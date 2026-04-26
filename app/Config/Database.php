@@ -26,10 +26,10 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => 'sql205.infinityfree.com',
-        'username'     => 'if0_41625633',
-        'password'     => 'pasabuy123',
-        'database'     => 'if0_41625633_pasa_buy_db',
+        'hostname'     => 'localhost',
+        'username'     => 'root',
+        'password'     => '',
+        'database'     => 'pasa_buy_db',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
