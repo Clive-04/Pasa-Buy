@@ -119,6 +119,48 @@ final class TalkJsMessagingTest extends FeatureTestCase
         $this->assertStringContainsString('only message the requester or runner', (string) $this->flash('error'));
     }
 
+    public function testEverySignedInPageRunsTheChatSessionForLiveBadges(): void
+    {
+        $user = $this->createUser();
+
+        $page = $this->getAs($user, 'dashboard');
+
+        $page->assertOK();
+        $page->assertSee('window.PasaBuyTalk', null);
+        $page->assertSee('unreads.onChange', null);
+        $page->assertSee('"pb_' . $user . '"', null);
+        $page->assertSee('data-unread="messages"', null);
+        $page->assertDontSee('sk_test_talkjs_secret');
+    }
+
+    public function testChatSessionIsNotRenderedWithoutTalkJs(): void
+    {
+        config('TalkJS')->appId     = '';
+        config('TalkJS')->secretKey = '';
+        $user = $this->createUser();
+
+        $this->getAs($user, 'dashboard')->assertDontSee('cdn.talkjs.com', null);
+    }
+
+    public function testMessagesPageListsErrandChatsOnly(): void
+    {
+        $requester = $this->createUser(['first_name' => 'Rhea']);
+        $runner    = $this->createUser(['first_name' => 'Rolly']);
+        $stranger  = $this->createUser(['first_name' => 'Stanley']);
+        $requestId = $this->createRequest($requester, ['item_name' => 'Rice']);
+        $this->createRequest($stranger, ['item_name' => 'Unaccepted soap']);
+        (new RequestLifecycle())->accept($requestId, $runner);
+
+        $page = $this->getAs($runner, 'messages');
+
+        $page->assertSee('Errand chats');
+        $page->assertSee('messages?user_id=' . $requester . '&amp;request_id=' . $requestId, null);
+        $page->assertSee('Your requester');
+        $page->assertDontSee('Unaccepted soap');
+
+        $this->getAs($requester, 'messages')->assertSee('Your runner');
+    }
+
     public function testUnreadCountLeavesMessagesToTalkJs(): void
     {
         $user = $this->createUser();

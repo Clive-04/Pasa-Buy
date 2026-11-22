@@ -15,7 +15,7 @@ class Wallet extends BaseController
     public function index()
     {
         $config   = config('PasaBuy');
-        $paymongo = config('PayMongo');
+        $provider = TopUpService::activeProvider();
         $userId   = $this->currentUserId();
 
         $payments = new PaymentModel();
@@ -30,11 +30,13 @@ class Wallet extends BaseController
             'user'           => (new UserModel())->find($userId),
             'transactions'   => $payments->paginate($config->perPage),
             'pager'          => $payments->pager,
-            'usePayMongo'    => $paymongo->isConfigured(),
+            'gateway'        => $provider,
+            'gatewayLabel'   => TopUpService::providerLabel($provider),
+            'pendingTopUps'  => $provider !== null ? (new TopUpService())->pendingFor($userId) : [],
             // One-time key: resubmitting this exact form never credits twice.
             'idempotencyKey' => bin2hex(random_bytes(16)),
-            'topUpMin'       => Money::format($paymongo->isConfigured() ? $paymongo->minTopUpCents : 1),
-            'topUpMax'       => Money::format($paymongo->isConfigured() ? $paymongo->maxTopUpCents : $config->demoTopUpMaxCents),
+            'topUpMin'       => Money::format($provider !== null ? TopUpService::limits($provider)[0] : 1),
+            'topUpMax'       => Money::format($provider !== null ? TopUpService::limits($provider)[1] : $config->demoTopUpMaxCents),
             'walletCap'      => Money::format($config->demoWalletCapCents),
         ]);
     }
@@ -43,8 +45,8 @@ class Wallet extends BaseController
     {
         $amount = trim((string) $this->request->getPost('amount'));
 
-        // GCash / Maya through PayMongo (test mode) when configured.
-        if (config('PayMongo')->isConfigured()) {
+        // GCash / Maya through Xendit or PayMongo (test mode) when configured.
+        if (TopUpService::activeProvider() !== null) {
             try {
                 $checkoutUrl = (new TopUpService())->start($this->currentUserId(), $amount);
 
@@ -83,23 +85,33 @@ class Wallet extends BaseController
     }
 
     /**
-     * PayMongo sends the user back here after checkout. The redirect proves
-     * nothing, so we ask PayMongo server-to-server before crediting.
+     * The provider sends the user back here after checkout. The redirect
+     * proves nothing, so we ask the provider server-to-server before crediting.
      */
     public function topUpReturn()
     {
-        $topUpId = (int) $this->request->getGet('topup');
+        return $this->reconcileAndRedirect((int) $this->request->getGet('topup'));
+    }
 
+    /** "Check payment" button for a pending top-up (POST, CSRF-protected). */
+    public function topUpCheck()
+    {
+        return $this->reconcileAndRedirect((int) $this->request->getPost('topup'));
+    }
+
+    private function reconcileAndRedirect(int $topUpId)
+    {
         try {
             $status = (new TopUpService())->reconcile($topUpId, $this->currentUserId());
         } catch (Throwable $e) {
             log_message('error', 'Top-up reconcile failed: {m}', ['m' => $e->getMessage()]);
-            $status = 'pending';
+            $status = 'error';
         }
 
         return match ($status) {
-            'credited', 'already' => redirect()->to('/wallet')->with('success', 'Payment confirmed by PayMongo. Your wallet has been topped up.'),
-            'pending'             => redirect()->to('/wallet')->with('success', 'Payment received by PayMongo is still being confirmed. Your balance updates automatically once it is.'),
+            'credited', 'already' => redirect()->to('/wallet')->with('success', 'Payment confirmed. Your wallet has been topped up.'),
+            'pending'             => redirect()->to('/wallet')->with('success', 'No completed payment yet. If you just paid, wait a moment and press "Check payment" again.'),
+            'error'               => redirect()->to('/wallet')->with('error', 'We could not reach the payment service. Please try again shortly.'),
             default               => redirect()->to('/wallet')->with('error', 'That top-up could not be found.'),
         };
     }

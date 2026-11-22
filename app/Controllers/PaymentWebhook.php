@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\PayMongoClient;
+use App\Libraries\XenditClient;
 use App\Services\ServiceException;
 use App\Services\TopUpService;
 use Throwable;
@@ -61,12 +62,65 @@ class PaymentWebhook extends BaseController
         }
 
         try {
-            $result = (new TopUpService())->confirm((string) $session['id'], $paid['amount'], $paid['id'], $paid['method'], false);
+            $result = (new TopUpService())->confirm((string) $session['id'], $paid['amount'], $paid['id'], $paid['method'], false, 'paymongo');
         } catch (ServiceException $e) {
             // e.g. amount mismatch: acknowledge so PayMongo stops retrying; it is logged for review.
             return $this->reply(200, 'rejected: ' . $e->getMessage());
         } catch (Throwable $e) {
             log_message('error', 'PayMongo webhook processing failed: {m}', ['m' => $e->getMessage()]);
+
+            return $this->reply(500, 'retry later');
+        }
+
+        return $this->reply(200, $result);
+    }
+
+    /**
+     * Xendit webhooks (test mode). Register in Dashboard → Settings → Webhooks:
+     *   URL:    https://<your-domain>/webhooks/xendit
+     *   Event:  payment_session.completed
+     * Xendit only sends a static verification token (x-callback-token), so
+     * the body is never trusted: the session is re-fetched from the Xendit
+     * API and only a SUCCEEDED payment of the exact amount is credited.
+     */
+    public function xendit()
+    {
+        $given = $this->request->getHeaderLine('x-callback-token');
+
+        if (! XenditClient::verifyCallbackToken($given, config('Xendit')->callbackToken)) {
+            log_message('warning', 'Rejected Xendit webhook with an invalid callback token.');
+
+            return $this->reply(401, 'invalid token');
+        }
+
+        $event = json_decode((string) $this->request->getBody(), true);
+
+        if (! is_array($event)) {
+            return $this->reply(400, 'invalid payload');
+        }
+
+        if (($event['event'] ?? '') !== 'payment_session.completed') {
+            return $this->reply(200, 'ignored');
+        }
+
+        $sessionId = (string) ($event['data']['payment_session_id'] ?? '');
+
+        if ($sessionId === '') {
+            return $this->reply(200, 'no session');
+        }
+
+        try {
+            $paid = service('xendit')->fetchPaid($sessionId);
+
+            if ($paid === null) {
+                return $this->reply(200, 'not paid');
+            }
+
+            $result = (new TopUpService())->confirm($sessionId, $paid['amount_cents'], $paid['payment_id'], $paid['method'], $paid['livemode'], 'xendit');
+        } catch (ServiceException $e) {
+            return $this->reply(200, 'rejected: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            log_message('error', 'Xendit webhook processing failed: {m}', ['m' => $e->getMessage()]);
 
             return $this->reply(500, 'retry later');
         }

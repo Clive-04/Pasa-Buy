@@ -1,5 +1,8 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
+<?php
+$otherName = ! empty($selectedUser) ? trim($selectedUser['first_name'] . ' ' . $selectedUser['last_name']) : null;
+?>
 
 <main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
@@ -9,55 +12,87 @@
             <?= page_header([
                 'crumbs' => [['Dashboard', 'dashboard'], ['Messages', null]],
                 'title'  => 'Messages',
-                'lead'   => ! empty($selectedUser)
-                    ? 'Chatting with ' . trim($selectedUser['first_name'] . ' ' . $selectedUser['last_name']) . (! empty($requestId) ? ' about request #' . (int) $requestId : '') . '.'
-                    : 'Chat with the requesters and runners on your errands.',
             ]) ?>
 
             <?= $this->include('includes/flash') ?>
 
-            <div id="talkjs-container" class="talkjs-frame" aria-label="Chat">
-                <p class="notif-empty">Loading chat…</p>
+            <div class="chat-layout">
+                <div class="chat-main">
+                    <?php if ($otherName !== null): ?>
+                        <div class="chat-context">
+                            <?= avatar($selectedUser, 'sm') ?>
+                            <div>
+                                <strong><?= esc($otherName) ?></strong>
+                                <?php if (! empty($request)): ?>
+                                    <small>
+                                        About <a href="<?= base_url('request-details/' . (int) $request['id']) ?>">request #<?= (int) $request['id'] ?>: <?= esc($request['item_name']) ?></a>
+                                        · <span class="status-pill <?= esc($request['status'], 'attr') ?>"><?= esc(status_label($request['status'])) ?></span>
+                                    </small>
+                                <?php else: ?>
+                                    <small>Direct message</small>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <div id="talkjs-container" class="talkjs-frame" aria-label="Chat">
+                        <div class="chat-loading"><span class="spinner" aria-hidden="true"></span> Loading chat…</div>
+                    </div>
+                    <noscript><p class="flash flash-warn is-static">Chat needs JavaScript to be enabled.</p></noscript>
+                </div>
+
+                <aside class="chat-side" aria-labelledby="errandChatsTitle">
+                    <h2 id="errandChatsTitle">Errand chats</h2>
+                    <?php if (! empty($errandChats)): ?>
+                        <ul class="errand-chats">
+                            <?php foreach ($errandChats as $chat): ?>
+                                <?php $active = ! empty($selectedUser) && (int) $selectedUser['id'] === (int) $chat['other_id'] && (int) $requestId === (int) $chat['request_id']; ?>
+                                <li>
+                                    <a href="<?= base_url('messages?user_id=' . (int) $chat['other_id'] . '&request_id=' . (int) $chat['request_id']) ?>"<?= $active ? ' aria-current="true" class="is-active"' : '' ?>>
+                                        <?= avatar(['first_name' => $chat['first_name'], 'last_name' => $chat['last_name'], 'profile_photo' => $chat['profile_photo']], 'sm') ?>
+                                        <span>
+                                            <strong><?= esc(trim($chat['first_name'] . ' ' . $chat['last_name'])) ?></strong>
+                                            <small>Your <?= esc($chat['other_role']) ?> · #<?= (int) $chat['request_id'] ?> <?= esc($chat['item_name']) ?></small>
+                                        </span>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php else: ?>
+                        <p class="muted">When a runner accepts one of your requests, or you accept someone's, you can chat with them here.</p>
+                    <?php endif; ?>
+                    <p class="chat-note"><?= icon('lock') ?> Chats are private to the people on the errand. Never share passwords or one-time PINs.</p>
+                </aside>
             </div>
-            <noscript><p class="flash flash-warn is-static">Chat needs JavaScript to be enabled.</p></noscript>
         </section>
     </div>
 </main>
 
 <script>
-(function (t, a, l, k, j, s) {
-    s = a.createElement('script'); s.async = 1; s.src = 'https://cdn.talkjs.com/talk.js'; a.head.appendChild(s);
-    k = t.Promise; t.Talk = { v: 3, ready: { then: function (f) { if (k) return new k(function (r, e) { l.push([f, r, e]); }); l.push([f]); }, catch: function () { return k && new k(); }, c: l } };
-})(window, document, []);
-
-Talk.ready.then(function () {
-    var session = new Talk.Session({
-        appId: <?= json_encode($appId) ?>,
-        userId: <?= json_encode($talkUserId) ?>,
-        token: <?= json_encode($token) ?>
-    });
-
+(function () {
     var container = document.getElementById('talkjs-container');
-    container.textContent = '';
-    var inbox = session.createInbox();
-    <?php if (! empty($conversationId)): ?>
-    inbox.select(<?= json_encode($conversationId) ?>);
-    <?php endif; ?>
-    inbox.mount(container);
 
-    // Keep the top-bar/sidebar message badges in sync with TalkJS.
-    if (session.unreads && session.unreads.onChange) {
-        session.unreads.onChange(function (unread) {
-            document.querySelectorAll('[data-unread="messages"]').forEach(function (badge) {
-                var n = unread.length;
-                badge.hidden = n <= 0;
-                badge.firstChild.nodeValue = n > 9 ? '9+' : String(n);
-            });
-        });
+    if (!window.PasaBuyTalk) {
+        container.textContent = 'Chat could not be loaded. Please refresh the page.';
+        return;
     }
-}).catch(function () {
-    document.getElementById('talkjs-container').textContent = 'Chat could not be loaded. Please refresh the page.';
-});
+
+    window.PasaBuyTalk.then(function (session) {
+        container.textContent = '';
+
+        var inbox = session.createInbox({
+            showFeedHeader: false,
+            showMobileBackButton: true,
+            messageField: { placeholder: 'Write a message…', spellcheck: true }
+        });
+        <?php if (! empty($conversationId)): ?>
+        inbox.select(<?= json_encode($conversationId) ?>);
+        <?php endif; ?>
+        inbox.mount(container);
+    }).catch(function () {
+        container.textContent = 'Chat could not be loaded. Please refresh the page.';
+    });
+})();
 </script>
 
 <?= $this->include('includes/footer') ?>

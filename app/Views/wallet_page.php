@@ -21,13 +21,36 @@
                     <span class="label"><?= icon('wallet') ?> <?= is_demo_mode() ? 'Demo credits available' : 'Available balance' ?></span>
                     <div class="balance"><?= money($user['wallet_balance'] ?? '0') ?></div>
                     <?php if (is_demo_mode()): ?>
-                        <p style="font-size:.86rem;"><?= $usePayMongo ? "Top up with GCash or Maya through PayMongo test mode. No real money moves, and credits can't be withdrawn." : "Simulated credits for trying Pasa-Buy. They can't be withdrawn, and no GCash, Maya or bank payment is involved." ?></p>
+                        <p style="font-size:.86rem;"><?= $gateway ? "Top up with GCash or Maya through " . esc($gatewayLabel) . " test mode. No real money moves, and credits can't be withdrawn." : "Simulated credits for trying Pasa-Buy. They can't be withdrawn, and no GCash, Maya or bank payment is involved." ?></p>
                     <?php endif; ?>
                 </div>
                 <?php if (is_demo_mode()): ?>
-                    <button type="button" class="btn btn-accent btn-lg" data-open-dialog="topUpDialog" style="position:relative; z-index:1;"><?= icon('plus') ?> <?= $usePayMongo ? 'Top up with GCash / Maya' : 'Add demo credits' ?></button>
+                    <button type="button" class="btn btn-accent btn-lg" data-open-dialog="topUpDialog" style="position:relative; z-index:1;"><?= icon('plus') ?> <?= $gateway ? 'Top up with GCash / Maya' : 'Add demo credits' ?></button>
                 <?php endif; ?>
             </section>
+
+            <?php if (! empty($pendingTopUps)): ?>
+                <section class="card pending-topups" aria-labelledby="pendingTitle">
+                    <div class="card-head">
+                        <h2 id="pendingTitle"><?= icon('clock') ?> Waiting for payment</h2>
+                    </div>
+                    <p class="muted" style="margin:0 0 .75rem;">Paid already? Press <strong>Check payment</strong> and we'll confirm it with <?= esc($gatewayLabel) ?>. Unpaid top-ups expire on their own.</p>
+                    <ul class="pending-list">
+                        <?php foreach ($pendingTopUps as $pending): ?>
+                            <li>
+                                <span class="status-pill pending">Pending</span>
+                                <strong><?= money($pending['amount']) ?></strong>
+                                <small class="muted"><?= esc(time_ago($pending['created_at'])) ?></small>
+                                <form action="<?= base_url('wallet/top-up/check') ?>" method="post" data-submit-once>
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="topup" value="<?= (int) $pending['id'] ?>">
+                                    <button type="submit" class="btn btn-secondary btn-sm" data-busy-label="Checking…"><?= icon('refresh') ?> Check payment</button>
+                                </form>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </section>
+            <?php endif; ?>
 
             <section class="card" aria-labelledby="historyTitle">
                 <div class="card-head">
@@ -92,9 +115,9 @@
 <dialog class="pb-dialog" id="topUpDialog" aria-labelledby="topUpTitle"<?= $topUpFailed ? ' data-autopen' : '' ?>>
     <div class="pb-dialog-head">
         <div>
-            <h2 id="topUpTitle"><?= $usePayMongo ? 'Top up your wallet' : 'Add demo credits' ?></h2>
-            <?php if ($usePayMongo): ?>
-                <p>You'll pay on PayMongo's secure page with <strong>GCash</strong> or <strong>Maya</strong>, then come back here. Your wallet is credited only after PayMongo confirms the payment. Test mode: no real money. <?= esc($topUpMin) ?> to <?= esc($topUpMax) ?>.</p>
+            <h2 id="topUpTitle"><?= $gateway ? 'Top up your wallet' : 'Add demo credits' ?></h2>
+            <?php if ($gateway): ?>
+                <p>You'll pay on <?= esc($gatewayLabel) ?>'s secure page with <strong>GCash</strong> or <strong>Maya</strong>, then come back here. Your wallet is credited only after <?= esc($gatewayLabel) ?> confirms the payment. Test mode: no real money. <?= esc($topUpMin) ?> to <?= esc($topUpMax) ?>.</p>
             <?php else: ?>
                 <p>Simulated money for trying Pasa-Buy. Up to <?= esc($topUpMax) ?> at a time; wallets are capped at <?= esc($walletCap) ?>.</p>
             <?php endif; ?>
@@ -119,7 +142,7 @@
 
         <div class="pb-dialog-actions">
             <button type="button" class="btn btn-secondary" data-close-dialog>Cancel</button>
-            <button type="submit" class="btn btn-primary" data-busy-label="Opening…"><?= icon('plus') ?> <?= $usePayMongo ? 'Continue to payment' : 'Add credits' ?></button>
+            <button type="submit" class="btn btn-primary" data-busy-label="Opening…"><?= icon('plus') ?> <?= $gateway ? 'Continue to payment' : 'Add credits' ?></button>
         </div>
     </form>
 </dialog>

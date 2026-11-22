@@ -27,6 +27,7 @@ $routes->get('/health', 'Health::index');
 
 // Payment provider callbacks: no session, CSRF-exempt, verified by signature.
 $routes->post('/webhooks/paymongo', 'PaymentWebhook::paymongo');
+$routes->post('/webhooks/xendit', 'PaymentWebhook::xendit');
 
 // ------------------------------------------------------------- signed in
 $routes->group('', ['filter' => 'auth'], static function (RouteCollection $routes): void {
@@ -51,6 +52,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
     $routes->get('wallet', 'Wallet::index');
     $routes->post('wallet/top-up', 'Wallet::topUp');
     $routes->get('wallet/top-up/return', 'Wallet::topUpReturn');
+    $routes->post('wallet/top-up/check', 'Wallet::topUpCheck');
 
     $routes->get('profile', 'Profile::index');
     $routes->post('profile/update', 'Profile::updateProfile');

@@ -29,6 +29,16 @@ class Services extends BaseService
         return new \App\Libraries\PayMongoClient(config('PayMongo'));
     }
 
+    /** Xendit API client (tests replace it with Services::injectMock('xendit', ...)). */
+    public static function xendit(bool $getShared = true): \App\Libraries\XenditClient
+    {
+        if ($getShared) {
+            return static::getSharedInstance('xendit');
+        }
+
+        return new \App\Libraries\XenditClient(config('Xendit'));
+    }
+
     /** TalkJS server client (tests replace it with Services::injectMock('talkjs', ...)). */
     public static function talkjs(bool $getShared = true): \App\Libraries\TalkJsClient
     {

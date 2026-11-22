@@ -44,6 +44,9 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         config('TalkJS')->secretKey = '';
         config('PayMongo')->secretKey = '';
         config('PayMongo')->webhookSecret = '';
+        config('Xendit')->secretKey = '';
+        config('Xendit')->callbackToken = '';
+        config('Xendit')->publicBaseUrl = '';
 
         if (! str_contains((string) $this->db->getDatabase(), 'test')) {
             throw new RuntimeException('Refusing to run destructive tests against database "' . $this->db->getDatabase() . '".');

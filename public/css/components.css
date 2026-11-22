@@ -392,3 +392,12 @@ a.row-item:hover { border-color: var(--accent); background: var(--surface-2); tr
     .pb-table td { display: grid; grid-template-columns: minmax(6.5rem, 35%) 1fr; gap: 12px; padding: 6px 14px; border: none; text-align: right; overflow-wrap: anywhere; }
     .pb-table td::before { content: attr(data-label); color: var(--muted); font-weight: 700; text-align: left; }
 }
+
+/* New-message notice (TalkJS onMessage) */
+.chat-toast-stack { position: fixed; right: 20px; bottom: 20px; z-index: 90; display: grid; gap: 10px; width: min(340px, calc(100vw - 32px)); }
+.chat-toast { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 14px; background: var(--surface); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-lg); animation: pb-rise .25s ease-out; transition: opacity .4s, transform .4s; }
+.chat-toast strong { font-size: .9rem; }
+.chat-toast span { color: var(--muted); font-size: .85rem; }
+.chat-toast:hover { border-color: var(--brand); }
+.chat-toast.is-leaving { opacity: 0; transform: translateY(8px); }
+@media (prefers-reduced-motion: reduce) { .chat-toast { animation: none; transition: none; } }

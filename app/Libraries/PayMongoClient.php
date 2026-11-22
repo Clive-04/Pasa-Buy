@@ -14,12 +14,44 @@ use Throwable;
  * The secret key is sent as HTTP Basic auth (key as username, empty
  * password) and never leaves the server.
  */
-class PayMongoClient
+class PayMongoClient implements PaymentGateway
 {
     public function __construct(
         private readonly PayMongo $config,
         private readonly ?CURLRequest $http = null,
     ) {
+    }
+
+    public function name(): string
+    {
+        return 'paymongo';
+    }
+
+    public function keyPrefix(): string
+    {
+        return 'pm_';
+    }
+
+    public function createCheckout(int $amountCents, string $description, string $reference, ?string $successUrl, ?string $cancelUrl, array $metadata): array
+    {
+        return $this->createCheckoutSession($amountCents, $description, (string) $successUrl, (string) $cancelUrl, $reference, $metadata);
+    }
+
+    public function fetchPaid(string $checkoutId): ?array
+    {
+        $session = $this->retrieveCheckoutSession($checkoutId);
+        $paid    = self::paidPayment($session);
+
+        if ($paid === null) {
+            return null;
+        }
+
+        return [
+            'payment_id'   => $paid['id'],
+            'amount_cents' => $paid['amount'],
+            'method'       => $paid['method'],
+            'livemode'     => (bool) ($session['attributes']['livemode'] ?? false),
+        ];
     }
 
     /**

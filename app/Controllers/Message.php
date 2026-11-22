@@ -267,13 +267,34 @@ class Message extends BaseController
 
         return view('messages_talkjs_page', [
             'title'          => 'Messages | Pasa-Buy',
-            'appId'          => $client->appId(),
-            'talkUserId'     => \App\Libraries\TalkJsClient::userId($meId),
-            'token'          => $client->userToken($meId),
             'conversationId' => $conversationId,
             'selectedUser'   => $selected,
-            'requestId'      => $requestId,
+            'requestId'      => $conversationId !== null ? $requestId : null,
+            'request'        => $conversationId !== null && $requestId !== null ? (new RequestModel())->select('id, item_name, status, store_name')->find($requestId) : null,
+            'errandChats'    => $this->errandChats($meId),
         ]);
+    }
+
+    /**
+     * People the user is running an errand with (as requester or runner),
+     * so a chat can be started even before any message exists.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function errandChats(int $userId): array
+    {
+        return db_connect()->query(
+            'SELECT r.id AS request_id, r.item_name, r.status, u.id AS other_id, u.first_name, u.last_name, u.profile_photo,
+                    IF(r.user_id = ?, \'runner\', \'requester\') AS other_role
+             FROM accepted_requests ar
+             JOIN requests r ON r.id = ar.request_id
+             JOIN users u ON u.id = IF(r.user_id = ?, ar.runner_id, r.user_id)
+             WHERE (r.user_id = ? OR ar.runner_id = ?)
+               AND r.status IN (\'accepted\', \'on_the_way\', \'delivered\')
+             ORDER BY FIELD(r.status, \'on_the_way\', \'accepted\', \'delivered\'), r.updated_at DESC
+             LIMIT 8',
+            [$userId, $userId, $userId, $userId],
+        )->getResultArray();
     }
 
     /**

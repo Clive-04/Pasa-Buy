@@ -61,6 +61,7 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
         </a>
     </nav>
 </header>
+<?= $this->include('includes/talkjs_session') ?>
 <?php else: ?>
 <header class="site-header">
     <?= brand_mark(base_url('login')) ?>

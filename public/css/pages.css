@@ -321,4 +321,37 @@ a.mini-stat:hover { border-color: var(--accent); transform: translateY(-1px); }
 .detail-main, .detail-aside { gap: var(--sp-5); }
 .profile-grid > div { display: grid; gap: var(--sp-5); align-content: start; }
 
-.talkjs-frame { height: min(75vh, 760px); min-height: 520px; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
+/* Messages (TalkJS). The inbox draws its own panels, so the frame stays
+   borderless and the side column uses the remaining width. */
+.chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: var(--sp-5); align-items: start; }
+.chat-main { display: grid; gap: var(--sp-3); min-width: 0; }
+.chat-context { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
+.chat-context strong { display: block; color: var(--ink); }
+.chat-context small { color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chat-context .status-pill { font-size: .72rem; padding: 2px 8px; }
+.talkjs-frame { height: min(72vh, 720px); min-height: 480px; border-radius: var(--r-lg); overflow: hidden; }
+.chat-loading { height: 100%; display: grid; place-content: center; grid-auto-flow: column; gap: 10px; align-items: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--r-lg); }
+.chat-loading .spinner { width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--brand); border-radius: 50%; animation: pb-spin .8s linear infinite; }
+.chat-side { position: sticky; top: 96px; display: grid; gap: var(--sp-3); padding: var(--sp-4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.chat-side h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.chat-side .muted { color: var(--muted); font-size: .88rem; margin: 0; }
+.errand-chats { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.errand-chats a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; color: var(--ink); text-decoration: none; transition: background .15s; }
+.errand-chats a:hover { background: var(--surface-2); }
+.errand-chats a.is-active { background: var(--brand-soft); color: var(--brand-soft-ink); }
+.errand-chats strong { display: block; font-size: .92rem; }
+.errand-chats small { display: block; color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
+.chat-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding-top: var(--sp-3); border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+.chat-note .i { flex: none; width: 15px; height: 15px; margin-top: 2px; }
+@media (max-width: 1100px) {
+    .chat-layout { grid-template-columns: 1fr; }
+    .chat-side { position: static; order: -1; }
+    .errand-chats { grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); overflow-x: auto; padding-bottom: 4px; }
+    .chat-note { display: none; }
+}
+@media (max-width: 640px) { .talkjs-frame { height: calc(100vh - 220px); min-height: 420px; } }
+
+/* Wallet: top-ups waiting for provider confirmation */
+.pending-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.pending-list li { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; padding: .65rem .85rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2, var(--surface)); }
+.pending-list li form { margin-left: auto; }
