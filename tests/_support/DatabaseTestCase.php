@@ -38,6 +38,13 @@ abstract class DatabaseTestCase extends CIUnitTestCase
 
         $this->db = db_connect();
 
+        // Never let real API keys from .env reach tests (no network, no
+        // behaviour change). Integration tests set fake keys themselves.
+        config('TalkJS')->appId = '';
+        config('TalkJS')->secretKey = '';
+        config('PayMongo')->secretKey = '';
+        config('PayMongo')->webhookSecret = '';
+
         if (! str_contains((string) $this->db->getDatabase(), 'test')) {
             throw new RuntimeException('Refusing to run destructive tests against database "' . $this->db->getDatabase() . '".');
         }
