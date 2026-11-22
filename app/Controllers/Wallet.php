@@ -90,7 +90,9 @@ class Wallet extends BaseController
      */
     public function topUpReturn()
     {
-        return $this->reconcileAndRedirect((int) $this->request->getGet('topup'));
+        // The provider may still be finalising the payment when it redirects,
+        // so give it a few seconds before falling back to "Check payment".
+        return $this->reconcileAndRedirect((int) $this->request->getGet('topup'), 3);
     }
 
     /** "Check payment" button for a pending top-up (POST, CSRF-protected). */
@@ -99,10 +101,20 @@ class Wallet extends BaseController
         return $this->reconcileAndRedirect((int) $this->request->getPost('topup'));
     }
 
-    private function reconcileAndRedirect(int $topUpId)
+    private function reconcileAndRedirect(int $topUpId, int $attempts = 1)
     {
         try {
-            $status = (new TopUpService())->reconcile($topUpId, $this->currentUserId());
+            $service = new TopUpService();
+
+            for ($try = 1; ; $try++) {
+                $status = $service->reconcile($topUpId, $this->currentUserId());
+
+                if ($status !== 'pending' || $try >= $attempts) {
+                    break;
+                }
+
+                sleep(2);
+            }
         } catch (Throwable $e) {
             log_message('error', 'Top-up reconcile failed: {m}', ['m' => $e->getMessage()]);
             $status = 'error';

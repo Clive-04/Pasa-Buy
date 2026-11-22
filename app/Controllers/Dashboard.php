@@ -86,9 +86,9 @@ class Dashboard extends BaseController
             'openRequests'        => (new RequestModel())->where('status', 'pending')->where('user_id !=', $userId)->countAllResults(),
             'myActiveRequests'    => $myActive,
             'availableRequests'   => (new RequestModel())
-                ->select('id, item_name, store_name, service_fee, platform_fee, estimated_price, urgency, payment_method, created_at')
+                ->select('id, item_name, category, quantity, store_name, landmark, service_fee, platform_fee, estimated_price, urgency, payment_method, created_at')
                 ->where('status', 'pending')->where('user_id !=', $userId)
-                ->orderBy('created_at', 'DESC')->findAll(4),
+                ->orderBy('created_at', 'DESC')->findAll(6),
             'recentActivity'      => (new RequestNotificationModel())->where('user_id', $userId)->orderBy('created_at', 'DESC')->orderBy('id', 'DESC')->findAll(5),
         ]);
     }

@@ -1,9 +1,6 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 <?php
-use App\Libraries\FeePolicy;
-use App\Libraries\Money;
-
 $categoryLabels = [
     'food' => 'Food', 'medicine' => 'Medicine', 'school_supplies' => 'School supplies',
     'household' => 'Household', 'personal_care' => 'Personal care', 'other' => 'Other',
@@ -62,33 +59,7 @@ $filtered = $filters['search'] !== '' || $filters['category'] !== '' || $filters
             <div class="request-card-grid">
                 <?php if (! empty($requests)): ?>
                     <?php foreach ($requests as $request): ?>
-                        <?php $earn = FeePolicy::runnerServiceEarningsCents(Money::toCents($request['service_fee'])); ?>
-                        <article class="req-card">
-                            <div class="req-card-head">
-                                <span class="request-tag <?= esc($request['urgency'], 'attr') ?>"><?= esc(ucfirst($request['urgency'])) ?></span>
-                                <span class="text-muted" style="font-size:.8rem;"><?= icon('clock') ?> <?= esc(time_ago($request['created_at'])) ?></span>
-                            </div>
-                            <div>
-                                <h3 style="margin:0 0 8px;"><a href="<?= base_url('request-details/' . (int) $request['id']) ?>" style="color:inherit; text-decoration:none;"><?= esc($request['item_name']) ?></a> <small class="text-muted">×<?= (int) $request['quantity'] ?></small></h3>
-                                <ul class="req-meta" style="flex-direction:column; gap:6px;">
-                                    <li><?= icon('store') ?> <?= esc($request['store_name']) ?></li>
-                                    <?php if (! empty($request['landmark'])): ?>
-                                        <li><?= icon('map-pin') ?> Near <?= esc($request['landmark']) ?></li>
-                                    <?php endif; ?>
-                                    <li><?= icon($request['payment_method'] === 'cod' ? 'cash' : 'wallet') ?> <?= esc(payment_method_label($request['payment_method'])) ?></li>
-                                </ul>
-                            </div>
-                            <div class="money-breakdown" style="padding:10px 12px;">
-                                <div class="row"><span>Item (you buy)</span><strong><?= money($request['estimated_price']) ?></strong></div>
-                                <div class="row total"><span>You earn</span><strong style="color: var(--pb-success-ink);"><?= money_cents($earn) ?></strong></div>
-                            </div>
-                            <div class="req-actions">
-                                <form action="<?= base_url('request/accept/' . (int) $request['id']) ?>" method="post" class="inline-form" data-submit-once>
-                                    <?= csrf_field() ?>
-                                    <button type="submit" class="btn btn-primary btn-sm" data-busy-label="Accepting…"><?= icon('check') ?> Accept</button>
-                                </form>
-                            </div>
-                        </article>
+                        <?= view('includes/request_card', ['request' => $request]) ?>
                     <?php endforeach; ?>
                 <?php else: ?>
                     <div class="card empty-state" style="grid-column: 1 / -1;">

@@ -1,9 +1,6 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 <?php
-use App\Libraries\FeePolicy;
-use App\Libraries\Money;
-
 $hour     = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good evening');
 ?>
@@ -51,57 +48,65 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good
                 </section>
             <?php endif; ?>
 
-            <div class="two-col">
-                <section aria-labelledby="myActiveHeading">
-                    <div class="section-head">
-                        <h2 id="myActiveHeading" class="section-label"><?= icon('list') ?> My active requests</h2>
-                        <a href="<?= base_url('my-requests') ?>" class="link">View all <?= icon('chevron') ?></a>
-                    </div>
-                    <?php if (! empty($myActiveRequests)): ?>
-                        <div class="row-list">
-                            <?php foreach ($myActiveRequests as $request): ?>
-                                <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="row-item row-item-stack">
-                                    <span class="row-line">
-                                        <span class="row-main">
-                                            <strong><?= esc($request['item_name']) ?></strong>
-                                            <span><?= esc($request['store_name']) ?> · <?= money($request['total_amount']) ?></span>
-                                        </span>
-                                        <span class="status-pill <?= esc($request['status'], 'attr') ?>"><?= esc(status_label($request['status'])) ?></span>
-                                    </span>
-                                    <?= request_steps($request, true) ?>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div class="empty-inline">
-                            <p>No active requests. <a class="link" href="<?= base_url('post-request') ?>">Post one <?= icon('arrow-right') ?></a></p>
-                        </div>
-                    <?php endif; ?>
-                </section>
-
-                <section aria-labelledby="openHeading">
-                    <div class="section-head">
-                        <h2 id="openHeading" class="section-label"><?= icon('search') ?> Requests you can deliver</h2>
-                        <a href="<?= base_url('browse-requests') ?>" class="link">Browse all <?= icon('chevron') ?></a>
-                    </div>
-                    <?php if (! empty($availableRequests)): ?>
-                        <div class="row-list">
-                            <?php foreach ($availableRequests as $request): ?>
-                                <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="row-item">
+            <section aria-labelledby="myActiveHeading">
+                <div class="section-head">
+                    <h2 id="myActiveHeading" class="section-label"><?= icon('list') ?> My active requests</h2>
+                    <a href="<?= base_url('my-requests') ?>" class="link">View all <?= icon('chevron') ?></a>
+                </div>
+                <?php if (! empty($myActiveRequests)): ?>
+                    <div class="row-list active-grid">
+                        <?php foreach ($myActiveRequests as $request): ?>
+                            <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="row-item row-item-stack">
+                                <span class="row-line">
                                     <span class="row-main">
                                         <strong><?= esc($request['item_name']) ?></strong>
-                                        <span><?= esc($request['store_name']) ?> · <?= esc(time_ago($request['created_at'])) ?></span>
+                                        <span><?= esc($request['store_name']) ?> · <?= money($request['total_amount']) ?></span>
                                     </span>
-                                    <span class="earn-tag">+<?= money_cents(FeePolicy::runnerServiceEarningsCents(Money::toCents($request['service_fee']))) ?></span>
-                                    <?= icon('chevron') ?>
-                                </a>
-                            <?php endforeach; ?>
+                                    <span class="status-pill <?= esc($request['status'], 'attr') ?>"><?= esc(status_label($request['status'])) ?></span>
+                                </span>
+                                <?= request_steps($request, true) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="empty-inline">
+                        <p>No active requests. <a class="link" href="<?= base_url('post-request') ?>">Post one <?= icon('arrow-right') ?></a></p>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+            <section class="market" aria-labelledby="openHeading">
+                <div class="section-head">
+                    <div>
+                        <h2 id="openHeading" class="section-label"><?= icon('store') ?> Requests you can deliver</h2>
+                        <p class="market-lead"><?= (int) $openRequests ?> open <?= (int) $openRequests === 1 ? 'errand' : 'errands' ?> from your neighbours. Accept one, buy the items, and earn the service fee.</p>
+                    </div>
+                    <a href="<?= base_url('browse-requests') ?>" class="link">Browse all <?= icon('chevron') ?></a>
+                </div>
+                <nav class="market-cats" aria-label="Browse by category">
+                    <?php foreach (['food' => 'Food', 'medicine' => 'Medicine', 'school_supplies' => 'School supplies', 'household' => 'Household', 'personal_care' => 'Personal care', 'other' => 'Other'] as $value => $label): ?>
+                        <a class="chip" href="<?= base_url('browse-requests?category=' . $value) ?>"><?= esc($label) ?></a>
+                    <?php endforeach; ?>
+                </nav>
+                <?php if (! empty($availableRequests)): ?>
+                    <div class="request-card-grid">
+                        <?php foreach ($availableRequests as $request): ?>
+                            <?= view('includes/request_card', ['request' => $request]) ?>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($openRequests > count($availableRequests)): ?>
+                        <div class="market-more">
+                            <a href="<?= base_url('browse-requests') ?>" class="btn btn-secondary"><?= icon('search') ?> See all <?= (int) $openRequests ?> open requests</a>
                         </div>
-                    <?php else: ?>
-                        <div class="empty-inline"><p>No open requests nearby right now.</p></div>
                     <?php endif; ?>
-                </section>
-            </div>
+                <?php else: ?>
+                    <div class="card empty-state">
+                        <?= icon('store') ?>
+                        <h3>No open requests right now</h3>
+                        <p>New requests from your neighbours will appear here. Check back soon.</p>
+                    </div>
+                <?php endif; ?>
+            </section>
         </section>
     </div>
 </main>
