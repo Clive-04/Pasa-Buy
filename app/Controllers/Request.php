@@ -262,7 +262,9 @@ class Request extends BaseController
 
         return view('my_requests_page', [
             'title'         => 'My Requests | Pasa-Buy',
-            'requests'      => $model->orderBy('created_at', 'DESC')->orderBy('id', 'DESC')->paginate($config->perPage),
+            // Active requests first; finished ones (shown as compact rows) after.
+            'requests'      => $model->orderBy("status IN ('delivered', 'cancelled')", 'ASC', false)
+                ->orderBy('created_at', 'DESC')->orderBy('id', 'DESC')->paginate($config->perPage),
             'pager'         => $model->pager,
             'currentStatus' => $status,
         ]);

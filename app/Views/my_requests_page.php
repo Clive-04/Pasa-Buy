@@ -28,7 +28,26 @@ $tabs = ['' => 'All', 'pending' => 'Waiting for runner', 'accepted' => 'Accepted
 
             <div class="req-list">
                 <?php if (! empty($requests)): ?>
+                    <?php $shownPastHeading = false; ?>
                     <?php foreach ($requests as $request): ?>
+                        <?php if (in_array($request['status'], ['delivered', 'cancelled'], true)): ?>
+                            <?php if (! $shownPastHeading && $currentStatus === ''): ?>
+                                <h2 class="section-label past-heading"><?= icon('check-circle') ?> Past requests</h2>
+                            <?php endif; ?>
+                            <?php $shownPastHeading = true; ?>
+                            <?php $done = $request['status'] === 'delivered'; ?>
+                            <a class="req-row" href="<?= base_url('request-details/' . (int) $request['id']) ?>">
+                                <span class="req-row-icon <?= $done ? 'is-done' : 'is-cancelled' ?>"><?= icon($done ? 'check' : 'x') ?></span>
+                                <span class="req-row-main">
+                                    <strong><?= esc($request['item_name']) ?></strong>
+                                    <small><?= esc($request['store_name']) ?> · <?= $done ? 'Delivered' : 'Cancelled' ?> <?= esc(time_ago($request[$done ? 'updated_at' : 'cancelled_at'] ?? $request['updated_at'])) ?></small>
+                                </span>
+                                <span class="req-row-amount"><?= $done ? money($request['total_amount']) : '' ?></span>
+                                <span class="status-pill <?= esc($request['status'], 'attr') ?>"><?= esc(status_label($request['status'])) ?></span>
+                                <?= icon('chevron') ?>
+                            </a>
+                            <?php continue; ?>
+                        <?php endif; ?>
                         <?php
                         $next  = next_step($request, 'requester');
                         $needsPayment = in_array($request['status'], ['accepted', 'on_the_way'], true)

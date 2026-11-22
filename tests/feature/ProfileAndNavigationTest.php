@@ -176,6 +176,22 @@ final class ProfileAndNavigationTest extends FeatureTestCase
         $this->assertStringNotContainsString('/notifications', $response->getRedirectUrl());
     }
 
+    public function testFinishedRequestsAreCompactRowsBelowActiveOnes(): void
+    {
+        $me = $this->createUser();
+        $old = $this->createRequest($me, ['item_name' => 'Old delivered soap']);
+        $this->db->table('requests')->where('id', $old)->update(['status' => 'delivered']);
+        $this->createRequest($me, ['item_name' => 'Fresh pending bread']);
+
+        $html = (string) $this->getAs($me, 'my-requests')->response()->getBody();
+
+        $this->assertStringContainsString('Past requests', $html);
+        $this->assertLessThan(strpos($html, 'Old delivered soap'), strpos($html, 'Fresh pending bread'), 'Active requests come first.');
+        $row = substr($html, strpos($html, 'Past requests'));
+        $this->assertStringContainsString('class="req-row"', $row);
+        $this->assertStringNotContainsString('class="req-card"', $row, 'Finished requests are not full cards.');
+    }
+
     public function testNavigationShowsGroupedMenuAndBreadcrumbs(): void
     {
         $user = $this->createUser();
