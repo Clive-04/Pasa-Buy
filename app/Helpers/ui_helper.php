@@ -189,7 +189,7 @@ if (! function_exists('next_step')) {
             $status === 'cancelled' => $r('muted', 'This request was cancelled', 'Nothing else needs to happen. It stays in the history for reference.'),
             $status === 'delivered' => $r('success', 'Completed', $viewer === 'other'
                 ? 'This errand is finished.'
-                : 'The errand is finished. You can now rate each other from your profiles.'),
+                : 'The errand is finished. Rate how it went: every delivery gets its own rating.'),
 
             $status === 'pending' && $viewer === 'requester' => $r('info', 'Waiting for a runner', 'Nearby runners can see your request. You will be notified when someone accepts it. You can still cancel it.'),
             $status === 'pending' => $r('action', 'Want to do this errand?', 'Accept it to become the runner. You buy the items (about ' . money($request['estimated_price'] ?? '0') . '), deliver them, and receive ' . $net . ' in total. That is the item cost back plus your service fee, minus the 10% platform fee.'),

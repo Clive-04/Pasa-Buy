@@ -283,12 +283,15 @@ final class AuthAndSecurityTest extends FeatureTestCase
 
     public function testRatingsRequireACompletedErrandTogether(): void
     {
-        $rater  = $this->createUser();
-        $target = $this->createUser();
+        $requester = $this->createUser();
+        $runner    = $this->createUser();
+        $requestId = $this->createRequest($requester);
+        (new \App\Services\RequestLifecycle())->accept($requestId, $runner);
 
-        $this->postAs($rater, 'users/' . $target . '/rate', ['rating' => 5]);
+        // Accepted but not delivered yet.
+        $this->postAs($requester, 'request/' . $requestId . '/rate', ['rating' => 5]);
         $this->assertSame(0, $this->countRows('user_ratings'));
-        $this->assertStringContainsString('delivered request', (string) $this->flash('error'));
+        $this->assertStringContainsString('delivered', (string) $this->flash('error'));
     }
 
     public function testHealthEndpointReportsOk(): void

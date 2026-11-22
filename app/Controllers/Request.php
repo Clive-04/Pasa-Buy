@@ -7,6 +7,7 @@ use App\Libraries\Money;
 use App\Models\AcceptedRequestModel;
 use App\Models\RequestModel;
 use App\Models\UserModel;
+use App\Services\RatingService;
 use App\Services\RequestLifecycle;
 use App\Services\WalletService;
 
@@ -243,7 +244,28 @@ class Request extends BaseController
             // Exact address and phone are shared only with the participants.
             'canSeeContact' => $isRequester || $isRunner || $isAdmin,
             'walletBalance' => $viewer['wallet_balance'] ?? '0.00',
+            'myRating'      => ($isRequester || $isRunner) && $request['status'] === 'delivered'
+                ? (new RatingService())->ratingFor($viewerId, (int) $request['id'])
+                : null,
         ]);
+    }
+
+    /** Rate the other participant of this delivered request (once per delivery). */
+    public function rate($id = null)
+    {
+        $requestId = (int) $id;
+
+        return $this->attempt(
+            fn () => (new RatingService())->rateDelivery(
+                $this->currentUserId(),
+                $requestId,
+                (int) $this->request->getPost('rating'),
+                (string) $this->request->getPost('feedback'),
+            ),
+            'Thanks! Your rating was added.',
+            '/request-details/' . $requestId,
+            true,
+        );
     }
 
     public function myRequests()

@@ -11,6 +11,7 @@ class UserRatingModel extends Model
     protected $allowedFields = [
         'rater_id',
         'rated_user_id',
+        'request_id',
         'rating',
         'feedback',
         'created_at',

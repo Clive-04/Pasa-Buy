@@ -74,8 +74,9 @@ final class UserJourneyTest extends FeatureTestCase
         $notifications->assertSee('Your request was delivered');
 
         // Requester can now rate the runner.
-        $this->postAs($requester, 'users/' . $runner . '/rate', ['rating' => '5', 'feedback' => 'Quick!']);
-        $this->assertSame(1, $this->countRows('user_ratings', ['rated_user_id' => $runner]));
+        $this->getAs($requester, 'request-details/' . $requestId)->assertSee('Rate runner');
+        $this->postAs($requester, 'request/' . $requestId . '/rate', ['rating' => '5', 'feedback' => 'Quick!']);
+        $this->assertSame(1, $this->countRows('user_ratings', ['rated_user_id' => $runner, 'request_id' => $requestId]));
 
         // Admin report reflects recorded collections and reconciles.
         $report = $this->getAs($admin, 'admin/dashboard?tab=delivered', 'admin');

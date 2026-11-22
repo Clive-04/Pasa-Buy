@@ -38,6 +38,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
     $routes->post('request/accept/(:num)', 'Request::accept/$1');
     $routes->post('request/status/(:num)', 'Request::updateAcceptedStatus/$1');
     $routes->post('request/pay-runner/(:num)', 'Request::payRunner/$1');
+    $routes->post('request/(:num)/rate', 'Request::rate/$1');
     $routes->post('request/cancel/(:num)', 'Request::cancel/$1');
 
     $routes->get('browse-requests', 'Request::browse');
@@ -64,7 +65,6 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 
     $routes->get('users/search', 'UserSearch::index');
     $routes->get('users/(:num)', 'UserSearch::view/$1');
-    $routes->post('users/(:num)/rate', 'UserSearch::rate/$1');
 
     $routes->get('notifications', 'RequestNotification::index');
     $routes->get('notifications/unread-count', 'RequestNotification::unreadCount');

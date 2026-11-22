@@ -148,7 +148,7 @@ class DemoSeeder extends Seeder
         }
 
         $db->table('user_ratings')->insert([
-            'rater_id' => $ids['requester'], 'rated_user_id' => $ids['runner'],
+            'rater_id' => $ids['requester'], 'rated_user_id' => $ids['runner'], 'request_id' => $done,
             'rating' => 5, 'feedback' => 'Fast and friendly (demo rating).',
         ]);
 

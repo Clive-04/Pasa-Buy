@@ -1,7 +1,6 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 <?php
-$currentRating = (string) (old('rating') ?? ($myRating['rating'] ?? ''));
 $fullName      = trim(($profileUser['first_name'] ?? '') . ' ' . ($profileUser['last_name'] ?? ''));
 ?>
 
@@ -41,33 +40,11 @@ $fullName      = trim(($profileUser['first_name'] ?? '') . ' ' . ($profileUser['
                 </section>
 
                 <section class="card" aria-labelledby="rateHeading">
-                    <div class="card-head"><h2 id="rateHeading"><?= icon('star') ?> <?= ! empty($myRating) ? 'Your rating' : 'Rate ' . esc($profileUser['first_name']) ?></h2></div>
-
+                    <div class="card-head"><h2 id="rateHeading"><?= icon('star') ?> Ratings</h2></div>
                     <?php if ($isOwnProfile): ?>
                         <p class="text-muted">This is how others see your profile. <a class="link" href="<?= base_url('profile') ?>">Edit my profile <?= icon('chevron') ?></a></p>
-                    <?php elseif (! $canRate): ?>
-                        <div class="empty-state" style="padding:16px;">
-                            <?= icon('lock') ?>
-                            <p>You can rate <?= esc($profileUser['first_name']) ?> after you complete a delivered errand together, as requester or runner.</p>
-                        </div>
                     <?php else: ?>
-                        <form action="<?= base_url('users/' . (int) $profileUser['id'] . '/rate') ?>" method="post" data-submit-once>
-                            <?= csrf_field() ?>
-                            <div class="form-group">
-                                <label for="rating">Rating</label>
-                                <select id="rating" name="rating" required>
-                                    <option value="">Choose a rating</option>
-                                    <?php foreach ([5 => 'Excellent', 4 => 'Very good', 3 => 'Good', 2 => 'Fair', 1 => 'Poor'] as $value => $label): ?>
-                                        <option value="<?= $value ?>" <?= $currentRating === (string) $value ? 'selected' : '' ?>><?= str_repeat('★', $value) ?> <?= $label ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="feedback">Feedback <span class="text-muted">(optional)</span></label>
-                                <textarea id="feedback" name="feedback" rows="3" maxlength="1000" placeholder="How was the errand?"><?= esc((string) (old('feedback') ?? ($myRating['feedback'] ?? ''))) ?></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…"><?= icon('star') ?> <?= ! empty($myRating) ? 'Update rating' : 'Submit rating' ?></button>
-                        </form>
+                        <p class="text-muted" style="margin:0;">Ratings come from completed errands. After a delivery with <?= esc($profileUser['first_name']) ?>, open that request to rate it. Each delivery counts once.</p>
                     <?php endif; ?>
                 </section>
             </div>

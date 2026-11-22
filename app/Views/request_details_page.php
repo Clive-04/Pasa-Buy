@@ -28,6 +28,12 @@ $crumbs = $isAdminViewer
 
 $toneIcon = ['action' => 'arrow-right', 'info' => 'info', 'success' => 'check-circle', 'muted' => 'x-circle'][$next['tone']] ?? 'info';
 $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
+
+// Ratings: one per participant per delivered request; they add up on profiles.
+$otherParty   = $isRequester ? $runner : $requester;
+$otherRole    = $isRequester ? 'runner' : 'requester';
+$canRate      = $status === 'delivered' && ($isRequester || $isRunner) && ! $isAdminViewer && empty($myRating) && ! empty($otherParty);
+$alreadyRated = $status === 'delivered' && ! empty($myRating);
 ?>
 
 <main class="dashboard-page" id="main-content">
@@ -52,6 +58,15 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
 
             <div class="detail-grid">
                 <div class="detail-main">
+                    <?php if ($alreadyRated): ?>
+                    <section class="rated-note" aria-label="Completed">
+                        <?= icon('check-circle') ?>
+                        <p><strong>Completed.</strong> You rated <?= esc($otherParty['first_name'] ?? 'them') ?>
+                            <span class="stars" aria-label="<?= (int) $myRating['rating'] ?> out of 5 stars"><?= str_repeat('★', (int) $myRating['rating']) ?><span class="stars-off"><?= str_repeat('★', 5 - (int) $myRating['rating']) ?></span></span>
+                            <?php if (! empty($myRating['feedback'])): ?><small>“<?= esc($myRating['feedback']) ?>”</small><?php endif; ?>
+                        </p>
+                    </section>
+                    <?php else: ?>
                     <section class="next-step tone-<?= esc($next['tone'], 'attr') ?>" aria-labelledby="nextHeading">
                         <?= icon($toneIcon) ?>
                         <h2 id="nextHeading"><?= esc($next['title']) ?></h2>
@@ -79,8 +94,8 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
                                 </a>
                             <?php endif; ?>
 
-                            <?php if ($status === 'delivered' && ($isRequester || $isRunner)): ?>
-                                <a href="<?= base_url('users/' . (int) ($isRequester ? ($runner['id'] ?? 0) : $request['user_id'])) ?>" class="btn btn-secondary"><?= icon('star') ?> Rate <?= $isRequester ? 'runner' : 'requester' ?></a>
+                            <?php if ($canRate): ?>
+                                <button type="button" class="btn btn-primary" data-open-dialog="rateDialog"><?= icon('star') ?> Rate <?= $otherRole ?></button>
                             <?php endif; ?>
 
                             <?php if ($canCancel): ?>
@@ -95,6 +110,7 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
                             </p>
                         <?php endif; ?>
                     </section>
+                    <?php endif; ?>
 
                     <section class="card" aria-labelledby="itemHeading">
                         <div class="card-head"><h2 id="itemHeading"><?= icon('package') ?> Details</h2></div>
@@ -214,6 +230,36 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
         <div class="pb-dialog-actions">
             <button type="button" class="btn btn-secondary" data-close-dialog>Keep request</button>
             <button type="submit" class="btn btn-danger-solid btn" data-busy-label="Cancelling…"><?= icon('x-circle') ?> Yes, cancel it</button>
+        </div>
+    </form>
+</dialog>
+<?php endif; ?>
+
+<?php if ($canRate): ?>
+<dialog class="pb-dialog" id="rateDialog" aria-labelledby="rateTitle"<?= old('rating') !== null ? ' data-autopen' : '' ?>>
+    <div class="pb-dialog-head">
+        <div>
+            <h2 id="rateTitle">Rate <?= esc(trim($otherParty['first_name'] . ' ' . $otherParty['last_name'])) ?></h2>
+            <p>How did this delivery go? Each errand gets its own rating, and they add up on <?= esc($otherParty['first_name']) ?>'s profile. You can rate this delivery once.</p>
+        </div>
+        <button type="button" class="pb-dialog-close" data-close-dialog aria-label="Close">&times;</button>
+    </div>
+    <form action="<?= base_url('request/' . $requestId . '/rate') ?>" method="post" data-submit-once>
+        <?= csrf_field() ?>
+        <fieldset class="star-input">
+            <legend class="visually-hidden">Rating</legend>
+            <?php foreach ([5 => 'Excellent', 4 => 'Very good', 3 => 'Good', 2 => 'Fair', 1 => 'Poor'] as $value => $label): ?>
+                <input type="radio" id="star<?= $value ?>" name="rating" value="<?= $value ?>" required<?= (string) old('rating') === (string) $value ? ' checked' : '' ?>>
+                <label for="star<?= $value ?>" title="<?= $label ?>">★<span class="visually-hidden"> <?= $value ?> star<?= $value > 1 ? 's' : '' ?>, <?= $label ?></span></label>
+            <?php endforeach; ?>
+        </fieldset>
+        <div class="form-group">
+            <label for="feedback">Feedback <span class="text-muted">(optional)</span></label>
+            <textarea id="feedback" name="feedback" rows="3" maxlength="1000" placeholder="Fast, careful with the items, friendly…"><?= esc((string) old('feedback')) ?></textarea>
+        </div>
+        <div class="pb-dialog-actions">
+            <button type="button" class="btn btn-secondary" data-close-dialog>Not now</button>
+            <button type="submit" class="btn btn-primary" data-busy-label="Saving…"><?= icon('star') ?> Submit rating</button>
         </div>
     </form>
 </dialog>
