@@ -24,7 +24,8 @@
 
         <form action="<?= base_url('logout') ?>" method="post" class="side-logout">
             <?= csrf_field() ?>
-            <button type="submit" class="side-link side-link-danger"><?= icon('logout') ?><span>Log out</span></button>
+            <button type="submit" class="side-link side-link-danger" data-open-dialog="logoutDialog"><?= icon('logout') ?><span>Log out</span></button>
         </form>
     </nav>
 </aside>
+<?= $this->include('includes/logout_dialog') ?>

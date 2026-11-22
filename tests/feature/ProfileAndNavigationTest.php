@@ -192,6 +192,20 @@ final class ProfileAndNavigationTest extends FeatureTestCase
         $this->assertStringNotContainsString('class="req-card"', $row, 'Finished requests are not full cards.');
     }
 
+    public function testLogOutAsksForConfirmationFirst(): void
+    {
+        $user = $this->createUser();
+
+        $page = $this->getAs($user, 'dashboard');
+
+        $page->assertSee('data-open-dialog="logoutDialog"', null);
+        $page->assertSee('id="logoutDialog"', null);
+        $page->assertSee('Log out of Pasa-Buy?');
+        $page->assertSee('Stay signed in');
+
+        $this->getAs($this->createUser(['role' => 'admin']), 'admin/dashboard', 'admin')->assertSee('id="logoutDialog"', null);
+    }
+
     public function testNavigationShowsGroupedMenuAndBreadcrumbs(): void
     {
         $user = $this->createUser();
