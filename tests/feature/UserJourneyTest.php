@@ -86,6 +86,23 @@ final class UserJourneyTest extends FeatureTestCase
         $report->assertSee('all balances match their ledgers');
     }
 
+    public function testPostRequestPrefillsDeliveryDetailsButKeepsThemEditable(): void
+    {
+        $user = $this->createUser(['address' => 'Purok 5, Barangay Mabini', 'phone_number' => '09175551234']);
+
+        $form = $this->getAs($user, 'post-request');
+        $form->assertSee('value="Purok 5, Barangay Mabini"', null);
+        $form->assertSee('value="09175551234"', null);
+        $form->assertSee('From your profile');
+        $form->assertDontSee('id="delivery_address" readonly', null);
+
+        // A different address typed in for this request is the one saved.
+        $this->postAs($user, 'request/process', $this->requestForm(['delivery_address' => 'Office, 2nd floor', 'contact_number' => '09170001111']));
+        $row = $this->db->table('requests')->where('user_id', $user)->get()->getRowArray();
+        $this->assertSame('Office, 2nd floor', $row['delivery_address']);
+        $this->assertSame('Purok 5, Barangay Mabini', $this->db->table('users')->where('id', $user)->get()->getRow()->address, 'The profile itself is unchanged.');
+    }
+
     public function testCashOnDeliveryJourney(): void
     {
         $requester = $this->createUser();

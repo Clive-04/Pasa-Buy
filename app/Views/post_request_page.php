@@ -104,20 +104,20 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                             </fieldset>
 
                             <fieldset class="form-section">
-                                <legend><h2><?= icon('map-pin') ?> Where to deliver</h2></legend>
+                                <legend><h2><?= icon('map-pin') ?> Where to deliver<?php if (! empty($me['address']) || ! empty($me['phone_number'])): ?> <span class="chip legend-chip"><?= icon('user') ?> From your profile</span><?php endif; ?></h2></legend>
 
                                 <div class="form-grid">
                                     <div class="form-group full-width">
                                         <label for="delivery_address">Delivery Address / Barangay <span class="required-mark">*</span></label>
                                         <input type="text" id="delivery_address" name="delivery_address" placeholder="Where should the runner deliver?" maxlength="500" required autocomplete="street-address"
-                                               value="<?= esc(form_value('delivery_address')) ?>"<?= field_invalid_attrs('delivery_address') ?>>
-                                        <?= field_error('delivery_address') ?: '<p class="field-hint">Shown only to the runner who accepts your request.</p>' ?>
+                                               value="<?= esc(form_value('delivery_address', $me['address'] ?? '')) ?>"<?= field_invalid_attrs('delivery_address') ?>>
+                                        <?= field_error('delivery_address') ?>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="contact_number">Contact Number <span class="required-mark">*</span></label>
                                         <input type="tel" id="contact_number" name="contact_number" placeholder="09171234567" inputmode="tel" maxlength="16" required autocomplete="tel"
-                                               value="<?= esc(form_value('contact_number')) ?>"<?= field_invalid_attrs('contact_number') ?>>
+                                               value="<?= esc(form_value('contact_number', $me['phone_number'] ?? '')) ?>"<?= field_invalid_attrs('contact_number') ?>>
                                         <?= field_error('contact_number') ?>
                                     </div>
 
@@ -151,7 +151,7 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                                         <label for="service_fee">Service Fee Offer (₱) <span class="required-mark">*</span></label>
                                         <input type="number" id="service_fee" name="service_fee" step="0.01" min="0" max="10000" inputmode="decimal" placeholder="0.00" required
                                                value="<?= esc(form_value('service_fee')) ?>"<?= field_invalid_attrs('service_fee') ?>>
-                                        <?= field_error('service_fee') ?: '<p class="field-hint">What you pay the runner for the errand.</p>' ?>
+                                        <?= field_error('service_fee') ?>
                                     </div>
 
                                     <div class="form-group">
@@ -208,7 +208,6 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                         </div>
 
                         </div>
-                        <p class="tip"><?= icon('info') ?> <span><strong>Tip:</strong> be specific with brand, size and a landmark so nearby runners accept faster.</span></p>
                     </aside>
                 </div>
             </div>

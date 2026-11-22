@@ -33,9 +33,8 @@ $ratingNow = (string) (old('rating') ?? ($myWebsiteRating['rating'] ?? ''));
         </div>
 
         <div class="form-group">
-            <label>Email address</label>
+            <label>Email address <span class="text-muted">(used to log in, can't be changed)</span></label>
             <div class="readonly-field"><?= icon('lock') ?> <?= esc($user['email'] ?? '') ?></div>
-            <p class="field-hint">Your email is used to log in, so it can't be changed here.</p>
         </div>
 
         <div class="form-grid-2">
@@ -50,7 +49,7 @@ $ratingNow = (string) (old('rating') ?? ($myWebsiteRating['rating'] ?? ''));
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" maxlength="100" autocomplete="username" placeholder="e.g. maria.santos"
                        value="<?= esc(form_value('username', $user['username'] ?? '')) ?>"<?= field_invalid_attrs('username') ?>>
-                <?= field_error('username') ?: '<p class="field-hint">Helps people find you in search.</p>' ?>
+                <?= field_error('username') ?>
             </div>
         </div>
 

@@ -24,6 +24,8 @@ class Request extends BaseController
             'title'           => 'Post Request | Pasa-Buy',
             'categories'      => RequestLifecycle::CATEGORIES,
             'platformFeeRate' => FeePolicy::PLATFORM_FEE_BASIS_POINTS / 100,
+            // Prefills "Where to deliver"; the user can change it per request.
+            'me'              => (new UserModel())->select('address, phone_number')->find($this->currentUserId()),
         ]);
     }
 

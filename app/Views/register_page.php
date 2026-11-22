@@ -65,7 +65,7 @@
                         <label for="password">Password</label>
                         <input type="password" id="password" name="password" placeholder="At least 8 characters"
                                autocomplete="new-password" minlength="8" required<?= field_invalid_attrs('password') ?>>
-                        <?= field_error('password') ?: '<p class="field-hint">Use at least 8 characters.</p>' ?>
+                        <?= field_error('password') ?>
                     </div>
 
                     <div class="form-group">
