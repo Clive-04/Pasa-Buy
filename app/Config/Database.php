@@ -54,15 +54,18 @@ class Database extends Config
     ];
 
     /**
-     * Schema-migration connection: same database as `default`, but with a
-     * user that may CREATE/ALTER. Supply its credentials ONLY when running
-     * migrations, as process environment variables (never in .env, which
-     * the web application can read):
+     * Schema-migration credentials: same database as `default`, but a user
+     * that may CREATE/ALTER. Supply them ONLY for the migration command, as
+     * process environment variables (never in .env, which the web
+     * application can read):
      *
      *   database_migrate_username=... database_migrate_password=... \
-     *     php spark migrate --all -g migrate
+     *     php spark migrate --all
      *
-     * Any value left empty falls back to the `default` connection.
+     * When a username is supplied to a CLI process, the `default`
+     * connection uses these credentials for that process only (spark's
+     * MigrationRunner always runs on the default connection; `-g` only
+     * labels history). Empty values fall back to `default`.
      *
      * @var array<string, mixed>
      */
@@ -220,10 +223,16 @@ class Database extends Config
     {
         parent::__construct();
 
+        $migratorSupplied = ($this->migrate['username'] ?? '') !== '';
+
         $this->migrate = array_merge(
             $this->default,
             array_filter($this->migrate, static fn ($value): bool => $value !== '' && $value !== null),
         );
+
+        if ($migratorSupplied && is_cli() && ENVIRONMENT !== 'testing') {
+            $this->default = $this->migrate;
+        }
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
