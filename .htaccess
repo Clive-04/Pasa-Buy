@@ -1,0 +1,28 @@
+# ----------------------------------------------------------------------
+# LOCAL DEVELOPMENT SHIM ONLY
+# ----------------------------------------------------------------------
+# XAMPP serves this folder at http://localhost/Pasa-Buy-Project/, so the
+# project root is reachable. This file forwards every request into
+# public/ so nothing outside public/ (.env, app/, vendor/, writable/,
+# composer.json, backups...) can be fetched directly.
+#
+# Staging and production MUST set the web server DocumentRoot to the
+# public/ directory instead of relying on this file. See DEPLOYMENT.md.
+# ----------------------------------------------------------------------
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+
+	# Requests already inside public/ are handled by public/.htaccess.
+	RewriteRule ^public/ - [L]
+
+	# Everything else is served from public/ (or routed to its index.php).
+	RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Without mod_rewrite, refuse to serve the project root at all.
+<IfModule !mod_rewrite.c>
+	Require all denied
+</IfModule>

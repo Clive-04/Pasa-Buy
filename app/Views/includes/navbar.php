@@ -21,7 +21,7 @@ if ($isLoggedIn) {
         </button>
 
         <a href="<?= $homeLink ?>" class="logo">
-            <img src="<?= base_url('public/img/logo.PNG') ?>" alt="Pasa-Buy Logo" class="logo-img">
+            <img src="<?= base_url('img/logo.PNG') ?>" alt="Pasa-Buy Logo" class="logo-img">
             <span class="logo-text">Pasa-Buy</span>
         </a>
     </div>

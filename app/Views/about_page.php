@@ -19,7 +19,7 @@
             <div class="team-grid">
                 <div class="team-card">
                     <div class="team-image">
-                        <img src="<?= base_url('public/img/team/reniedo.png') ?>" alt="Bea Nicole Reniedo">
+                        <img src="<?= base_url('img/team/reniedo.png') ?>" alt="Bea Nicole Reniedo">
                     </div>
                     <h3>Bea Nicole Reniedo</h3>
                     <span class="team-role">Project Lead</span>
@@ -28,7 +28,7 @@
 
                 <div class="team-card">
                     <div class="team-image">
-                        <img src="<?= base_url('public/img/team/luce.jpg') ?>" alt="Alexa May Cy Luce">
+                        <img src="<?= base_url('img/team/luce.jpg') ?>" alt="Alexa May Cy Luce">
                     </div>
                     <h3>Alexa May "Cy" Luce</h3>
                     <span class="team-role">Market & Operations Strategist</span>
@@ -37,7 +37,7 @@
 
                 <div class="team-card">
                     <div class="team-image">
-                        <img src="<?= base_url('public/img/team/sales.jpg') ?>" alt="Marjhelly P. Sales">
+                        <img src="<?= base_url('img/team/sales.jpg') ?>" alt="Marjhelly P. Sales">
                     </div>
                     <h3>Marjhelly P. Sales</h3>
                     <span class="team-role">User Experience & Design Specialist</span>
