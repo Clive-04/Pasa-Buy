@@ -53,6 +53,27 @@ class Database extends Config
         ],
     ];
 
+    /**
+     * Schema-migration connection: same database as `default`, but with a
+     * user that may CREATE/ALTER. Supply its credentials ONLY when running
+     * migrations, as process environment variables (never in .env, which
+     * the web application can read):
+     *
+     *   database_migrate_username=... database_migrate_password=... \
+     *     php spark migrate --all -g migrate
+     *
+     * Any value left empty falls back to the `default` connection.
+     *
+     * @var array<string, mixed>
+     */
+    public array $migrate = [
+        'hostname' => '',
+        'username' => '',
+        'password' => '',
+        'database' => '',
+        'port'     => '',
+    ];
+
     //    /**
     //     * Sample database connection for SQLite3.
     //     *
@@ -198,6 +219,11 @@ class Database extends Config
     public function __construct()
     {
         parent::__construct();
+
+        $this->migrate = array_merge(
+            $this->default,
+            array_filter($this->migrate, static fn ($value): bool => $value !== '' && $value !== null),
+        );
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
