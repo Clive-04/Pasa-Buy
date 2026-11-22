@@ -39,7 +39,9 @@ class Database extends Config
         'swapPre'      => '',
         'encrypt'      => false,
         'compress'     => false,
-        'strictOn'     => false,
+        // Strict mode makes MySQL reject invalid enum values, truncation and
+        // out-of-range money instead of silently storing '' or clipped values.
+        'strictOn'     => true,
         'failover'     => [],
         'port'         => 3306,
         'numberNative' => false,
@@ -163,27 +165,30 @@ class Database extends Config
      * @var array<string, mixed>
      */
     public array $tests = [
-        'DSN'         => '',
-        'hostname'    => '127.0.0.1',
-        'username'    => '',
-        'password'    => '',
-        'database'    => ':memory:',
-        'DBDriver'    => 'SQLite3',
-        'DBPrefix'    => 'db_',  // Needed to ensure we're working correctly with prefixes live. DO NOT REMOVE FOR CI DEVS
-        'pConnect'    => false,
-        'DBDebug'     => true,
-        'charset'     => 'utf8',
-        'DBCollat'    => '',
-        'swapPre'     => '',
-        'encrypt'     => false,
-        'compress'    => false,
-        'strictOn'    => false,
-        'failover'    => [],
-        'port'        => 3306,
-        'foreignKeys' => true,
-        'busyTimeout' => 1000,
-        'synchronous' => null,
-        'dateFormat'  => [
+        // Tests run against a real MySQL/MariaDB database (never SQLite) so
+        // that row locks, transactions and constraints behave as in
+        // production. Override with database.tests.* in .env / phpunit.xml.
+        // The database named here is TRUNCATED by the test suite.
+        'DSN'          => '',
+        'hostname'     => '127.0.0.1',
+        'username'     => 'root',
+        'password'     => '',
+        'database'     => 'pasa_buy_test',
+        'DBDriver'     => 'MySQLi',
+        'DBPrefix'     => '',
+        'pConnect'     => false,
+        'DBDebug'      => true,
+        'charset'      => 'utf8mb4',
+        'DBCollat'     => 'utf8mb4_general_ci',
+        'swapPre'      => '',
+        'encrypt'      => false,
+        'compress'     => false,
+        'strictOn'     => true,
+        'failover'     => [],
+        'port'         => 3306,
+        'numberNative' => false,
+        'foundRows'    => false,
+        'dateFormat'   => [
             'date'     => 'Y-m-d',
             'datetime' => 'Y-m-d H:i:s',
             'time'     => 'H:i:s',
