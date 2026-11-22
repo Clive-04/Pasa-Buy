@@ -20,20 +20,20 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
 
             <?= $this->include('includes/flash') ?>
 
-            <section class="profile-hero" aria-label="Profile summary">
+            <section class="hero-card profile-hero" aria-label="Profile summary">
                 <?= avatar($user, 'lg') ?>
                 <div class="profile-hero-text">
                     <h2 class="profile-name"><?= esc($fullName) ?></h2>
                     <p class="handle"><?= ! empty($user['username']) ? '@' . esc($user['username']) : 'No username yet' ?></p>
                     <div class="chips">
-                        <span class="chip"><?= icon('calendar') ?> Member since <?= esc(date('F Y', strtotime($user['created_at']))) ?></span>
-                        <span class="chip"><?= icon('star') ?>
+                        <span class="chip chip-on-hero"><?= icon('calendar') ?> Member since <?= esc(date('F Y', strtotime($user['created_at']))) ?></span>
+                        <span class="chip chip-on-hero"><?= icon('star') ?>
                             <?= $rating !== null ? esc(number_format($rating, 1)) . ' from ' . (int) $ratingCount . ' rating' . ($ratingCount === 1 ? '' : 's') : 'No ratings yet' ?>
                         </span>
-                        <span class="chip"><?= icon('shield') ?> <?= ($user['role'] ?? 'user') === 'admin' ? 'Administrator' : 'Community member' ?></span>
+                        <span class="chip chip-on-hero"><?= icon('shield') ?> <?= ($user['role'] ?? 'user') === 'admin' ? 'Administrator' : 'Community member' ?></span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-primary" data-open-dialog="editProfileModal"><?= icon('edit') ?> Edit profile</button>
+                <button type="button" class="btn btn-mint" data-open-dialog="editProfileModal"><?= icon('edit') ?> Edit profile</button>
             </section>
 
             <div class="profile-grid">
@@ -99,7 +99,7 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
                             <a href="<?= base_url('accepted-requests') ?>" class="mini-stat"><strong><?= (int) $acceptedRequests ?></strong><span>Errands accepted</span></a>
                             <a href="<?= base_url('accepted-requests?status=delivered') ?>" class="mini-stat"><strong><?= (int) $deliveredRequests ?></strong><span>Delivered</span></a>
                         </div>
-                        <a href="<?= base_url('wallet') ?>" class="side-balance" style="margin-top:12px;">
+                        <a href="<?= base_url('wallet') ?>" class="side-balance" style="margin:12px 0 0;">
                             <span><?= icon('wallet') ?> <?= is_demo_mode() ? 'Demo wallet balance' : 'Wallet balance' ?></span>
                             <strong><?= money($user['wallet_balance']) ?></strong>
                         </a>

@@ -11,10 +11,7 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
         <a href="<?= $homeLink ?>" class="icon-btn topbar-menu" data-open-sidebar aria-label="Open menu" aria-controls="dashboardSidebar" aria-expanded="false">
             <?= icon('menu') ?>
         </a>
-        <a href="<?= $homeLink ?>" class="topbar-brand" aria-label="Pasa-Buy home">
-            <img src="<?= base_url('img/logo.PNG') ?>" alt="" class="logo-img">
-            <span>Pasa-Buy</span>
-        </a>
+        <?= brand_mark($homeLink) ?>
     </div>
 
     <?php if (! $isAdmin): ?>
@@ -28,9 +25,7 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
 
     <nav class="topbar-actions" aria-label="Shortcuts">
         <?php if (! $isAdmin): ?>
-            <a href="<?= base_url('users/search') ?>" class="icon-btn topbar-search-link" aria-label="Search people" title="Search people">
-                <?= icon('search') ?>
-            </a>
+            <a href="<?= base_url('users/search') ?>" class="icon-btn topbar-search-link" aria-label="Search people" title="Search people"><?= icon('search') ?></a>
             <a href="<?= base_url('messages') ?>" class="icon-btn<?= nav_attrs('messages') ?>" title="Messages">
                 <?= icon('message') ?><span class="visually-hidden">Messages</span>
                 <?= unread_badge('messages', 'badge badge-dot') ?>
@@ -40,8 +35,9 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
                 <?= unread_badge('notifications', 'badge badge-dot') ?>
             </a>
         <?php endif; ?>
+        <?= theme_toggle() ?>
 
-        <a href="<?= base_url($isAdmin ? 'admin/dashboard' : 'profile') ?>" class="topbar-user<?= nav_attrs('profile') ?>" title="<?= $isAdmin ? 'Admin dashboard' : 'Your profile' ?>">
+        <a href="<?= base_url($isAdmin ? 'admin/dashboard' : 'profile') ?>" class="topbar-user<?= nav_attrs('profile') ?>" title="<?= $isAdmin ? 'Admin overview' : 'Your profile' ?>">
             <?= avatar($me, 'sm') ?>
             <span class="topbar-user-name">
                 <?= esc($me['first_name']) ?>
@@ -51,32 +47,23 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
     </nav>
 </header>
 <?php else: ?>
-<header>
-<nav class="navbar" aria-label="Main">
-    <div class="nav-left">
-        <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navMenu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
+<header class="site-header">
+    <?= brand_mark(base_url('login')) ?>
 
-        <a href="<?= $homeLink ?>" class="logo">
-            <img src="<?= base_url('img/logo.PNG') ?>" alt="" class="logo-img">
-            <span class="logo-text">Pasa-Buy</span>
-        </a>
-    </div>
-
-    <div class="nav-center nav-menu" id="navMenu">
-        <?php foreach (['login' => 'Home', 'about' => 'About', 'contact' => 'Contact'] as $path => $label): ?>
-            <?php $active = $current === $path || ($path === 'login' && $current === ''); ?>
-            <a href="<?= base_url($path) ?>" class="nav-link <?= $active ? 'active' : '' ?>"<?= $active ? ' aria-current="page"' : '' ?>><?= $label ?></a>
+    <nav class="site-nav" aria-label="Main">
+        <?php foreach (['about' => 'About', 'contact' => 'Contact'] as $path => $label): ?>
+            <a href="<?= base_url($path) ?>"<?= $current === $path ? ' aria-current="page"' : '' ?>><?= $label ?></a>
         <?php endforeach; ?>
-    </div>
+    </nav>
 
-    <div class="nav-right nav-actions">
-        <a href="<?= base_url('login') ?>" class="nav-login">Log in</a>
-        <a href="<?= base_url('register') ?>" class="nav-signup">Sign up</a>
+    <div class="site-actions">
+        <?= theme_toggle() ?>
+        <?php if ($current !== 'login' && $current !== ''): ?>
+            <a href="<?= base_url('login') ?>" class="btn btn-ghost btn-sm">Log in</a>
+        <?php endif; ?>
+        <?php if ($current !== 'register'): ?>
+            <a href="<?= base_url('register') ?>" class="btn btn-primary btn-sm">Sign up</a>
+        <?php endif; ?>
     </div>
-</nav>
 </header>
 <?php endif; ?>

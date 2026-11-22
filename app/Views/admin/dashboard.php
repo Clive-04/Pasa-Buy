@@ -6,12 +6,12 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
     && in_array($r['payment_status'], ['unpaid', 'cod_pending'], true);
 ?>
 
-<main class="dashboard-page admin-page" id="main-content">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
 
         <?= $this->include('includes/admin_sidebar') ?>
 
-        <section class="dashboard-main" style="width: 100%;">
+        <section class="dashboard-main">
             <?= page_header([
                 'eyebrow' => 'Administrator',
                 'title'   => 'Admin overview',
@@ -20,33 +20,33 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
 
             <?= $this->include('includes/flash') ?>
 
-            <div class="dashboard-stats">
-                <div class="stat-box">
-                    <span class="stat-label">Platform Fees Collected</span>
-                    <h2><?= money_cents($collectedCents) ?></h2>
+            <div class="stat-grid">
+                <div class="stat">
+                    <span class="label"><?= icon('cash') ?> Platform fees collected</span>
+                    <div class="value"><?= money_cents($collectedCents) ?></div>
                     <p><?= (int) $collectedEntries ?> fee entr<?= $collectedEntries === 1 ? 'y' : 'ies' ?> in the ledger (10% of service fees)</p>
                 </div>
 
-                <div class="stat-box">
-                    <span class="stat-label">Fee Reconciliation</span>
+                <div class="stat">
+                    <span class="label"><?= icon('shield') ?> Fee reconciliation</span>
                     <?php if ($difference === 0): ?>
-                        <h2 class="reconcile-ok">Balanced</h2>
+                        <div class="value reconcile-ok">Balanced</div>
                         <p>Ledger matches the fees of all settled requests (<?= money_cents($expectedCents) ?>).</p>
                     <?php else: ?>
-                        <h2 class="reconcile-warn"><?= money_cents(abs($difference)) ?> <?= $difference > 0 ? 'over' : 'short' ?></h2>
+                        <div class="value reconcile-warn"><?= money_cents(abs($difference)) ?> <?= $difference > 0 ? 'over' : 'short' ?></div>
                         <p>Settled requests expect <?= money_cents($expectedCents) ?>. Investigate before reporting.</p>
                     <?php endif; ?>
                 </div>
 
-                <div class="stat-box">
-                    <span class="stat-label">Ongoing Requests</span>
-                    <h2><?= (int) $ongoingCount ?></h2>
-                    <p><?= (int) $counts['pending'] ?> pending • <?= (int) $counts['accepted'] ?> accepted • <?= (int) $counts['on_the_way'] ?> on the way</p>
+                <div class="stat">
+                    <span class="label"><?= icon('clock') ?> Ongoing requests</span>
+                    <div class="value"><?= (int) $ongoingCount ?></div>
+                    <p><?= (int) $counts['pending'] ?> pending · <?= (int) $counts['accepted'] ?> accepted · <?= (int) $counts['on_the_way'] ?> on the way</p>
                 </div>
 
-                <div class="stat-box">
-                    <span class="stat-label">Completed / Cancelled</span>
-                    <h2><?= (int) $counts['delivered'] ?> / <?= (int) $counts['cancelled'] ?></h2>
+                <div class="stat">
+                    <span class="label"><?= icon('check-circle') ?> Completed / cancelled</span>
+                    <div class="value"><?= (int) $counts['delivered'] ?> / <?= (int) $counts['cancelled'] ?></div>
                     <p>
                         Wallet check:
                         <?= $ledgerMismatches === 0
@@ -56,8 +56,8 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
                 </div>
             </div>
 
-            <div class="dashboard-card">
-                <div class="card-header">
+            <section class="card">
+                <div class="card-head">
                     <h2><?= icon($tab === 'delivered' ? 'check-circle' : 'clock') ?> <?= $tab === 'delivered' ? 'Delivered requests' : 'Ongoing requests' ?></h2>
                     <nav class="request-tabs" aria-label="Request list">
                         <a href="<?= base_url('admin/dashboard') ?>" class="tab-btn <?= $tab === 'ongoing' ? 'active' : '' ?>"<?= $tab === 'ongoing' ? ' aria-current="page"' : '' ?>>Ongoing (<?= (int) $ongoingCount ?>)</a>
@@ -108,7 +108,7 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
                         <p><?= $tab === 'delivered' ? 'No completed deliveries yet.' : 'No ongoing requests.' ?></p>
                     </div>
                 <?php endif; ?>
-            </div>
+            </section>
 
         </section>
     </div>
@@ -125,7 +125,7 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
     <form method="post" data-dynamic-action data-submit-once>
         <?= csrf_field() ?>
         <div class="pb-dialog-actions">
-            <button type="button" class="btn-light" data-close-dialog>Keep</button>
+            <button type="button" class="btn btn-secondary" data-close-dialog>Keep</button>
             <button type="submit" class="btn btn-danger-solid" data-busy-label="Cancelling…">Yes, cancel it</button>
         </div>
     </form>

@@ -1,73 +1,50 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 
-<main class="auth-page" id="main-content">
-    <section class="auth-section">
-        <div class="auth-container login-layout">
-            <div class="auth-visual">
-                <div class="visual-overlay"></div>
-                <div class="visual-content">
-                    <span class="visual-badge">Welcome Back</span>
-                    <h1>Login to Pasa-Buy</h1>
-                    <p>
-                        Access your requests, track deliveries, contact users,
-                        and manage your local errands in one place.
-                    </p>
-
-                    <div class="visual-features">
-                        <div class="visual-feature-card">
-                            <h3>Track Requests</h3>
-                            <p>Follow each request from accepted to delivered.</p>
-                        </div>
-                        <div class="visual-feature-card">
-                            <h3>Message Other Users</h3>
-                            <p>Stay connected for faster coordination.</p>
-                        </div>
-                        <div class="visual-feature-card">
-                            <h3><?= is_demo_mode() ? 'Demo Wallet' : 'Wallet' ?></h3>
-                            <p><?= is_demo_mode() ? 'Try payments with simulated credits. No real money is used.' : 'Pay runners from your wallet balance.' ?></p>
-                        </div>
-                    </div>
-                </div>
+<main class="site-main" id="main-content">
+    <div class="auth">
+        <section class="hero-card auth-aside" aria-labelledby="loginHeroTitle">
+            <div>
+                <p class="eyebrow" style="background: rgba(255,255,255,.12); color: var(--mint);">Welcome back</p>
+                <h1 id="loginHeroTitle">Errands done by <em>your neighbours</em>.</h1>
+                <p class="lead">Post what you need from a nearby store, or earn by delivering for people in your community.</p>
             </div>
+            <ul class="feature-list">
+                <li><span class="feature-icon"><?= icon('package') ?></span><div><strong>Post a request</strong><span>Item, store and where to bring it — that's it.</span></div></li>
+                <li><span class="feature-icon"><?= icon('truck') ?></span><div><strong>Track every step</strong><span>Accepted, on the way, delivered — with updates.</span></div></li>
+                <li><span class="feature-icon"><?= icon('wallet') ?></span><div><strong><?= is_demo_mode() ? 'Demo wallet' : 'Wallet' ?></strong><span><?= is_demo_mode() ? 'Try payments with simulated credits. No real money.' : 'Pay runners from your wallet balance.' ?></span></div></li>
+            </ul>
+        </section>
 
-            <div class="auth-form-side">
-                <div class="auth-card">
-                    <div class="auth-header">
-                        <h2>Sign In</h2>
-                        <p>Enter your account details to continue.</p>
-                    </div>
+        <section class="card auth-card" aria-labelledby="loginTitle">
+            <h2 id="loginTitle">Log in</h2>
+            <p class="lead">Enter your account details to continue.</p>
 
-                    <?= $this->include('includes/flash') ?>
+            <?= $this->include('includes/flash') ?>
 
-                    <form action="<?= base_url('login/process') ?>" method="post" class="auth-form" data-submit-once>
-                        <?= csrf_field() ?>
+            <form action="<?= base_url('login/process') ?>" method="post" data-submit-once style="margin-top: var(--sp-4);">
+                <?= csrf_field() ?>
 
-                        <div class="form-group">
-                            <label for="email">Email Address</label>
-                            <input type="email" id="email" name="email" placeholder="Enter your email"
-                                   value="<?= esc(form_value('email')) ?>" autocomplete="email" maxlength="50" required
-                                   <?= form_value('email') === '' ? 'autofocus' : '' ?>>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" name="password" placeholder="Enter your password"
-                                   autocomplete="current-password" required
-                                   <?= form_value('email') !== '' ? 'autofocus' : '' ?>>
-                        </div>
-
-                        <button type="submit" class="auth-btn primary-btn" data-busy-label="Signing in…">Login</button>
-
-                        <p class="auth-footer-text">
-                            Don’t have an account?
-                            <a href="<?= base_url('register') ?>">Register here</a>
-                        </p>
-                    </form>
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com"
+                           value="<?= esc(form_value('email')) ?>" autocomplete="email" maxlength="50" required
+                           <?= form_value('email') === '' ? 'autofocus' : '' ?>>
                 </div>
-            </div>
-        </div>
-    </section>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Your password"
+                           autocomplete="current-password" required
+                           <?= form_value('email') !== '' ? 'autofocus' : '' ?>>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-block" data-busy-label="Logging in…"><?= icon('arrow-right') ?> Log in</button>
+            </form>
+
+            <p class="auth-switch">New to Pasa-Buy? <a class="link" href="<?= base_url('register') ?>">Create an account</a></p>
+        </section>
+    </div>
 </main>
 
 <?= $this->include('includes/footer') ?>

@@ -169,7 +169,46 @@
         });
     }
 
+    // ------------------------------------------------------------- theme
+    function initThemeToggle() {
+        var root = document.documentElement;
+        var media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+        function effective() {
+            var chosen = root.getAttribute('data-theme');
+            if (chosen === 'light' || chosen === 'dark') {
+                return chosen;
+            }
+            return media && media.matches ? 'dark' : 'light';
+        }
+
+        function sync() {
+            var dark = effective() === 'dark';
+            document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+                button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+                button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+                button.setAttribute('title', dark ? 'Switch to light mode' : 'Switch to dark mode');
+            });
+        }
+
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('[data-theme-toggle]')) {
+                return;
+            }
+            var next = effective() === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', next);
+            try { localStorage.setItem('pasabuy-theme', next); } catch (e) { /* private mode: still works for this page */ }
+            sync();
+        });
+
+        if (media && media.addEventListener) {
+            media.addEventListener('change', sync);
+        }
+        sync();
+    }
+
     ready(function () {
+        initThemeToggle();
         initFlash();
         initDialogs();
         initSubmitOnce();

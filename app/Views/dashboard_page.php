@@ -12,15 +12,19 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good
         <section class="dashboard-main">
             <?= $this->include('includes/flash') ?>
 
-            <div class="welcome">
-                <div>
-                    <h1><?= $greeting ?>, <?= esc($me['first_name'] ?? 'there') ?></h1>
+            <section class="hero-card welcome" aria-label="Welcome">
+                <div style="position:relative; z-index:1;">
+                    <h1><?= $greeting ?>, <?= esc($me['first_name'] ?? 'there') ?> <span class="wave" aria-hidden="true">●</span></h1>
                     <p><?= esc(date('l, F j')) ?> · Here's what's happening with your errands.</p>
                 </div>
-            </div>
+                <div class="welcome-actions">
+                    <a href="<?= base_url('post-request') ?>" class="btn btn-mint"><?= icon('plus') ?> Post a request</a>
+                    <a href="<?= base_url('browse-requests') ?>" class="btn btn-light-on-hero"><?= icon('search') ?> Find requests</a>
+                </div>
+            </section>
 
             <?php if (! empty($attention)): ?>
-                <section class="card" aria-labelledby="attentionHeading" style="margin-bottom: var(--sp-5);">
+                <section class="card" aria-labelledby="attentionHeading">
                     <div class="card-head">
                         <h2 id="attentionHeading"><?= icon('bell') ?> Needs your attention</h2>
                     </div>
@@ -138,7 +142,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good
                 </section>
             </div>
 
-            <section class="card" aria-labelledby="activityHeading" style="margin-top: var(--sp-4);">
+            <section class="card" aria-labelledby="activityHeading">
                 <div class="card-head">
                     <h2 id="activityHeading"><?= icon('bell') ?> Recent updates</h2>
                     <a href="<?= base_url('notifications') ?>" class="link">All notifications <?= icon('chevron') ?></a>

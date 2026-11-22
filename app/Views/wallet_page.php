@@ -7,35 +7,32 @@
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
-            <div class="request-content-panel">
-                <?= page_header([
-                    'crumbs'  => [['Dashboard', 'dashboard'], ['Wallet', null]],
-                    'eyebrow' => is_demo_mode() ? 'Demo funds' : 'Funds',
-                    'title'   => 'My wallet',
-                    'lead'    => 'Your balance and every movement in and out of it. Requesters pay runners from here; runners receive their earnings here.',
-                    'actions' => is_demo_mode() ? '<button type="button" class="btn btn-primary" data-open-dialog="topUpDialog">' . icon('plus') . ' Add demo credits</button>' : '',
-                ]) ?>
+            <?= page_header([
+                'crumbs'  => [['Dashboard', 'dashboard'], ['Wallet', null]],
+                'eyebrow' => is_demo_mode() ? 'Demo funds' : 'Funds',
+                'title'   => 'My wallet',
+                'lead'    => 'Requesters pay runners from here, and runners receive their earnings here.',
+            ]) ?>
 
-                <?= $this->include('includes/flash') ?>
+            <?= $this->include('includes/flash') ?>
 
-                <?php if (is_demo_mode()): ?>
-                    <p class="flash flash-warn" role="note">
-                        This is a demo. Wallet credits are simulated and cannot be withdrawn, and no GCash, Maya or bank payment is involved.
-                    </p>
-                <?php endif; ?>
-
-                <div class="dashboard-stats" style="margin-bottom:24px;">
-                    <div class="stat-box" style="max-width: 320px;">
-                        <span class="stat-label">Current Balance</span>
-                        <h2><?= money($user['wallet_balance'] ?? '0') ?></h2>
-                        <p><?= is_demo_mode() ? 'Demo credits available' : 'Available balance' ?></p>
-                    </div>
+            <section class="hero-card wallet-hero" aria-label="Balance">
+                <div style="position:relative; z-index:1;">
+                    <span class="label"><?= icon('wallet') ?> <?= is_demo_mode() ? 'Demo credits available' : 'Available balance' ?></span>
+                    <div class="balance"><?= money($user['wallet_balance'] ?? '0') ?></div>
+                    <?php if (is_demo_mode()): ?>
+                        <p style="font-size:.86rem;">Simulated credits for trying Pasa-Buy. They can't be withdrawn, and no GCash, Maya or bank payment is involved.</p>
+                    <?php endif; ?>
                 </div>
+                <?php if (is_demo_mode()): ?>
+                    <button type="button" class="btn btn-mint btn-lg" data-open-dialog="topUpDialog" style="position:relative; z-index:1;"><?= icon('plus') ?> Add demo credits</button>
+                <?php endif; ?>
+            </section>
 
-                <div class="dashboard-card">
-                    <div class="card-header">
-                        <h3>Transaction History</h3>
-                    </div>
+            <section class="card" aria-labelledby="historyTitle">
+                <div class="card-head">
+                    <h2 id="historyTitle"><?= icon('list') ?> Transaction history</h2>
+                </div>
 
                     <?php if (! empty($transactions)): ?>
                         <div class="pb-table-wrap">
@@ -81,11 +78,12 @@
                         <div class="pb-pager"><?= $pager->links() ?></div>
                     <?php else: ?>
                         <div class="empty-state">
-                            <p>No transactions yet. Your wallet activity will appear here.</p>
+                            <?= icon('wallet') ?>
+                            <h3>No transactions yet</h3>
+                            <p>Payments, earnings and demo top-ups will appear here.</p>
                         </div>
                     <?php endif; ?>
-                </div>
-            </div>
+            </section>
         </section>
     </div>
 </main>
@@ -107,13 +105,17 @@
         <div class="form-group">
             <label for="amount">Amount (₱)</label>
             <input type="number" step="0.01" min="0.01" max="5000" name="amount" id="amount" inputmode="decimal"
-                   placeholder="e.g. 500" required value="<?= esc((string) old('amount')) ?>"
-                   style="width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:12px;">
+                   placeholder="e.g. 500" required value="<?= esc((string) old('amount')) ?>">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;" aria-label="Quick amounts">
+                <?php foreach ([100, 500, 1000, 2000] as $quick): ?>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('amount').value='<?= $quick ?>'">₱<?= number_format($quick) ?></button>
+                <?php endforeach; ?>
+            </div>
         </div>
 
         <div class="pb-dialog-actions">
-            <button type="button" class="btn-light" data-close-dialog>Cancel</button>
-            <button type="submit" class="btn-gradient" data-busy-label="Adding…">Add credits</button>
+            <button type="button" class="btn btn-secondary" data-close-dialog>Cancel</button>
+            <button type="submit" class="btn btn-primary" data-busy-label="Adding…"><?= icon('plus') ?> Add credits</button>
         </div>
     </form>
 </dialog>

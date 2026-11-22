@@ -24,16 +24,16 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                 <?= $this->include('includes/flash') ?>
 
                 <p class="flash flash-info" id="draftNotice" role="status" hidden>
-                    A saved draft was restored. <button type="button" class="btn-light" id="discardDraft">Discard draft</button>
+                    A saved draft was restored. <button type="button" class="btn btn-secondary btn-sm" id="discardDraft">Discard draft</button>
                 </p>
 
-                <div class="post-request-grid">
-                    <section class="post-request-form-card">
-                        <form action="<?= base_url('request/process') ?>" method="post" class="post-request-form" id="postRequestForm" data-submit-once novalidate>
+                <div class="post-grid">
+                    <section>
+                        <form action="<?= base_url('request/process') ?>" method="post" id="postRequestForm" data-submit-once novalidate>
                             <?= csrf_field() ?>
 
                             <fieldset class="form-section">
-                                <legend><h2>Item Details</h2></legend>
+                                <legend><h2><?= icon('package') ?> What do you need?</h2></legend>
 
                                 <div class="form-grid">
                                     <div class="form-group">
@@ -77,7 +77,7 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                             </fieldset>
 
                             <fieldset class="form-section">
-                                <legend><h2>Store Details</h2></legend>
+                                <legend><h2><?= icon('store') ?> Where to buy it</h2></legend>
 
                                 <div class="form-grid">
                                     <div class="form-group">
@@ -104,7 +104,7 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                             </fieldset>
 
                             <fieldset class="form-section">
-                                <legend><h2>Delivery Details</h2></legend>
+                                <legend><h2><?= icon('map-pin') ?> Where to deliver</h2></legend>
 
                                 <div class="form-grid">
                                     <div class="form-group full-width">
@@ -137,7 +137,7 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                             </fieldset>
 
                             <fieldset class="form-section">
-                                <legend><h2>Payment and Urgency</h2></legend>
+                                <legend><h2><?= icon('wallet') ?> Price, payment and urgency</h2></legend>
 
                                 <div class="form-grid">
                                     <div class="form-group">
@@ -178,25 +178,25 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                             </fieldset>
 
                             <div class="form-actions">
-                                <button type="button" class="form-btn secondary-btn" id="saveDraft"><?= icon('save') ?> Save draft</button>
-                                <button type="submit" class="form-btn primary-btn" data-busy-label="Posting…"><?= icon('send') ?> Post request</button>
+                                <button type="button" class="btn btn-secondary" id="saveDraft"><?= icon('save') ?> Save draft</button>
+                                <button type="submit" class="btn btn-primary btn-lg" data-busy-label="Posting…"><?= icon('send') ?> Post request</button>
                             </div>
                             <p class="field-hint" id="draftStatus" role="status" aria-live="polite"></p>
                         </form>
                     </section>
 
-                    <aside class="request-summary-card" aria-labelledby="summaryHeading">
-                        <h2 id="summaryHeading">Request Summary</h2>
+                    <aside class="post-summary" aria-labelledby="summaryHeading"><div class="card">
+                        <div class="card-head"><h2 id="summaryHeading"><?= icon('list') ?> Summary</h2></div>
 
-                        <div class="summary-box">
-                            <div class="summary-row"><span>Item</span><strong id="summaryItem">Not set</strong></div>
-                            <div class="summary-row"><span>Quantity</span><strong id="summaryQuantity">1</strong></div>
-                            <div class="summary-row"><span>Store</span><strong id="summaryStore">Not set</strong></div>
-                            <div class="summary-row"><span>Urgency</span><strong id="summaryUrgency">Not set</strong></div>
-                            <div class="summary-row"><span>Payment</span><strong id="summaryPayment">Not set</strong></div>
-                        </div>
+                        <dl class="summary-list">
+                            <div><dt>Item</dt><dd id="summaryItem">Not set</dd></div>
+                            <div><dt>Quantity</dt><dd id="summaryQuantity">1</dd></div>
+                            <div><dt>Store</dt><dd id="summaryStore">Not set</dd></div>
+                            <div><dt>Urgency</dt><dd id="summaryUrgency">Not set</dd></div>
+                            <div><dt>Payment</dt><dd id="summaryPayment">Not set</dd></div>
+                        </dl>
 
-                        <div class="money-breakdown" aria-live="polite">
+                        <div class="money-breakdown" aria-live="polite" style="margin-top: var(--sp-3);">
                             <div class="row"><span>Estimated item price</span><strong id="summaryEstimated">₱0.00</strong></div>
                             <div class="row"><span>Service fee</span><strong id="summaryServiceFee">₱0.00</strong></div>
                             <div class="row total"><span>You pay</span><strong id="summaryTotal">₱0.00</strong></div>
@@ -207,10 +207,8 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                             </p>
                         </div>
 
-                        <div class="summary-tip">
-                            <h3>Tip</h3>
-                            <p>Be specific with your item details and location so nearby runners can accept your request faster.</p>
                         </div>
+                        <p class="tip"><?= icon('info') ?> <span><strong>Tip:</strong> be specific with brand, size and a landmark so nearby runners accept faster.</span></p>
                     </aside>
                 </div>
             </div>
