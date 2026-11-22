@@ -20,7 +20,6 @@ $iconFor = static fn (string $type): string => match ($type) {
             <?= page_header([
                 'crumbs'  => [['Dashboard', 'dashboard'], ['Notifications', null]],
                 'title'   => 'Notifications',
-                'lead'    => 'Updates about your requests and deliveries. Select one to open the request it is about.',
                 'actions' => '<form action="' . base_url('notifications/mark-all-read') . '" method="post" class="inline-form">' . csrf_field()
                     . '<button type="submit" class="btn btn-secondary">' . icon('check') . ' Mark all as read</button></form>',
             ]) ?>

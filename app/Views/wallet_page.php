@@ -11,7 +11,6 @@
                 'crumbs'  => [['Dashboard', 'dashboard'], ['Wallet', null]],
                 'eyebrow' => is_demo_mode() ? 'Demo funds' : 'Funds',
                 'title'   => 'My wallet',
-                'lead'    => 'Requesters pay runners from here, and runners receive their earnings here.',
             ]) ?>
 
             <?= $this->include('includes/flash') ?>

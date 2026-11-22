@@ -10,7 +10,6 @@
             <?= page_header([
                 'crumbs' => [['Dashboard', 'dashboard'], ['Messages', null]],
                 'title'  => 'Messages',
-                'lead'   => 'Chat with the requesters and runners on your errands.',
             ]) ?>
 
             <?= $this->include('includes/flash') ?>

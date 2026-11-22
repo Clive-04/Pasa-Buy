@@ -13,7 +13,6 @@ $tabs = ['' => 'All', 'pending' => 'Waiting for runner', 'accepted' => 'Accepted
                 'crumbs'  => [['Dashboard', 'dashboard'], ['My requests', null]],
                 'eyebrow' => 'I need something',
                 'title'   => 'My requests',
-                'lead'    => 'Everything you have asked runners to buy for you, and what needs to happen next.',
                 'actions' => '<a href="' . base_url('post-request') . '" class="btn btn-primary">' . icon('plus') . ' Post a request</a>',
             ]) ?>
 

@@ -45,7 +45,6 @@ $alreadyRated = $status === 'delivered' && ! empty($myRating);
                 'crumbs'  => $crumbs,
                 'eyebrow' => 'Request #' . $requestId . ' · posted ' . time_ago($request['created_at']),
                 'title'   => $request['item_name'],
-                'lead'    => (int) $request['quantity'] . ' × from ' . $request['store_name'],
                 'actions' => '<span class="status-pill ' . esc($status, 'attr') . '">' . esc(status_label($status)) . '</span>'
                     . ' <span class="request-tag ' . esc($request['urgency'], 'attr') . '">' . esc(ucfirst($request['urgency'])) . '</span>',
             ]) ?>

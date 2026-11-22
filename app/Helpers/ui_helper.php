@@ -99,10 +99,6 @@ if (! function_exists('page_header')) {
 
         $html .= '<h1>' . esc($o['title']) . '</h1>';
 
-        if (! empty($o['lead'])) {
-            $html .= '<p class="lead">' . esc($o['lead']) . '</p>';
-        }
-
         $html .= '</div>';
 
         if (! empty($o['actions'])) {

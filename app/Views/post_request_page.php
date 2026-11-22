@@ -18,7 +18,6 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                     'crumbs'  => [['Dashboard', 'dashboard'], ['Post a request', null]],
                     'eyebrow' => 'I need something',
                     'title'   => 'Post a request',
-                    'lead'    => 'Tell runners what to buy, where, and where to bring it. Fields marked * are required. Your exact address and number are only shown to the runner who accepts.',
                 ]) ?>
 
                 <?= $this->include('includes/flash') ?>

@@ -15,7 +15,6 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
             <?= page_header([
                 'crumbs' => [['Dashboard', 'dashboard'], ['My profile', null]],
                 'title'  => 'My profile',
-                'lead'   => 'Your account details from registration, your activity and your settings. Only you can see your email, mobile number and address here.',
             ]) ?>
 
             <?= $this->include('includes/flash') ?>

@@ -9,7 +9,6 @@
                 <?= page_header([
                     'crumbs' => [['Dashboard', 'dashboard'], ['Search people', null]],
                     'title'  => 'Search people',
-                    'lead'   => 'Find requesters and runners by name or username, then open their profile to see ratings.',
                 ]) ?>
 
                 <form action="<?= base_url('users/search') ?>" method="get" class="card filter-bar" role="search" style="padding:14px;">

@@ -16,7 +16,6 @@ $balanceCents = Money::toCents($walletBalance);
                 'crumbs'  => [['Dashboard', 'dashboard'], ['My deliveries', null]],
                 'eyebrow' => 'I want to earn',
                 'title'   => 'My deliveries',
-                'lead'    => 'Errands you accepted as a runner. Update each one as you go so the requester knows where their items are.',
                 'actions' => '<a href="' . base_url('browse-requests') . '" class="btn btn-secondary">' . icon('search') . ' Find more requests</a>',
             ]) ?>
 

@@ -15,7 +15,6 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
             <?= page_header([
                 'eyebrow' => 'Administrator',
                 'title'   => 'Admin overview',
-                'lead'    => 'Monitor requests and the platform fees recorded in the wallet ledger.' . (is_demo_mode() ? ' All amounts are demo credits.' : ''),
             ]) ?>
 
             <?= $this->include('includes/flash') ?>

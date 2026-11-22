@@ -12,7 +12,6 @@ $fullName      = trim(($profileUser['first_name'] ?? '') . ' ' . ($profileUser['
             <?= page_header([
                 'crumbs' => [['Search people', 'users/search'], [$fullName, null]],
                 'title'  => 'Public profile',
-                'lead'   => 'Email, mobile number and address are private and never shown here.',
             ]) ?>
 
             <?= $this->include('includes/flash') ?>

@@ -17,7 +17,6 @@ $filtered = $filters['search'] !== '' || $filters['category'] !== '' || $filters
                 'crumbs'  => [['Dashboard', 'dashboard'], ['Find requests', null]],
                 'eyebrow' => 'I want to earn',
                 'title'   => 'Find requests to deliver',
-                'lead'    => 'Pick an errand, buy the items and deliver them. You earn the service fee minus a 10% platform fee.',
                 'actions' => '<a href="' . base_url('accepted-requests') . '" class="btn btn-secondary">' . icon('truck') . ' My deliveries</a>',
             ]) ?>
 
