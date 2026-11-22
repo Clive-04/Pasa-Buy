@@ -1,69 +1,139 @@
-# CodeIgniter 4 Application Starter
+# Pasa-Buy
 
-## What is CodeIgniter?
+Pasa-Buy is a community errand marketplace. A **requester** posts an item they need from a nearby store, a **runner** accepts it, buys it and delivers it, and the two coordinate through in-app messages. Payment is by wallet or cash on delivery. **Admins** monitor requests and platform fees.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+> **Status: portfolio demo.** Wallet balances are *simulated demo credits*. No real money, GCash, Maya or bank transfer is processed, and user-entered payment references are never treated as proof of funds. The app shows a demo banner on every page.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## Features
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+| Area | What it does |
+|---|---|
+| Accounts | Registration with validation, login with throttling, role-based home (user/admin), POST-only logout |
+| Requests | Post (with live price summary and local drafts), browse/filter/paginate, accept, *On the way*, deliver, cancel |
+| Payments | Wallet payment from requester to runner, or cash on delivery; **10% platform fee on the service fee, paid by the runner** |
+| Wallet | Demo-credit top-ups (capped, idempotent), full ledger with running balance |
+| Messages | Conversations per user/request, private attachments (JPG/PNG/WEBP/PDF/DOCX ≤ 5 MB) |
+| Notifications | Request events, unread badges refreshed in place |
+| Profiles | Photo (private storage), ratings from completed errands, website rating, referrals (saved, no email sent) |
+| Admin | Ongoing/delivered lists, recorded platform fees, fee reconciliation, wallet-vs-ledger check, cancel unpaid requests |
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+### Money rules
 
-## Installation & updates
+```
+Requester pays   = item estimated price + service fee
+Platform fee     = 10% of service fee (rounded half-up to the centavo)
+Runner receives  = requester pays − platform fee
+```
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+* **Wallet:** charged when the requester pays; requester debit, runner credit and fee debit happen in one transaction.
+* **Cash on delivery:** the requester pays the runner in cash; the fee is debited from the runner's wallet when they confirm delivery. Runners need enough balance for the fee to accept a COD request.
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+All amounts are calculated in integer centavos (`App\Libraries\Money`, `App\Libraries\FeePolicy`).
 
-## Setup
+## Technology (verified in this repository)
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+* PHP ≥ 8.2, **CodeIgniter 4.7.6** (Composer, locked)
+* MySQL 8 / MariaDB 10.4+ via MySQLi, strict SQL mode
+* Server-rendered PHP views, plain CSS and JavaScript (no build step)
+* PHPUnit 10 for unit, database, concurrency and HTTP tests
 
-## Important Change with index.php
+## Project layout
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+```
+app/
+  Config/            Routes, filters (auth/admin/CSRF), PasaBuy.php settings
+  Controllers/       Thin HTTP layer
+  Services/          RequestLifecycle, WalletService — all state changes, transactional
+  Libraries/         Money, FeePolicy, UploadStorage, BackupTools
+  Database/          Migrations (baseline + hardening) and DemoSeeder
+  Commands/          spark user:role, uploads:import-legacy, backup:create, backup:restore
+  Views/             Pages and shared includes
+public/              Web document root (index.php, css, js, img) — the ONLY public folder
+writable/            Logs, sessions, cache, private uploads (never web-accessible)
+tests/               unit/, database/ (incl. multi-process concurrency), feature/
+deploy/              Staging/production .env templates
+scripts/             smoke-test.php, build-release.sh
+```
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## Local setup (XAMPP on Windows, or any PHP + MySQL)
 
-**Please** read the user guide for a better explanation of how CI4 works!
+1. **Requirements:** PHP 8.2+ with `intl`, `mbstring`, `mysqli`, `gd`, `fileinfo`; Composer 2; MySQL 8 or MariaDB 10.4+.
+2. **Install:**
+   ```bash
+   composer install
+   cp .env.example .env        # then adjust database credentials if needed
+   ```
+3. **Database:**
+   ```sql
+   CREATE DATABASE pasa_buy_db  CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+   CREATE DATABASE pasa_buy_test CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+   ```
+   ```bash
+   php spark migrate --all
+   php spark db:seed DemoSeeder      # synthetic demo accounts and requests
+   ```
+4. **Run:**
+   * XAMPP: open `http://localhost/Pasa-Buy-Project/`. The root `.htaccess` forwards everything into `public/`. This is a local shortcut only.
+   * Or the built-in server: `php spark serve`, then open `http://localhost:8080/` and set `app.baseURL` accordingly.
 
-## Repository Management
+### Demo accounts (local seed)
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+Password: `DemoPass#2026` locally, or `DEMO_SEED_PASSWORD` if you set it.
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+| Email | Role |
+|---|---|
+| `requester@demo.pasabuy.test` | Requester with demo credits and requests in every state |
+| `runner@demo.pasabuy.test` | Runner with a completed wallet delivery and an active COD job |
+| `runner2@demo.pasabuy.test` | Runner with a completed COD delivery |
+| `requester2@demo.pasabuy.test` | Second requester |
+| `admin@demo.pasabuy.test` | Administrator |
 
-## Server Requirements
+Grant or revoke admin for any existing account: `php spark user:role someone@example.com admin`. Public registration always creates ordinary users.
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+### Upgrading a pre-2026-11 database
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+The baseline migration leaves existing tables untouched; the hardening migration converts them (it was rehearsed on a copy of the May 2026 data). **Back up first**, then:
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+```bash
+php spark backup:create ../backups
+php spark migrate --all
+php spark uploads:import-legacy   # copies old root uploads/ into writable/uploads (originals kept)
+```
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+## Tests
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+```bash
+vendor/bin/phpunit --no-coverage
+```
+
+* Uses the `tests` connection (`pasa_buy_test` by default, configurable with `database.tests.*`). **That database is wiped**; the suite refuses to run unless its name contains `test`.
+* Includes multi-process concurrency tests (simultaneous accepts, payments, COD confirmations and top-ups), so it needs a real MySQL/MariaDB. SQLite is not supported.
+* CI (`.github/workflows/ci.yml`) runs composer validate/audit, a PHP lint and the suite on PHP 8.2/8.3 against MySQL 8.0 and MariaDB 10.6 for every push to `main` and every pull request.
+
+## Security model (summary)
+
+* `public/` is the only web root; config, code, vendor, logs, sessions and uploads are outside it.
+* Session-based CSRF protection on every POST; state changes are POST-only.
+* `auth` route filter for all signed-in pages; `admin` filter re-checks the role in the database.
+* Login throttling, session-ID regeneration, generic login errors, bcrypt hashes.
+* Uploads are checked by extension and detected content type, stored with random names in `writable/uploads`, and served only to authorized users with `nosniff` and a sandbox CSP.
+* Every view escapes output; exact delivery address and phone are shown only to the request's participants.
+* Database constraints back the application rules: no negative balances, one assignment per request, and one ledger entry per request per type.
+
+## Deployment
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for hosting requirements, the release, backup, restore and rollback procedures, and the staging rehearsal results.
+
+## Known limitations
+
+* Demo mode only; there is no verified payment provider. `pasabuy.demoMode = false` disables top-ups entirely.
+* There are no refunds. Paid or delivered requests cannot be cancelled.
+* Badges refresh by polling every 30 s (no WebSockets); messages refresh on navigation.
+* No email delivery, so referrals are recorded only.
+* A Content-Security-Policy for pages is not yet enabled, because several views still contain inline scripts.
+* Legacy user uploads in the project-root `uploads/` folder are still tracked in git. Release builds exclude them and they are never served, but removing them from the repository (or its history) needs the owner's decision.
+* `public/img/team/` photos are deployed and shown on the About page; confirm consent before a public launch.
+
+## License
+
+MIT (see `LICENSE`). CodeIgniter is © CodeIgniter Foundation, MIT licensed.

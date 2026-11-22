@@ -27,6 +27,12 @@
 
 /* ---------------------------------------------------------------- a11y */
 
+/* Component display rules (e.g. .flash { display:flex }) must not
+   override the HTML hidden attribute. */
+[hidden] {
+    display: none !important;
+}
+
 .skip-link {
     position: absolute;
     left: 12px;
@@ -390,12 +396,13 @@ dialog.pb-dialog::backdrop {
     }
 
     .pb-table td {
-        display: flex;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: minmax(6.5rem, 35%) 1fr;
         gap: 12px;
         border: none;
         padding: 6px 14px;
         text-align: right;
+        overflow-wrap: anywhere;
     }
 
     .pb-table td::before {
