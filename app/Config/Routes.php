@@ -50,6 +50,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 
     $routes->get('profile', 'Profile::index');
     $routes->post('profile/update', 'Profile::updateProfile');
+    $routes->post('profile/password', 'Profile::changePassword');
     $routes->post('profile/rate-website', 'Profile::rateWebsite');
     $routes->post('profile/refer-friend', 'Profile::referFriend');
 
