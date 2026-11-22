@@ -33,7 +33,7 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
                         <span class="chip chip-on-hero"><?= icon('shield') ?> <?= ($user['role'] ?? 'user') === 'admin' ? 'Administrator' : 'Community member' ?></span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-mint" data-open-dialog="editProfileModal"><?= icon('edit') ?> Edit profile</button>
+                <button type="button" class="btn btn-accent" data-open-dialog="editProfileModal"><?= icon('edit') ?> Edit profile</button>
             </section>
 
             <div class="profile-grid">
@@ -41,7 +41,6 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
                     <section class="card" aria-labelledby="personalHeading">
                         <div class="card-head">
                             <h2 id="personalHeading"><?= icon('user') ?> Personal information</h2>
-                            <button type="button" class="btn btn-ghost btn-sm" data-open-dialog="editProfileModal"><?= icon('edit') ?> Edit</button>
                         </div>
                         <dl class="info-list">
                             <div>
@@ -80,7 +79,6 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
                     <section class="card" aria-labelledby="aboutHeading">
                         <div class="card-head">
                             <h2 id="aboutHeading"><?= icon('info') ?> About me</h2>
-                            <button type="button" class="btn btn-ghost btn-sm" data-open-dialog="editProfileModal"><?= icon('edit') ?> Edit</button>
                         </div>
                         <p style="margin:0; line-height:1.6; color: var(--pb-ink-2);">
                             <?= ! empty($user['about_me']) ? nl2br(esc($user['about_me'])) : 'Tell your neighbours a little about yourself, for example when you are usually free to run errands.' ?>
@@ -110,9 +108,6 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
                             <h2 id="settingsHeading"><?= icon('settings') ?> Settings</h2>
                         </div>
                         <div class="settings-list">
-                            <button type="button" class="settings-item" data-open-dialog="editProfileModal">
-                                <?= icon('edit') ?><span>Edit profile<small>Name, mobile, address, photo</small></span><?= icon('chevron') ?>
-                            </button>
                             <button type="button" class="settings-item" data-open-dialog="passwordModal">
                                 <?= icon('lock') ?><span>Change password<small>Keep your account secure</small></span><?= icon('chevron') ?>
                             </button>

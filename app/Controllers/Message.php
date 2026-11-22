@@ -18,6 +18,10 @@ class Message extends BaseController
 
     public function index()
     {
+        if (config('TalkJS')->isConfigured()) {
+            return $this->talkjsIndex();
+        }
+
         $db             = db_connect();
         $loggedInUserId = $this->currentUserId();
         $selectedUserId = (int) $this->request->getGet('user_id');
@@ -211,6 +215,65 @@ class Message extends BaseController
             ->setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
             ->setHeader('Cache-Control', 'no-store, private')
             ->setBody(file_get_contents($path));
+    }
+
+    /**
+     * Hosted chat (TalkJS). The server decides who may talk to whom, creates
+     * the users and the conversation with exactly those participants, and
+     * gives the browser a signed token for the current user only.
+     */
+    private function talkjsIndex()
+    {
+        $client   = service('talkjs');
+        $meId     = $this->currentUserId();
+        $otherId  = (int) $this->request->getGet('user_id');
+        $requestId = (int) $this->request->getGet('request_id') ?: null;
+        $users    = new UserModel();
+        $me       = $users->select('id, first_name, last_name, profile_photo')->find($meId);
+        $selected = null;
+        $conversationId = null;
+        $error    = null;
+
+        try {
+            $client->syncUser($me);
+
+            if ($otherId > 0 && $otherId !== $meId) {
+                $selected = $users->select('id, first_name, last_name, profile_photo')->find($otherId);
+
+                if ($selected === null) {
+                    $error = 'That user could not be found.';
+                } elseif ($requestId !== null && ! $this->participantsMatch($requestId, $meId, $otherId)) {
+                    $error = 'You can only message the requester or runner of that request.';
+                    $selected = null;
+                } else {
+                    $client->syncUser($selected);
+                    $conversationId = $client->conversationId($meId, $otherId, $requestId);
+                    $request = $requestId !== null ? (new RequestModel())->select('id, item_name')->find($requestId) : null;
+                    $client->syncConversation(
+                        $conversationId,
+                        [$meId, $otherId],
+                        $request !== null ? 'Request #' . $request['id'] . ': ' . $request['item_name'] : 'Direct message',
+                        $request !== null ? ['requestId' => (string) $request['id']] : [],
+                    );
+                }
+            }
+        } catch (ServiceException $e) {
+            $error = $e->getMessage();
+        }
+
+        if ($error !== null) {
+            session()->setFlashdata('error', $error);
+        }
+
+        return view('messages_talkjs_page', [
+            'title'          => 'Messages | Pasa-Buy',
+            'appId'          => $client->appId(),
+            'talkUserId'     => \App\Libraries\TalkJsClient::userId($meId),
+            'token'          => $client->userToken($meId),
+            'conversationId' => $conversationId,
+            'selectedUser'   => $selected,
+            'requestId'      => $requestId,
+        ]);
     }
 
     /**

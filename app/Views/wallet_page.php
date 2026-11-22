@@ -21,11 +21,11 @@
                     <span class="label"><?= icon('wallet') ?> <?= is_demo_mode() ? 'Demo credits available' : 'Available balance' ?></span>
                     <div class="balance"><?= money($user['wallet_balance'] ?? '0') ?></div>
                     <?php if (is_demo_mode()): ?>
-                        <p style="font-size:.86rem;">Simulated credits for trying Pasa-Buy. They can't be withdrawn, and no GCash, Maya or bank payment is involved.</p>
+                        <p style="font-size:.86rem;"><?= $usePayMongo ? "Top up with GCash or Maya through PayMongo test mode. No real money moves, and credits can't be withdrawn." : "Simulated credits for trying Pasa-Buy. They can't be withdrawn, and no GCash, Maya or bank payment is involved." ?></p>
                     <?php endif; ?>
                 </div>
                 <?php if (is_demo_mode()): ?>
-                    <button type="button" class="btn btn-mint btn-lg" data-open-dialog="topUpDialog" style="position:relative; z-index:1;"><?= icon('plus') ?> Add demo credits</button>
+                    <button type="button" class="btn btn-accent btn-lg" data-open-dialog="topUpDialog" style="position:relative; z-index:1;"><?= icon('plus') ?> <?= $usePayMongo ? 'Top up with GCash / Maya' : 'Add demo credits' ?></button>
                 <?php endif; ?>
             </section>
 
@@ -92,8 +92,12 @@
 <dialog class="pb-dialog" id="topUpDialog" aria-labelledby="topUpTitle"<?= $topUpFailed ? ' data-autopen' : '' ?>>
     <div class="pb-dialog-head">
         <div>
-            <h2 id="topUpTitle">Add demo credits</h2>
-            <p>Simulated money for trying Pasa-Buy. Up to <?= esc($topUpMax) ?> at a time; wallets are capped at <?= esc($walletCap) ?>.</p>
+            <h2 id="topUpTitle"><?= $usePayMongo ? 'Top up your wallet' : 'Add demo credits' ?></h2>
+            <?php if ($usePayMongo): ?>
+                <p>You'll pay on PayMongo's secure page with <strong>GCash</strong> or <strong>Maya</strong>, then come back here. Your wallet is credited only after PayMongo confirms the payment. Test mode: no real money. <?= esc($topUpMin) ?> to <?= esc($topUpMax) ?>.</p>
+            <?php else: ?>
+                <p>Simulated money for trying Pasa-Buy. Up to <?= esc($topUpMax) ?> at a time; wallets are capped at <?= esc($walletCap) ?>.</p>
+            <?php endif; ?>
         </div>
         <button type="button" class="pb-dialog-close" data-close-dialog aria-label="Close">&times;</button>
     </div>
@@ -115,7 +119,7 @@
 
         <div class="pb-dialog-actions">
             <button type="button" class="btn btn-secondary" data-close-dialog>Cancel</button>
-            <button type="submit" class="btn btn-primary" data-busy-label="Adding…"><?= icon('plus') ?> Add credits</button>
+            <button type="submit" class="btn btn-primary" data-busy-label="Opening…"><?= icon('plus') ?> <?= $usePayMongo ? 'Continue to payment' : 'Add credits' ?></button>
         </div>
     </form>
 </dialog>

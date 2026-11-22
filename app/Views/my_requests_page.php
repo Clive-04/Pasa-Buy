@@ -59,9 +59,9 @@ $tabs = ['' => 'All', 'pending' => 'Waiting for runner', 'accepted' => 'Accepted
                                     <button type="button" class="btn btn-danger btn-sm" data-open-dialog="cancelDialog"
                                             data-form-action="<?= esc(base_url('request/cancel/' . (int) $request['id']), 'attr') ?>"><?= icon('x-circle') ?> Cancel</button>
                                 <?php endif; ?>
-                                <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn <?= $needsPayment ? 'btn-primary' : 'btn-secondary' ?> btn-sm">
-                                    <?= $needsPayment ? icon('wallet') . ' Pay runner' : icon('eye') . ' View details' ?>
-                                </a>
+                                <?php if ($needsPayment): ?>
+                                    <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn btn-primary btn-sm"><?= icon('wallet') ?> Pay runner</a>
+                                <?php endif; ?>
                             </div>
                         </article>
                     <?php endforeach; ?>

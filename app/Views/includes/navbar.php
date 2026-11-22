@@ -30,10 +30,25 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
                 <?= icon('message') ?><span class="visually-hidden">Messages</span>
                 <?= unread_badge('messages', 'badge badge-dot') ?>
             </a>
-            <a href="<?= base_url('notifications') ?>" class="icon-btn<?= nav_attrs('notifications') ?>" title="Notifications">
-                <?= icon('bell') ?><span class="visually-hidden">Notifications</span>
-                <?= unread_badge('notifications', 'badge badge-dot') ?>
-            </a>
+            <div class="notif-menu" data-notif-menu data-feed-url="<?= esc(base_url('notifications/feed'), 'attr') ?>">
+                <button type="button" class="icon-btn<?= nav_attrs('notifications') ?>" aria-haspopup="true" aria-expanded="false" aria-controls="notifPanel" title="Notifications" data-notif-toggle>
+                    <?= icon('bell') ?><span class="visually-hidden">Notifications</span>
+                    <?= unread_badge('notifications', 'badge badge-dot') ?>
+                </button>
+                <div class="notif-panel" id="notifPanel" role="region" aria-label="Notifications" hidden>
+                    <div class="notif-panel-head">
+                        <strong>Notifications</strong>
+                        <form action="<?= base_url('notifications/mark-all-read') ?>" method="post" class="inline-form">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-ghost btn-sm">Mark all read</button>
+                        </form>
+                    </div>
+                    <div class="notif-list" data-notif-list aria-live="polite">
+                        <p class="notif-empty">Loading…</p>
+                    </div>
+                    <a href="<?= base_url('notifications') ?>" class="notif-all">See all notifications <?= icon('chevron') ?></a>
+                </div>
+            </div>
         <?php endif; ?>
         <?= theme_toggle() ?>
 

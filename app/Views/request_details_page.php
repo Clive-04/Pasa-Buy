@@ -46,13 +46,13 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
 
             <?= $this->include('includes/flash') ?>
 
-            <section class="card" aria-label="Progress" style="margin-bottom: var(--sp-4);">
+            <section class="card" aria-label="Progress">
                 <?= request_steps($request) ?>
             </section>
 
             <div class="detail-grid">
-                <div>
-                    <section class="next-step tone-<?= esc($next['tone'], 'attr') ?>" aria-labelledby="nextHeading" style="margin-bottom: var(--sp-4);">
+                <div class="detail-main">
+                    <section class="next-step tone-<?= esc($next['tone'], 'attr') ?>" aria-labelledby="nextHeading">
                         <?= icon($toneIcon) ?>
                         <h2 id="nextHeading"><?= esc($next['title']) ?></h2>
                         <p><?= esc($next['text']) ?></p>
@@ -97,7 +97,7 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
                     </section>
 
                     <section class="card" aria-labelledby="itemHeading">
-                        <div class="card-head"><h2 id="itemHeading"><?= icon('package') ?> Item</h2></div>
+                        <div class="card-head"><h2 id="itemHeading"><?= icon('package') ?> Details</h2></div>
                         <dl class="dl">
                             <div><dt>Item</dt><dd><?= esc($request['item_name']) ?></dd></div>
                             <div><dt>Quantity</dt><dd><?= (int) $request['quantity'] ?></dd></div>
@@ -107,10 +107,9 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
                         <?php if (! empty($request['item_notes'])): ?>
                             <p class="flash flash-info" style="margin:14px 0 0; animation:none;"><?= icon('info') ?> <span><?= esc($request['item_notes']) ?></span></p>
                         <?php endif; ?>
-                    </section>
 
-                    <section class="card" aria-labelledby="whereHeading">
-                        <div class="card-head"><h2 id="whereHeading"><?= icon('map-pin') ?> Where</h2></div>
+                        <div class="card-divider"></div>
+                        <h3 class="subhead" id="whereHeading"><?= icon('map-pin') ?> Where</h3>
                         <dl class="dl">
                             <div><dt><?= icon('store') ?> Buy from</dt><dd><?= esc($request['store_name']) ?><?= $request['alt_store'] ? '<br><small class="text-muted">or ' . esc($request['alt_store']) . '</small>' : '' ?></dd></div>
                             <div><dt><?= icon('map-pin') ?> Store address</dt><dd><?= esc($request['store_address']) ?></dd></div>
@@ -138,10 +137,9 @@ $messageTo = $isRequester ? ($runner['id'] ?? null) : (int) $request['user_id'];
                                 <?= $isCod ? 'The requester pays the runner in cash; the platform fee is taken from the runner\'s wallet at delivery.' : 'Paid from the requester\'s wallet before delivery.' ?>
                             </p>
                         </div>
-                    </section>
 
-                    <section class="card" aria-labelledby="peopleHeading">
-                        <div class="card-head"><h2 id="peopleHeading"><?= icon('users') ?> People</h2></div>
+                        <div class="card-divider"></div>
+                        <h3 class="subhead" id="peopleHeading"><?= icon('users') ?> People</h3>
                         <div class="row-list">
                             <a class="row-item" href="<?= base_url('users/' . (int) $request['user_id']) ?>">
                                 <?= avatar($requester, 'sm') ?>

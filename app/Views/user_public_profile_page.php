@@ -30,7 +30,7 @@ $fullName      = trim(($profileUser['first_name'] ?? '') . ' ' . ($profileUser['
                     </div>
                 </div>
                 <?php if (! $isOwnProfile): ?>
-                    <a href="<?= base_url('messages?user_id=' . (int) $profileUser['id']) ?>" class="btn btn-mint"><?= icon('message') ?> Message</a>
+                    <a href="<?= base_url('messages?user_id=' . (int) $profileUser['id']) ?>" class="btn btn-accent"><?= icon('message') ?> Message</a>
                 <?php endif; ?>
             </section>
 

@@ -125,6 +125,26 @@ final class ProfileAndNavigationTest extends FeatureTestCase
         $this->getAs($runner, 'request-details/' . $requestId)->assertSee('Buy the items, then set off');
     }
 
+    public function testNotificationDropdownFeedReturnsOnlyMyLatestItemsAsPlainData(): void
+    {
+        $me    = $this->createUser();
+        $other = $this->createUser();
+        $req   = $this->createRequest($this->createUser());
+
+        $this->db->table('request_notifications')->insertBatch([
+            ['user_id' => $me, 'request_id' => $req, 'type' => 'delivered', 'title' => '<b>Delivered</b>', 'content' => 'Mine', 'is_read' => 0],
+            ['user_id' => $other, 'request_id' => $req, 'type' => 'delivered', 'title' => 'Not mine', 'content' => 'Other', 'is_read' => 0],
+        ]);
+
+        $data = json_decode($this->getAs($me, 'notifications/feed')->getJSON(), true);
+
+        $this->assertSame(1, $data['unread']);
+        $this->assertCount(1, $data['items']);
+        $this->assertSame('<b>Delivered</b>', $data['items'][0]['title'], 'Raw text; the browser renders it with textContent.');
+        $this->assertTrue($data['items'][0]['unread']);
+        $this->assertStringContainsString('notifications/open/', $data['items'][0]['url']);
+    }
+
     public function testNavigationShowsGroupedMenuAndBreadcrumbs(): void
     {
         $user = $this->createUser();

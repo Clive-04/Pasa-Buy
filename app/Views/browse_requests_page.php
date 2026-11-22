@@ -83,7 +83,6 @@ $filtered = $filters['search'] !== '' || $filters['category'] !== '' || $filters
                                 <div class="row total"><span>You earn</span><strong style="color: var(--pb-success-ink);"><?= money_cents($earn) ?></strong></div>
                             </div>
                             <div class="req-actions">
-                                <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn btn-secondary btn-sm"><?= icon('eye') ?> Details</a>
                                 <form action="<?= base_url('request/accept/' . (int) $request['id']) ?>" method="post" class="inline-form" data-submit-once>
                                     <?= csrf_field() ?>
                                     <button type="submit" class="btn btn-primary btn-sm" data-busy-label="Accepting…"><?= icon('check') ?> Accept</button>

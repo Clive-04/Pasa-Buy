@@ -25,6 +25,9 @@ $routes->get('/about', 'NavBar::about');
 $routes->get('/contact', 'NavBar::contact');
 $routes->get('/health', 'Health::index');
 
+// Payment provider callbacks: no session, CSRF-exempt, verified by signature.
+$routes->post('/webhooks/paymongo', 'PaymentWebhook::paymongo');
+
 // ------------------------------------------------------------- signed in
 $routes->group('', ['filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->get('dashboard', 'Dashboard::index');
@@ -47,6 +50,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 
     $routes->get('wallet', 'Wallet::index');
     $routes->post('wallet/top-up', 'Wallet::topUp');
+    $routes->get('wallet/top-up/return', 'Wallet::topUpReturn');
 
     $routes->get('profile', 'Profile::index');
     $routes->post('profile/update', 'Profile::updateProfile');
@@ -62,6 +66,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 
     $routes->get('notifications', 'RequestNotification::index');
     $routes->get('notifications/unread-count', 'RequestNotification::unreadCount');
+    $routes->get('notifications/feed', 'RequestNotification::feed');
     $routes->get('notifications/open/(:num)', 'RequestNotification::open/$1');
     $routes->post('notifications/mark-all-read', 'RequestNotification::markAllRead');
 });

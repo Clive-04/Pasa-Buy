@@ -19,6 +19,26 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
+    /** PayMongo API client (tests replace it with Services::injectMock('paymongo', ...)). */
+    public static function paymongo(bool $getShared = true): \App\Libraries\PayMongoClient
+    {
+        if ($getShared) {
+            return static::getSharedInstance('paymongo');
+        }
+
+        return new \App\Libraries\PayMongoClient(config('PayMongo'));
+    }
+
+    /** TalkJS server client (tests replace it with Services::injectMock('talkjs', ...)). */
+    public static function talkjs(bool $getShared = true): \App\Libraries\TalkJsClient
+    {
+        if ($getShared) {
+            return static::getSharedInstance('talkjs');
+        }
+
+        return new \App\Libraries\TalkJsClient(config('TalkJS'));
+    }
+
     /*
      * public static function example($getShared = true)
      * {

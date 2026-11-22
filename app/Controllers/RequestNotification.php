@@ -36,7 +36,35 @@ class RequestNotification extends BaseController
             ->setHeader('Cache-Control', 'no-store, private')
             ->setJSON([
                 'notifications' => $db->table('request_notifications')->where('user_id', $userId)->where('is_read', 0)->countAllResults(),
-                'messages'      => $db->table('notifications')->where('user_id', $userId)->where('type', 'message')->where('is_read', 0)->countAllResults(),
+                // With TalkJS, message counts come from TalkJS itself (null = don't touch).
+                'messages'      => config('TalkJS')->isConfigured() ? null : $db->table('notifications')->where('user_id', $userId)->where('type', 'message')->where('is_read', 0)->countAllResults(),
+            ]);
+    }
+
+    /**
+     * Latest notifications for the top-bar dropdown (JSON). The browser
+     * renders these with textContent, so no HTML is ever injected.
+     */
+    public function feed()
+    {
+        $rows = (new RequestNotificationModel())
+            ->where('user_id', $this->currentUserId())
+            ->orderBy('created_at', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->findAll(8);
+
+        return $this->response
+            ->setHeader('Cache-Control', 'no-store, private')
+            ->setJSON([
+                'unread' => unread_counts()['notifications'],
+                'items'  => array_map(static fn (array $n): array => [
+                    'title'  => (string) $n['title'],
+                    'text'   => (string) $n['content'],
+                    'when'   => time_ago($n['created_at']),
+                    'type'   => (string) $n['type'],
+                    'unread' => ! $n['is_read'],
+                    'url'    => base_url('notifications/open/' . (int) $n['id']),
+                ], $rows),
             ]);
     }
 

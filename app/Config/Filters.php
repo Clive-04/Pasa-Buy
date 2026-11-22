@@ -78,7 +78,7 @@ class Filters extends BaseFilters
             // Session-based CSRF protection for every state-changing request
             // (POST/PUT/PATCH/DELETE). GET requests are not checked, so routes
             // that change state must not use GET. Config in Config\Security.
-            'csrf',
+            'csrf' => ['except' => ['webhooks/*']],
             'invalidchars',
         ],
         'after' => [

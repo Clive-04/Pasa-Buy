@@ -129,6 +129,7 @@ if (! function_exists('ledger_label')) {
             'request_payment' => 'Paid a runner',
             'request_earning' => 'Received from requester',
             'platform_fee'    => 'Platform fee',
+            'top_up'          => 'Wallet top-up',
             'legacy_top_up'   => 'Top-up (before demo release)',
             default           => ucfirst(str_replace('_', ' ', (string) $type)),
         };

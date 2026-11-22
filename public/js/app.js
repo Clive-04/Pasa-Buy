@@ -53,7 +53,7 @@
                         return;
                     }
                     render('notifications', data.notifications || 0);
-                    render('messages', data.messages || 0);
+                    if (data.messages !== null && data.messages !== undefined) { render('messages', data.messages); }
                 })
                 .catch(function () { /* offline: try again next tick */ });
         }
@@ -207,7 +207,76 @@
         sync();
     }
 
+    // ------------------------------------------------- notifications menu
+    function initNotificationMenu() {
+        var menu = document.querySelector('[data-notif-menu]');
+        if (!menu) {
+            return;
+        }
+        var toggle = menu.querySelector('[data-notif-toggle]');
+        var panel = menu.querySelector('.notif-panel');
+        var list = menu.querySelector('[data-notif-list]');
+        var url = menu.getAttribute('data-feed-url');
+
+        function render(items) {
+            list.textContent = '';
+            if (!items.length) {
+                var empty = document.createElement('p');
+                empty.className = 'notif-empty';
+                empty.textContent = "You're all caught up.";
+                list.appendChild(empty);
+                return;
+            }
+            items.forEach(function (item) {
+                var a = document.createElement('a');
+                a.href = item.url;
+                a.className = 'notif-item' + (item.unread ? ' is-unread' : '');
+                var title = document.createElement('strong');
+                title.textContent = item.title;
+                var text = document.createElement('span');
+                text.textContent = item.text;
+                var when = document.createElement('time');
+                when.textContent = item.when + (item.unread ? ' · new' : '');
+                a.appendChild(title);
+                a.appendChild(text);
+                a.appendChild(when);
+                list.appendChild(a);
+            });
+        }
+
+        function load() {
+            fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) { if (data) { render(data.items || []); } })
+                .catch(function () { list.textContent = 'Could not load notifications.'; });
+        }
+
+        function open() {
+            panel.hidden = false;
+            toggle.setAttribute('aria-expanded', 'true');
+            load();
+        }
+
+        function close(returnFocus) {
+            if (panel.hidden) { return; }
+            panel.hidden = true;
+            toggle.setAttribute('aria-expanded', 'false');
+            if (returnFocus) { toggle.focus(); }
+        }
+
+        toggle.addEventListener('click', function () {
+            if (panel.hidden) { open(); } else { close(false); }
+        });
+        document.addEventListener('click', function (event) {
+            if (!menu.contains(event.target)) { close(false); }
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') { close(true); }
+        });
+    }
+
     ready(function () {
+        initNotificationMenu();
         initThemeToggle();
         initFlash();
         initDialogs();

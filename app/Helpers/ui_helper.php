@@ -222,7 +222,10 @@ if (! function_exists('current_user')) {
             return null;
         }
 
-        return $cache[$id] ??= db_connect()->table('users')
+        // Cached per request object (not per process: worker mode / tests reuse processes).
+        $key = $id . ':' . spl_object_id(service('request'));
+
+        return $cache[$key] ??= db_connect()->table('users')
             ->select('id, first_name, last_name, username, profile_photo, wallet_balance, role')
             ->where('id', $id)->get()->getRowArray();
     }
@@ -232,14 +235,16 @@ if (! function_exists('unread_counts')) {
     /** @return array{notifications: int, messages: int} */
     function unread_counts(): array
     {
-        static $cache = null;
+        static $cache = [];
         $id = (int) session('user_id');
 
         if ($id === 0) {
             return ['notifications' => 0, 'messages' => 0];
         }
 
-        return $cache ??= [
+        $key = $id . ':' . spl_object_id(service('request'));
+
+        return $cache[$key] ??= [
             'notifications' => db_connect()->table('request_notifications')->where('user_id', $id)->where('is_read', 0)->countAllResults(),
             'messages'      => db_connect()->table('notifications')->where('user_id', $id)->where('type', 'message')->where('is_read', 0)->countAllResults(),
         ];
