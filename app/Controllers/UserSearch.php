@@ -2,127 +2,130 @@
 
 namespace App\Controllers;
 
+use App\Models\RequestModel;
 use App\Models\UserModel;
 use App\Models\UserRatingModel;
-use App\Models\RequestModel;
 
 class UserSearch extends BaseController
 {
+    /** Fields of another user that may be shown publicly. */
+    private const PUBLIC_FIELDS = 'id, first_name, last_name, username, about_me, profile_photo, created_at';
+
     public function index()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
-
         $keyword = trim((string) $this->request->getGet('q'));
-        $userModel = new UserModel();
-
-        $users = [];
+        $users   = [];
 
         if ($keyword !== '') {
-            $users = $userModel
+            // Email/phone are private and are neither searched nor shown.
+            $users = (new UserModel())
+                ->select(self::PUBLIC_FIELDS)
                 ->groupStart()
                     ->like('first_name', $keyword)
                     ->orLike('last_name', $keyword)
                     ->orLike('username', $keyword)
-                    ->orLike('email', $keyword)
                 ->groupEnd()
-                ->where('id !=', session('user_id'))
-                ->findAll();
+                ->where('id !=', $this->currentUserId())
+                ->where('role', 'user')
+                ->orderBy('first_name')
+                ->findAll(30);
         }
 
         return view('user_search_page', [
-            'title' => 'Search Users | Pasa-Buy',
+            'title'   => 'Search Users | Pasa-Buy',
             'keyword' => $keyword,
-            'users' => $users
+            'users'   => $users,
         ]);
     }
 
     public function view($id)
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
+        $id   = (int) $id;
+        $user = (new UserModel())->select(self::PUBLIC_FIELDS)->find($id);
 
-        $userModel = new UserModel();
-        $requestModel = new RequestModel();
-        $userRatingModel = new UserRatingModel();
-
-        $user = $userModel->find($id);
-
-        if (!$user) {
+        if ($user === null) {
             return redirect()->to('/users/search')->with('error', 'User not found.');
         }
 
-        $ratingData = $userRatingModel
-            ->selectAvg('rating', 'avg_rating')
+        $ratingData = (new UserRatingModel())
+            ->select('AVG(rating) AS avg_rating, COUNT(*) AS rating_count')
             ->where('rated_user_id', $id)
             ->first();
 
-        $myRating = $userRatingModel
-            ->where('rater_id', session('user_id'))
+        $myRating = (new UserRatingModel())
+            ->where('rater_id', $this->currentUserId())
             ->where('rated_user_id', $id)
             ->first();
-
-        $totalRequests = $requestModel->where('user_id', $id)->countAllResults();
 
         return view('user_public_profile_page', [
-            'title' => 'User Profile | Pasa-Buy',
-            'profileUser' => $user,
-            'totalRequests' => $totalRequests,
-            'averageRating' => number_format((float)($ratingData['avg_rating'] ?? 0), 1),
-            'myRating' => $myRating,
-            'isOwnProfile' => ((string) session('user_id') === (string) $id)
+            'title'         => 'User Profile | Pasa-Buy',
+            'profileUser'   => $user,
+            'totalRequests' => (new RequestModel())->where('user_id', $id)->countAllResults(),
+            'averageRating' => $ratingData['avg_rating'] !== null ? number_format((float) $ratingData['avg_rating'], 1) : null,
+            'ratingCount'   => (int) ($ratingData['rating_count'] ?? 0),
+            'myRating'      => $myRating,
+            'canRate'       => $this->haveCompletedErrandTogether($this->currentUserId(), $id),
+            'isOwnProfile'  => $this->currentUserId() === $id,
         ]);
     }
 
     public function rate($id)
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
-
-        $raterId = (int) session('user_id');
+        $raterId     = $this->currentUserId();
         $ratedUserId = (int) $id;
-        $rating = (int) $this->request->getPost('rating');
-        $feedback = trim((string) $this->request->getPost('feedback'));
+        $rating      = (int) $this->request->getPost('rating');
+        $feedback    = trim((string) $this->request->getPost('feedback'));
+        $back        = redirect()->to('/users/' . $ratedUserId);
 
         if ($raterId === $ratedUserId) {
-            return redirect()->back()->with('error', 'You cannot rate your own account.');
+            return $back->with('error', 'You cannot rate your own account.');
         }
 
         if ($rating < 1 || $rating > 5) {
-            return redirect()->back()->with('error', 'Please select a valid rating.');
+            return $back->withInput()->with('error', 'Please choose a rating from 1 to 5 stars.');
         }
 
-        $userModel = new UserModel();
-        $ratedUser = $userModel->find($ratedUserId);
+        if (mb_strlen($feedback) > 1000) {
+            return $back->withInput()->with('error', 'Feedback must be at most 1000 characters.');
+        }
 
-        if (!$ratedUser) {
+        if ((new UserModel())->select('id')->find($ratedUserId) === null) {
             return redirect()->to('/users/search')->with('error', 'User not found.');
         }
 
-        $userRatingModel = new UserRatingModel();
-
-        $existing = $userRatingModel
-            ->where('rater_id', $raterId)
-            ->where('rated_user_id', $ratedUserId)
-            ->first();
-
-        $data = [
-            'rater_id' => $raterId,
-            'rated_user_id' => $ratedUserId,
-            'rating' => $rating,
-            'feedback' => $feedback
-        ];
-
-        if ($existing) {
-            $userRatingModel->update($existing['id'], $data);
-            return redirect()->back()->with('success', 'Your rating for this user was updated.');
+        if (! $this->haveCompletedErrandTogether($raterId, $ratedUserId)) {
+            return $back->with('error', 'You can rate someone after completing a delivered request with them.');
         }
 
-        $userRatingModel->insert($data);
+        $model    = new UserRatingModel();
+        $existing = $model->where('rater_id', $raterId)->where('rated_user_id', $ratedUserId)->first();
+        $data     = ['rater_id' => $raterId, 'rated_user_id' => $ratedUserId, 'rating' => $rating, 'feedback' => $feedback ?: null];
 
-        return redirect()->back()->with('success', 'User rated successfully.');
+        if ($existing !== null) {
+            $model->update($existing['id'], $data);
+
+            return $back->with('success', 'Your rating was updated.');
+        }
+
+        $model->insert($data);
+
+        return $back->with('success', 'Thank you for your rating.');
+    }
+
+    /** True if one was the requester and the other the runner of a delivered request. */
+    private function haveCompletedErrandTogether(int $a, int $b): bool
+    {
+        if ($a === $b) {
+            return false;
+        }
+
+        return db_connect()->table('accepted_requests ar')
+            ->join('requests r', 'r.id = ar.request_id')
+            ->where('ar.status', 'delivered')
+            ->groupStart()
+                ->groupStart()->where('r.user_id', $a)->where('ar.runner_id', $b)->groupEnd()
+                ->orGroupStart()->where('r.user_id', $b)->where('ar.runner_id', $a)->groupEnd()
+            ->groupEnd()
+            ->countAllResults() > 0;
     }
 }

@@ -34,7 +34,8 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
-        'admin' => \App\Filters\AdminFilter::class,
+        'auth'          => \App\Filters\AuthFilter::class,
+        'admin'         => \App\Filters\AdminFilter::class,
     ];
 
     /**
@@ -73,13 +74,14 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
-            // 'honeypot',
-            // 'csrf',
-            // 'invalidchars',
+            // Session-based CSRF protection for every state-changing request
+            // (POST/PUT/PATCH/DELETE). GET requests are not checked, so routes
+            // that change state must not use GET. Config in Config\Security.
+            'csrf',
+            'invalidchars',
         ],
         'after' => [
-            // 'honeypot',
-            // 'secureheaders',
+            'secureheaders',
         ],
     ];
 

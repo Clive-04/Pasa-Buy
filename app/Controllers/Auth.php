@@ -6,91 +6,167 @@ use App\Models\UserModel;
 
 class Auth extends BaseController
 {
+    /** Failed logins allowed per email+IP before a temporary lockout. */
+    private const LOGIN_ATTEMPTS = 5;
+
+    private const LOGIN_WINDOW_SECONDS = 15 * MINUTE;
+
     public function login()
     {
-        $data['title'] = "Login | Pasa-Buy";
+        if (session('isLoggedIn')) {
+            return redirect()->to($this->homeFor((string) session('role')));
+        }
 
-        return view('login_page', $data);
+        return view('login_page', ['title' => 'Login | Pasa-Buy']);
     }
 
     public function register()
     {
-        $data['title'] = "Register | Pasa-Buy";
+        if (session('isLoggedIn')) {
+            return redirect()->to($this->homeFor((string) session('role')));
+        }
 
-        return view('register_page', $data);
+        return view('register_page', ['title' => 'Register | Pasa-Buy']);
     }
 
     public function process()
     {
-        $userModel = new UserModel();
+        $throttler = service('throttler');
 
-        // Get form data
-        $password = $this->request->getPost('password');
-        $confirmPassword = $this->request->getPost('confirm_password');
-
-        if ($password !== $confirmPassword) {
-            return redirect()->back()->with('error', 'Passwords do not match.');
+        if (! $throttler->check('register-' . md5((string) $this->request->getIPAddress()), 10, HOUR)) {
+            return redirect()->back()->with('error', 'Too many sign-up attempts. Please try again later.');
         }
 
-        $data = [
-            'first_name' => $this->request->getPost('first_name'),
-            'last_name' => $this->request->getPost('last_name'),
-            'email' => $this->request->getPost('email'),
-            'phone_number' => $this->request->getPost('phone'),
-            'password' => password_hash($password, PASSWORD_DEFAULT),
-            'address' => $this->request->getPost('address'),
-            'role' => 'user' // 👈 default
+        $rules = [
+            'first_name'       => ['label' => 'First name', 'rules' => 'required|max_length[20]'],
+            'last_name'        => ['label' => 'Last name', 'rules' => 'required|max_length[20]'],
+            'email'            => ['label' => 'Email', 'rules' => 'required|valid_email|max_length[50]|is_unique[users.email]'],
+            'phone'            => ['label' => 'Phone number', 'rules' => 'required|regex_match[/^(\+639|09)\d{9}$/]|is_unique[users.phone_number]'],
+            'address'          => ['label' => 'Address', 'rules' => 'required|max_length[255]'],
+            // Validate the raw password before hashing.
+            'password'         => ['label' => 'Password', 'rules' => 'required|min_length[8]|max_length[72]'],
+            'confirm_password' => ['label' => 'Confirm password', 'rules' => 'required|matches[password]'],
         ];
 
-        // Basic validation
-        if (empty($data['first_name']) || empty($data['last_name']) || empty($data['email']) || empty($data['phone_number']) || empty($data['password']) || empty($data['address'])) {
-            return redirect()->back()->with('error', 'All fields are required.');
+        $messages = [
+            'email' => ['is_unique' => 'An account with this email already exists.'],
+            'phone' => [
+                'is_unique'   => 'An account with this phone number already exists.',
+                'regex_match' => 'Enter a Philippine mobile number like 09171234567.',
+            ],
+            'confirm_password' => ['matches' => 'Passwords do not match.'],
+        ];
+
+        $input = [
+            'first_name'       => trim((string) $this->request->getPost('first_name')),
+            'last_name'        => trim((string) $this->request->getPost('last_name')),
+            'email'            => strtolower(trim((string) $this->request->getPost('email'))),
+            'phone'            => preg_replace('/[\s-]/', '', (string) $this->request->getPost('phone')),
+            'address'          => trim((string) $this->request->getPost('address')),
+            'password'         => (string) $this->request->getPost('password'),
+            'confirm_password' => (string) $this->request->getPost('confirm_password'),
+        ];
+
+        $validation = service('validation')->setRules($rules, $messages);
+        $valid      = $validation->run($input);
+        $errors     = $validation->getErrors();
+
+        // bcrypt ignores everything after 72 bytes; multi-byte characters
+        // can exceed that even within 72 characters.
+        if (strlen($input['password']) > 72) {
+            $errors['password'] = 'Password is too long.';
+            $valid              = false;
         }
 
-        // Check if email or phone already exists
-        if ($userModel->where('email', $data['email'])->first() || $userModel->where('phone_number', $data['phone_number'])->first()) {
-            return redirect()->back()->with('error', 'Email or phone number already exists.');
+        if (! $valid) {
+            return redirect()->back()
+                ->with('error', 'Please correct the highlighted fields.')
+                ->with('errors', $errors)
+                ->with('form_old', array_diff_key($input, ['password' => 1, 'confirm_password' => 1]));
         }
 
-        // Save user
-        if ($userModel->insert($data)) {
-            return redirect()->to('/login')->with('success', 'Registration successful. Please login.');
-        } else {
-            return redirect()->back()->with('error', 'Registration failed. Please try again.');
+        $userModel = new UserModel();
+
+        // role is not mass-assignable; the column default ('user') applies.
+        // Administrators are provisioned with `php spark user:role`.
+        $saved = $userModel->insert([
+            'first_name'   => $input['first_name'],
+            'last_name'    => $input['last_name'],
+            'email'        => $input['email'],
+            'phone_number' => $input['phone'],
+            'password'     => password_hash($input['password'], PASSWORD_DEFAULT),
+            'address'      => $input['address'],
+        ]);
+
+        if (! $saved) {
+            return redirect()->back()
+                ->with('error', 'Registration failed. Please try again.')
+                ->with('form_old', array_diff_key($input, ['password' => 1, 'confirm_password' => 1]));
         }
+
+        return redirect()->to('/login')->with('success', 'Registration successful. Please log in.');
     }
 
     public function loginProcess()
     {
-        $userModel = new UserModel();
+        $email    = strtolower(trim((string) $this->request->getPost('email')));
+        $password = (string) $this->request->getPost('password');
 
-        $email = $this->request->getPost('email');
-        $password = $this->request->getPost('password');
+        $back = fn (string $message) => redirect()->back()
+            ->with('error', $message)
+            ->with('form_old', ['email' => $email]);
 
-        // Find user by email
-        $user = $userModel->where('email', $email)->first();
-
-        if ($user && password_verify($password, $user['password'])) {
-            session()->set([
-                'user_id' => $user['id'],
-                'user_name' => $user['first_name'] . ' ' . $user['last_name'],
-                'user_email' => $user['email'],
-                'role' => $user['role'], // 👈 ADD THIS
-                'isLoggedIn' => true     // 👈 ADD THIS
-            ]);
-
-            // 👇 redirect based on role
-            if ($user['role'] === 'admin') {
-                return redirect()->to('/admin/dashboard');
-            } else {
-                return redirect()->to('/dashboard');
-            }
+        if ($email === '' || $password === '') {
+            return $back('Enter your email and password.');
         }
+
+        $throttler = service('throttler');
+        $key       = 'login-' . md5($email . '|' . $this->request->getIPAddress());
+
+        if (! $throttler->check($key, self::LOGIN_ATTEMPTS, self::LOGIN_WINDOW_SECONDS, 0)) {
+            return $back('Too many failed attempts. Please wait ' . max(1, (int) ceil($throttler->getTokenTime() / 60)) . ' minute(s) and try again.');
+        }
+
+        $user = (new UserModel())->where('email', $email)->first();
+
+        if ($user === null || ! password_verify($password, $user['password'])) {
+            // Spend one token per failure (the check above, cost 0, only peeks).
+            $throttler->check($key, self::LOGIN_ATTEMPTS, self::LOGIN_WINDOW_SECONDS, 1);
+
+            // Same message whether the email exists or not.
+            return $back('Invalid email or password.');
+        }
+
+        // Successful login: forget earlier failures and prevent session fixation.
+        $throttler->remove($key);
+        session()->regenerate(true);
+
+        if (password_needs_rehash($user['password'], PASSWORD_DEFAULT)) {
+            (new UserModel())->update($user['id'], ['password' => password_hash($password, PASSWORD_DEFAULT)]);
+        }
+
+        $role = $user['role'] === 'admin' ? 'admin' : 'user';
+
+        session()->set([
+            'user_id'    => (int) $user['id'],
+            'user_name'  => trim($user['first_name'] . ' ' . $user['last_name']),
+            'user_email' => $user['email'],
+            'role'       => $role,
+            'isLoggedIn' => true,
+        ]);
+
+        return redirect()->to($this->homeFor($role))->with('success', 'Welcome back, ' . $user['first_name'] . '!');
     }
 
     public function logout()
     {
         session()->destroy();
+
         return redirect()->to('/login')->with('success', 'Logged out successfully.');
+    }
+
+    private function homeFor(string $role): string
+    {
+        return $role === 'admin' ? '/admin/dashboard' : '/dashboard';
     }
 }

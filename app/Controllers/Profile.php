@@ -2,195 +2,170 @@
 
 namespace App\Controllers;
 
-use App\Models\UserModel;
-use App\Models\RequestModel;
-use App\Models\WebsiteRatingModel;
-use App\Models\ReferralModel;
+use App\Libraries\UploadStorage;
 use App\Models\AcceptedRequestModel;
+use App\Models\ReferralModel;
+use App\Models\RequestModel;
+use App\Models\UserModel;
+use App\Models\UserRatingModel;
+use App\Models\WebsiteRatingModel;
+use App\Services\ServiceException;
 
 class Profile extends BaseController
 {
     public function index()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
+        $userId = $this->currentUserId();
+        $user   = (new UserModel())->find($userId);
+
+        if ($user === null) {
+            session()->destroy();
+
+            return redirect()->to('/login')->with('error', 'Account not found.');
         }
 
-        $userId = session('user_id');
-
-        $userModel = new UserModel();
-        $requestModel = new RequestModel();
-        $acceptedRequestModel = new AcceptedRequestModel();
-        $websiteRatingModel = new WebsiteRatingModel();
-
-        $user = $userModel->find($userId);
-
-        if (!$user) {
-            return redirect()->to('/login')->with('error', 'User not found.');
-        }
-
-        // Requests posted by the user
-        $totalRequests = $requestModel
-            ->where('user_id', $userId)
-            ->countAllResults();
-
-        // Requests accepted by the user as runner
-        $acceptedRequests = $acceptedRequestModel
-            ->where('runner_id', $userId)
-            ->countAllResults();
-
-        // Requests accepted by the user and already delivered
-        $deliveredRequests = $acceptedRequestModel
-            ->where('runner_id', $userId)
-            ->where('status', 'delivered')
-            ->countAllResults();
-
-        $avgWebsiteRating = $websiteRatingModel
-            ->selectAvg('rating', 'avg_rating')
+        $rating = (new UserRatingModel())
+            ->select('AVG(rating) AS avg_rating, COUNT(*) AS rating_count')
+            ->where('rated_user_id', $userId)
             ->first();
 
-        $data = [
-            'title' => 'Profile | Pasa-Buy',
-            'user' => $user,
-            'totalRequests' => $totalRequests,
-            'acceptedRequests' => $acceptedRequests,
-            'deliveredRequests' => $deliveredRequests,
-            'rating' => 5.0,
-            'isOwnProfile' => true
-        ];
-
-        return view('profile_page', $data);
+        return view('profile_page', [
+            'title'             => 'Profile | Pasa-Buy',
+            'user'              => $user,
+            'totalRequests'     => (new RequestModel())->where('user_id', $userId)->countAllResults(),
+            'acceptedRequests'  => (new AcceptedRequestModel())->where('runner_id', $userId)->countAllResults(),
+            'deliveredRequests' => (new AcceptedRequestModel())->where('runner_id', $userId)->where('status', 'delivered')->countAllResults(),
+            // Real average from other users' ratings (previously hard-coded 5.0).
+            'rating'            => $rating['avg_rating'] !== null ? round((float) $rating['avg_rating'], 1) : null,
+            'ratingCount'       => (int) ($rating['rating_count'] ?? 0),
+            'myWebsiteRating'   => (new WebsiteRatingModel())->where('user_id', $userId)->first(),
+            'isOwnProfile'      => true,
+        ]);
     }
 
     public function updateProfile()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
+        $userId = $this->currentUserId();
 
-        $userId = session('user_id');
-
-        $fullName = trim((string) $this->request->getPost('full_name'));
-        $username = trim((string) $this->request->getPost('username'));
-        $aboutMe  = trim((string) $this->request->getPost('about_me'));
-
-        $nameParts = explode(' ', $fullName, 2);
-        $firstName = $nameParts[0] ?? '';
-        $lastName  = $nameParts[1] ?? '';
-
-        $userModel = new UserModel();
-        $user = $userModel->find($userId);
-
-        $updateData = [
-            'first_name' => $firstName,
-            'last_name'  => $lastName,
-            'username'   => $username,
-            'about_me'   => $aboutMe
+        $input = [
+            'first_name' => trim((string) $this->request->getPost('first_name')),
+            'last_name'  => trim((string) $this->request->getPost('last_name')),
+            'username'   => trim((string) $this->request->getPost('username')),
+            'about_me'   => trim((string) $this->request->getPost('about_me')),
         ];
 
-        $photo = $this->request->getFile('profile_photo');
+        $validation = service('validation')->setRules([
+            'first_name' => ['label' => 'First name', 'rules' => 'required|max_length[20]'],
+            'last_name'  => ['label' => 'Last name', 'rules' => 'required|max_length[20]'],
+            'username'   => ['label' => 'Username', 'rules' => 'permit_empty|max_length[100]|regex_match[/^[A-Za-z0-9._-]+$/]'],
+            'about_me'   => ['label' => 'About me', 'rules' => 'permit_empty|max_length[1000]'],
+        ], [
+            'username' => ['regex_match' => 'Use letters, numbers, dots, dashes or underscores only.'],
+        ]);
 
-        if ($photo && $photo->isValid() && !$photo->hasMoved()) {
-            $newName = $photo->getRandomName();
-            $photo->move(FCPATH . 'uploads/profile_photos', $newName);
+        if (! $validation->run($input)) {
+            return $this->backWithErrors($validation->getErrors())->with('open_modal', 'editProfileModal');
+        }
 
-            if (!empty($user['profile_photo']) && file_exists(FCPATH . 'uploads/profile_photos/' . $user['profile_photo'])) {
-                unlink(FCPATH . 'uploads/profile_photos/' . $user['profile_photo']);
+        $userModel = new UserModel();
+        $user      = $userModel->find($userId);
+        $photo     = $this->request->getFile('profile_photo');
+        $newPhoto  = null;
+
+        if ($photo !== null && $photo->getError() !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $checked  = UploadStorage::validate($photo, UploadStorage::IMAGE_TYPES, UploadStorage::PROFILE_MAX_BYTES);
+                $newPhoto = UploadStorage::store($photo, UploadStorage::PROFILE_PHOTOS, $checked['extension']);
+            } catch (ServiceException $e) {
+                return $this->backWithErrors(['profile_photo' => $e->getMessage()], $e->getMessage())->with('open_modal', 'editProfileModal');
             }
 
-            $updateData['profile_photo'] = $newName;
+            $input['profile_photo'] = $newPhoto;
         }
 
-        $updated = $userModel->update($userId, $updateData);
+        if (! $userModel->update($userId, $input)) {
+            UploadStorage::delete(UploadStorage::PROFILE_PHOTOS, $newPhoto);
 
-        if (!$updated) {
-            return redirect()->back()->with('error', 'Profile update failed.');
+            return redirect()->back()->withInput()->with('error', 'Profile update failed.');
         }
 
-        session()->set('user_name', trim($firstName . ' ' . $lastName));
+        if ($newPhoto !== null) {
+            UploadStorage::delete(UploadStorage::PROFILE_PHOTOS, $user['profile_photo'] ?? null);
+        }
 
-        return redirect()->back()->with('success', 'Profile updated successfully.');
+        session()->set('user_name', trim($input['first_name'] . ' ' . $input['last_name']));
+
+        return redirect()->to('/profile')->with('success', 'Profile updated.');
     }
 
     public function rateWebsite()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
-
-        $userId = session('user_id');
-        $rating = (int) $this->request->getPost('rating');
+        $userId   = $this->currentUserId();
+        $rating   = (int) $this->request->getPost('rating');
         $feedback = trim((string) $this->request->getPost('feedback'));
 
         if ($rating < 1 || $rating > 5) {
-            return redirect()->back()->with('error', 'Please select a valid website rating.');
+            return redirect()->to('/profile')->withInput()->with('error', 'Please choose a rating from 1 to 5 stars.')->with('open_modal', 'rateWebsiteModal');
         }
 
-        $websiteRatingModel = new WebsiteRatingModel();
-
-        $existing = $websiteRatingModel
-            ->where('user_id', $userId)
-            ->first();
-
-        $data = [
-            'user_id' => $userId,
-            'rating' => $rating,
-            'feedback' => $feedback
-        ];
-
-        if ($existing) {
-            $websiteRatingModel->update($existing['id'], $data);
-            return redirect()->back()->with('success', 'Your website rating was updated.');
+        if (mb_strlen($feedback) > 1000) {
+            return redirect()->to('/profile')->withInput()->with('error', 'Feedback must be at most 1000 characters.')->with('open_modal', 'rateWebsiteModal');
         }
 
-        $websiteRatingModel->insert($data);
+        $model    = new WebsiteRatingModel();
+        $existing = $model->where('user_id', $userId)->first();
+        $data     = ['user_id' => $userId, 'rating' => $rating, 'feedback' => $feedback ?: null];
 
-        return redirect()->back()->with('success', 'Thank you for rating the website.');
+        if ($existing !== null) {
+            $model->update($existing['id'], $data);
+
+            return redirect()->to('/profile')->with('success', 'Your website rating was updated.');
+        }
+
+        $model->insert($data);
+
+        return redirect()->to('/profile')->with('success', 'Thank you for rating Pasa-Buy.');
     }
 
     public function referFriend()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
+        $userId      = $this->currentUserId();
+        $friendName  = trim((string) $this->request->getPost('friend_name'));
+        $friendEmail = strtolower(trim((string) $this->request->getPost('friend_email')));
 
-        $userId = session('user_id');
-        $friendName = trim((string) $this->request->getPost('friend_name'));
-        $friendEmail = trim((string) $this->request->getPost('friend_email'));
+        $back = fn (string $message) => redirect()->to('/profile')->withInput()->with('error', $message)->with('open_modal', 'referFriendModal');
 
         if ($friendName === '' || $friendEmail === '') {
-            return redirect()->back()->with('error', 'Friend name and email are required.');
+            return $back('Friend name and email are required.');
         }
 
-        if (!filter_var($friendEmail, FILTER_VALIDATE_EMAIL)) {
-            return redirect()->back()->with('error', 'Please enter a valid email address.');
+        if (mb_strlen($friendName) > 100 || mb_strlen($friendEmail) > 150 || ! filter_var($friendEmail, FILTER_VALIDATE_EMAIL)) {
+            return $back('Please enter a valid name and email address.');
         }
 
-        $userModel = new \App\Models\UserModel();
-        $currentUser = $userModel->find($userId);
+        $currentUser = (new UserModel())->find($userId);
 
-        if ($currentUser && !empty($currentUser['email']) && strtolower($friendEmail) === strtolower($currentUser['email'])) {
-            return redirect()->back()->with('error', 'You cannot refer your own email.');
+        if ($currentUser !== null && strtolower($currentUser['email']) === $friendEmail) {
+            return $back('You cannot refer your own email.');
         }
 
-        $referralModel = new \App\Models\ReferralModel();
+        $referrals = new ReferralModel();
 
-        $existingReferral = $referralModel
-            ->where('user_id', $userId)
-            ->where('friend_email', $friendEmail)
-            ->first();
-
-        if ($existingReferral) {
-            return redirect()->back()->with('error', 'You already referred this email.');
+        if ($referrals->where('user_id', $userId)->where('friend_email', $friendEmail)->first() !== null) {
+            return $back('You already referred this email.');
         }
 
-        $referralModel->insert([
-            'user_id' => $userId,
-            'friend_name' => $friendName,
+        $referrals->insert([
+            'user_id'      => $userId,
+            'friend_name'  => $friendName,
             'friend_email' => $friendEmail,
-            'status' => 'pending'
+            'status'       => 'pending',
         ]);
 
-        return redirect()->back()->with('success', 'Referral sent successfully.');
+        // No email is sent: the app has no mail delivery configured.
+        return redirect()->to('/profile')->with(
+            'success',
+            'Referral saved for ' . $friendName . '. Pasa-Buy does not send invitation emails, so share the link with them yourself.'
+        );
     }
 }

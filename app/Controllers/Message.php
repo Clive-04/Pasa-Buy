@@ -2,254 +2,241 @@
 
 namespace App\Controllers;
 
+use App\Libraries\UploadStorage;
+use App\Models\AcceptedRequestModel;
 use App\Models\MessageModel;
+use App\Models\RequestModel;
 use App\Models\UserModel;
+use App\Services\ServiceException;
+use CodeIgniter\Exceptions\PageNotFoundException;
+use Throwable;
 
 class Message extends BaseController
 {
+    private const MAX_MESSAGE_LENGTH = 2000;
+    private const THREAD_LIMIT       = 200;
+
     public function index()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
-
-        $messageModel = new MessageModel();
-        $userModel = new UserModel();
-        $db = db_connect();
-
-        $loggedInUserId = session('user_id');
-        $selectedUserId = $this->request->getGet('user_id');
-        $requestId = $this->request->getGet('request_id');
-
-        // Mark message notifications as read for the selected conversation
-        if (!empty($selectedUserId)) {
-            $messageIds = $db->table('messages')
-                ->select('id')
-                ->groupStart()
-                    ->groupStart()
-                        ->where('sender_id', $selectedUserId)
-                        ->where('receiver_id', $loggedInUserId)
-                    ->groupEnd()
-                    ->orGroupStart()
-                        ->where('sender_id', $loggedInUserId)
-                        ->where('receiver_id', $selectedUserId)
-                    ->groupEnd()
-                ->groupEnd()
-                ->get()
-                ->getResultArray();
-
-            $messageIds = array_column($messageIds, 'id');
-
-            if (!empty($messageIds)) {
-                $db->table('notifications')
-                    ->where('user_id', $loggedInUserId)
-                    ->where('sender_id', $selectedUserId)
-                    ->where('type', 'message')
-                    ->whereIn('message_id', $messageIds)
-                    ->update(['is_read' => 1]);
-            }
-        }
-
-        $search = trim((string) $this->request->getGet('search'));
+        $db             = db_connect();
+        $loggedInUserId = $this->currentUserId();
+        $selectedUserId = (int) $this->request->getGet('user_id');
+        $requestId      = (int) $this->request->getGet('request_id') ?: null;
+        $search         = trim((string) $this->request->getGet('search'));
 
         $selectedUser = null;
-        $messages = [];
+        $messages     = [];
 
-        if (!empty($selectedUserId) && (string) $selectedUserId !== (string) $loggedInUserId) {
-            $selectedUser = $userModel->find($selectedUserId);
+        if ($selectedUserId > 0 && $selectedUserId !== $loggedInUserId) {
+            $selectedUser = (new UserModel())->select('id, first_name, last_name, profile_photo')->find($selectedUserId);
+        }
 
-            $builder = $messageModel
+        if ($selectedUser !== null) {
+            // Opening a conversation marks its message notifications as read.
+            $db->table('notifications')
+                ->where('user_id', $loggedInUserId)
+                ->where('sender_id', $selectedUserId)
+                ->where('type', 'message')
+                ->where('is_read', 0)
+                ->update(['is_read' => 1]);
+
+            $builder = (new MessageModel())
                 ->groupStart()
-                    ->groupStart()
-                        ->where('sender_id', $loggedInUserId)
-                        ->where('receiver_id', $selectedUserId)
-                    ->groupEnd()
-                    ->orGroupStart()
-                        ->where('sender_id', $selectedUserId)
-                        ->where('receiver_id', $loggedInUserId)
-                    ->groupEnd()
+                    ->groupStart()->where('sender_id', $loggedInUserId)->where('receiver_id', $selectedUserId)->groupEnd()
+                    ->orGroupStart()->where('sender_id', $selectedUserId)->where('receiver_id', $loggedInUserId)->groupEnd()
                 ->groupEnd();
 
-            if (!empty($requestId)) {
+            if ($requestId !== null) {
                 $builder->where('request_id', $requestId);
             }
 
-            $messages = $builder
-                ->orderBy('created_at', 'ASC')
-                ->findAll();
+            // Latest messages, shown oldest-first.
+            $messages = array_reverse($builder->orderBy('created_at', 'DESC')->orderBy('id', 'DESC')->findAll(self::THREAD_LIMIT));
         }
 
         $searchSql = '';
-        $params = [
-            $loggedInUserId,
-            $loggedInUserId,
-            $loggedInUserId,
-            $loggedInUserId,
-            $loggedInUserId,
-            $loggedInUserId
-        ];
+        $params    = array_fill(0, 6, $loggedInUserId);
 
         if ($search !== '') {
-            $searchSql = " AND (
-                u.first_name LIKE ?
-                OR u.last_name LIKE ?
-                OR m1.message LIKE ?
-            )";
-
-            $like = '%' . $search . '%';
-            $params[] = $like;
-            $params[] = $like;
-            $params[] = $like;
+            $searchSql = " AND (u.first_name LIKE ? ESCAPE '!' OR u.last_name LIKE ? ESCAPE '!' OR m1.message LIKE ? ESCAPE '!')";
+            $like      = '%' . $db->escapeLikeString($search) . '%';
+            array_push($params, $like, $like, $like);
         }
 
-        $conversationQuery = $db->query("
-            SELECT
-                m1.id,
-                m1.sender_id,
-                m1.receiver_id,
-                m1.request_id,
-                m1.message,
-                m1.attachment_name,
-                m1.attachment_path,
-                m1.attachment_type,
-                m1.created_at,
-                u.id AS user_id,
-                u.first_name,
-                u.last_name,
-                (
-                    SELECT COUNT(*)
-                    FROM notifications n
-                    INNER JOIN messages m2 ON m2.id = n.message_id
-                    WHERE n.user_id = ?
-                    AND n.sender_id = u.id
-                    AND n.type = 'message'
-                    AND n.is_read = 0
-                ) AS unread_count
+        $conversations = $db->query("
+            SELECT m1.id, m1.sender_id, m1.receiver_id, m1.request_id, m1.message,
+                   m1.attachment_name, m1.created_at,
+                   u.id AS user_id, u.first_name, u.last_name,
+                   (SELECT COUNT(*) FROM notifications n
+                     WHERE n.user_id = ? AND n.sender_id = u.id AND n.type = 'message' AND n.is_read = 0) AS unread_count
             FROM messages m1
             INNER JOIN (
-                SELECT
-                    CASE
-                        WHEN sender_id = ? THEN receiver_id
-                        ELSE sender_id
-                    END AS other_user_id,
-                    MAX(created_at) AS latest_time
+                SELECT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS other_user_id,
+                       MAX(id) AS latest_id
                 FROM messages
                 WHERE sender_id = ? OR receiver_id = ?
                 GROUP BY other_user_id
-            ) latest
-                ON (
-                    (
-                        (m1.sender_id = ? AND m1.receiver_id = latest.other_user_id)
-                        OR
-                        (m1.receiver_id = ? AND m1.sender_id = latest.other_user_id)
-                    )
-                    AND m1.created_at = latest.latest_time
-                )
+            ) latest ON m1.id = latest.latest_id
+                    AND ((m1.sender_id = ? AND m1.receiver_id = latest.other_user_id)
+                      OR (m1.receiver_id = ? AND m1.sender_id = latest.other_user_id))
             INNER JOIN users u ON u.id = latest.other_user_id
-            WHERE 1=1
-            $searchSql
-            ORDER BY m1.created_at DESC
-        ", $params);
+            WHERE 1 = 1 {$searchSql}
+            ORDER BY m1.id DESC
+            LIMIT 100
+        ", $params)->getResultArray();
 
-        $data['title'] = 'Messages | Pasa-Buy';
-        $data['selectedUserId'] = $selectedUserId;
-        $data['selectedUser'] = $selectedUser;
-        $data['messages'] = $messages;
-        $data['requestId'] = $requestId;
-        $data['conversations'] = $conversationQuery->getResultArray();
-        $data['search'] = $search;
-
-        return view('messages_page', $data);
+        return view('messages_page', [
+            'title'          => 'Messages | Pasa-Buy',
+            'selectedUserId' => $selectedUser['id'] ?? null,
+            'selectedUser'   => $selectedUser,
+            'messages'       => $messages,
+            'requestId'      => $requestId,
+            'conversations'  => $conversations,
+            'search'         => $search,
+            'maxLength'      => self::MAX_MESSAGE_LENGTH,
+        ]);
     }
 
     public function send()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
+        $senderId   = $this->currentUserId();
+        $receiverId = (int) $this->request->getPost('receiver_id');
+        $requestId  = (int) $this->request->getPost('request_id') ?: null;
+        $message    = trim((string) $this->request->getPost('message'));
+        $attachment = $this->request->getFile('attachment');
+        $hasFile    = $attachment !== null && $attachment->getError() !== UPLOAD_ERR_NO_FILE;
+
+        $thread = 'messages?user_id=' . $receiverId . ($requestId !== null ? '&request_id=' . $requestId : '');
+        $fail   = fn (string $error) => redirect()->to($thread)->withInput()->with('error', $error);
+
+        if ($receiverId <= 0 || (new UserModel())->select('id')->find($receiverId) === null) {
+            return redirect()->to('messages')->with('error', 'That user could not be found.');
         }
 
-        $messageModel = new MessageModel();
+        if ($senderId === $receiverId) {
+            return redirect()->to('messages')->with('error', 'You cannot message yourself.');
+        }
+
+        if ($message === '' && ! $hasFile) {
+            return $fail('Type a message or attach a file.');
+        }
+
+        if (mb_strlen($message) > self::MAX_MESSAGE_LENGTH) {
+            return $fail('Messages can be at most ' . self::MAX_MESSAGE_LENGTH . ' characters.');
+        }
+
+        if ($requestId !== null && ! $this->participantsMatch($requestId, $senderId, $receiverId)) {
+            return redirect()->to('messages')->with('error', 'You can only message the requester or runner of that request.');
+        }
+
+        $stored = null;
+        $type   = null;
+
+        if ($hasFile) {
+            try {
+                $checked = UploadStorage::validate($attachment, UploadStorage::IMAGE_TYPES + UploadStorage::DOCUMENT_TYPES, UploadStorage::MESSAGE_MAX_BYTES);
+                $stored  = UploadStorage::store($attachment, UploadStorage::MESSAGE_FILES, $checked['extension']);
+                $type    = $checked['mime'];
+            } catch (ServiceException $e) {
+                return $fail($e->getMessage());
+            }
+        }
+
         $db = db_connect();
 
-        $senderId = session('user_id');
-        $receiverId = $this->request->getPost('receiver_id');
-        $requestId = $this->request->getPost('request_id');
-        $message = trim((string) $this->request->getPost('message'));
-        $attachment = $this->request->getFile('attachment');
+        try {
+            $db->resetTransStatus()->transException(true)->transStart();
 
-        $attachmentName = null;
-        $attachmentPath = null;
-        $attachmentType = null;
+            $messageId = (new MessageModel())->insert([
+                'sender_id'       => $senderId,
+                'receiver_id'     => $receiverId,
+                'request_id'      => $requestId,
+                'message'         => $message,
+                'attachment_name' => $hasFile ? mb_substr(basename((string) $attachment->getClientName()), 0, 255) : null,
+                'attachment_path' => $stored !== null ? UploadStorage::MESSAGE_FILES . '/' . $stored : null,
+                'attachment_type' => $type,
+                'created_at'      => date('Y-m-d H:i:s'),
+            ]);
 
-        if ($attachment && $attachment->getName() !== '') {
-            if (!$attachment->isValid()) {
-                return redirect()->back()->with('error', 'File upload failed: ' . $attachment->getErrorString());
-            }
+            $db->table('notifications')->insert([
+                'user_id'    => $receiverId,
+                'sender_id'  => $senderId,
+                'message_id' => $messageId,
+                'type'       => 'message',
+                'is_read'    => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
 
-            if ($attachment->hasMoved()) {
-                return redirect()->back()->with('error', 'The uploaded file is no longer available.');
-            }
+            $db->transComplete();
+        } catch (Throwable $e) {
+            UploadStorage::delete(UploadStorage::MESSAGE_FILES, $stored);
+            log_message('error', 'Message send failed: {message}', ['message' => $e->getMessage()]);
 
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx'];
-            $extension = strtolower($attachment->getClientExtension());
-
-            if (!in_array($extension, $allowedExtensions, true)) {
-                return redirect()->back()->with('error', 'Invalid file type. Allowed: JPG, PNG, WEBP, PDF, DOC, DOCX.');
-            }
-
-            if ($attachment->getSize() > 5 * 1024 * 1024) {
-                return redirect()->back()->with('error', 'File size must not exceed 5MB.');
-            }
-
-            $uploadPath = FCPATH . 'uploads/message_attachments/';
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0777, true);
-            }
-
-            $newName = $attachment->getRandomName();
-            $attachment->move($uploadPath, $newName);
-
-            $attachmentName = $attachment->getClientName();
-            $attachmentPath = 'uploads/message_attachments/' . $newName;
-            $attachmentType = $extension;
+            return $fail('Message could not be sent. Please try again.');
+        } finally {
+            $db->transException(false);
         }
 
-        if (empty($receiverId)) {
-            return redirect()->back()->with('error', 'Message could not be sent.');
+        return redirect()->to($thread);
+    }
+
+    /** Streams an attachment to the sender or receiver only. */
+    public function attachment($messageId)
+    {
+        $message = (new MessageModel())->find((int) $messageId);
+        $viewer  = $this->currentUserId();
+
+        if ($message === null
+            || ! in_array($viewer, [(int) $message['sender_id'], (int) $message['receiver_id']], true)
+            || empty($message['attachment_path'])) {
+            throw PageNotFoundException::forPageNotFound();
         }
 
-        if ((string) $senderId === (string) $receiverId) {
-            return redirect()->back()->with('error', 'You cannot message yourself.');
+        $name = basename((string) $message['attachment_path']);
+        $path = UploadStorage::path(UploadStorage::MESSAGE_FILES, $name);
+
+        if ($path === null) {
+            throw PageNotFoundException::forPageNotFound();
         }
 
-        if ($message === '' && empty($attachmentPath)) {
-            return redirect()->back()->with('error', 'Please type a message or attach a file.');
+        $contentType = UploadStorage::contentType($name);
+        $inline      = str_starts_with($contentType, 'image/') || $contentType === 'application/pdf';
+        $download    = preg_replace('/[^A-Za-z0-9._ -]/', '_', (string) ($message['attachment_name'] ?: $name));
+
+        return $this->response
+            ->setHeader('Content-Type', $contentType)
+            ->setHeader('Content-Length', (string) filesize($path))
+            ->setHeader('Content-Disposition', ($inline ? 'inline' : 'attachment') . '; filename="' . $download . '"')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
+            ->setHeader('Cache-Control', 'no-store, private')
+            ->setBody(file_get_contents($path));
+    }
+
+    /**
+     * A message tied to a request must be between its requester and its
+     * assigned runner (or, before anyone accepts it, involve the requester).
+     */
+    private function participantsMatch(int $requestId, int $senderId, int $receiverId): bool
+    {
+        $request = (new RequestModel())->select('id, user_id')->find($requestId);
+
+        if ($request === null) {
+            return false;
         }
 
-        $messageId = $messageModel->insert([
-            'sender_id'       => $senderId,
-            'receiver_id'     => $receiverId,
-            'request_id'      => !empty($requestId) ? $requestId : null,
-            'message'         => $message,
-            'attachment_name' => $attachmentName,
-            'attachment_path' => $attachmentPath,
-            'attachment_type' => $attachmentType
-        ]);
+        $requesterId = (int) $request['user_id'];
+        $acceptance  = (new AcceptedRequestModel())->where('request_id', $requestId)->first();
 
-        $db->table('notifications')->insert([
-            'user_id'    => $receiverId,
-            'sender_id'  => $senderId,
-            'message_id' => $messageId,
-            'type'       => 'message',
-            'is_read'    => 0,
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $redirectUrl = 'messages?user_id=' . $receiverId;
-        if (!empty($requestId)) {
-            $redirectUrl .= '&request_id=' . $requestId;
+        if ($acceptance === null) {
+            return in_array($requesterId, [$senderId, $receiverId], true);
         }
 
-        return redirect()->to(base_url($redirectUrl))->with('success', 'Message sent.');
+        $pair = [$requesterId, (int) $acceptance['runner_id']];
+        sort($pair);
+        $actual = [$senderId, $receiverId];
+        sort($actual);
+
+        return $pair === $actual;
     }
 }
