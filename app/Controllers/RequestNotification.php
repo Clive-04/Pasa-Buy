@@ -94,6 +94,12 @@ class RequestNotification extends BaseController
             ->set(['is_read' => 1])
             ->update();
 
-        return redirect()->to('/notifications')->with('success', 'All notifications marked as read.');
+        // The navbar dropdown sends this in the background and stays open.
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['ok' => true, 'notifications' => 0]);
+        }
+
+        // Without JavaScript: stay on the page the user was on.
+        return redirect()->back()->with('success', 'All notifications marked as read.');
     }
 }

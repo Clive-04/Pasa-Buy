@@ -353,3 +353,13 @@ if (! function_exists('time_ago')) {
         };
     }
 }
+
+if (! function_exists('asset')) {
+    /** URL for a file under public/ with a ?v= stamp, so browsers pick up changes. */
+    function asset(string $path): string
+    {
+        $file = FCPATH . ltrim($path, '/');
+
+        return base_url($path) . (is_file($file) ? '?v=' . filemtime($file) : '');
+    }
+}

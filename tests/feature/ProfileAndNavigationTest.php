@@ -145,6 +145,37 @@ final class ProfileAndNavigationTest extends FeatureTestCase
         $this->assertStringContainsString('notifications/open/', $data['items'][0]['url']);
     }
 
+    public function testMarkAllReadFromTheDropdownStaysOnThePage(): void
+    {
+        $me    = $this->createUser();
+        $other = $this->createUser();
+        $req   = $this->createRequest($this->createUser());
+
+        $this->db->table('request_notifications')->insertBatch([
+            ['user_id' => $me, 'request_id' => $req, 'type' => 'delivered', 'title' => 'A', 'content' => 'A', 'is_read' => 0],
+            ['user_id' => $other, 'request_id' => $req, 'type' => 'delivered', 'title' => 'B', 'content' => 'B', 'is_read' => 0],
+        ]);
+
+        // Background request from the dropdown: JSON, no redirect.
+        $response = $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])->postAs($me, 'notifications/mark-all-read');
+
+        $response->assertOK();
+        $this->assertFalse($response->isRedirect());
+        $this->assertSame(['ok' => true, 'notifications' => 0], json_decode($response->getJSON(), true));
+        $this->assertSame(0, $this->countRows('request_notifications', ['user_id' => $me, 'is_read' => 0]));
+        $this->assertSame(1, $this->countRows('request_notifications', ['user_id' => $other, 'is_read' => 0]), "Other users' notifications are untouched.");
+    }
+
+    public function testMarkAllReadWithoutJavaScriptDoesNotJumpToNotificationsPage(): void
+    {
+        $me = $this->createUser();
+
+        $response = $this->withHeaders(['Referer' => base_url('wallet')])->postAs($me, 'notifications/mark-all-read');
+
+        $this->assertTrue($response->isRedirect());
+        $this->assertStringNotContainsString('/notifications', $response->getRedirectUrl());
+    }
+
     public function testNavigationShowsGroupedMenuAndBreadcrumbs(): void
     {
         $user = $this->createUser();

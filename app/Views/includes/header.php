@@ -24,12 +24,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="<?= base_url('css/theme.css') ?>">
-    <link rel="stylesheet" href="<?= base_url('css/components.css') ?>">
-    <link rel="stylesheet" href="<?= base_url('css/pages.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/components.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/pages.css') ?>">
 
-    <script src="<?= base_url('js/responsive-layout.js') ?>" defer></script>
-    <script src="<?= base_url('js/app.js') ?>" defer></script>
+    <script src="<?= asset('js/responsive-layout.js') ?>" defer></script>
+    <script src="<?= asset('js/app.js') ?>" defer></script>
 </head>
 <body<?php if (session('isLoggedIn')): ?> data-poll-url="<?= esc(base_url('notifications/unread-count'), 'attr') ?>" data-poll-seconds="<?= (int) config('PasaBuy')->notificationPollSeconds ?>"<?php endif; ?>>
     <a class="skip-link" href="#main-content">Skip to main content</a>

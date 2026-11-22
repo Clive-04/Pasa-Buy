@@ -38,7 +38,7 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
                 <div class="notif-panel" id="notifPanel" role="region" aria-label="Notifications" hidden>
                     <div class="notif-panel-head">
                         <strong>Notifications</strong>
-                        <form action="<?= base_url('notifications/mark-all-read') ?>" method="post" class="inline-form">
+                        <form action="<?= base_url('notifications/mark-all-read') ?>" method="post" class="inline-form" data-notif-markall>
                             <?= csrf_field() ?>
                             <button type="submit" class="btn btn-ghost btn-sm">Mark all read</button>
                         </form>

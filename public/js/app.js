@@ -267,6 +267,36 @@
         toggle.addEventListener('click', function () {
             if (panel.hidden) { open(); } else { close(false); }
         });
+
+        // "Mark all read" in the dropdown: update in place, no page change.
+        var markAll = menu.querySelector('[data-notif-markall]');
+        if (markAll && window.fetch && window.FormData) {
+            markAll.addEventListener('submit', function (event) {
+                event.preventDefault();
+                var button = markAll.querySelector('button');
+                button.disabled = true;
+                fetch(markAll.action, {
+                    method: 'POST',
+                    body: new FormData(markAll),
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' }
+                })
+                    .then(function (r) {
+                        if (!r.ok) { throw new Error('failed'); }
+                        document.querySelectorAll('[data-unread="notifications"]').forEach(function (badge) {
+                            badge.hidden = true;
+                            badge.firstChild.nodeValue = '0';
+                        });
+                        list.querySelectorAll('.notif-item.is-unread').forEach(function (item) {
+                            item.classList.remove('is-unread');
+                            var when = item.querySelector('time');
+                            if (when) { when.textContent = when.textContent.replace(' · new', ''); }
+                        });
+                    })
+                    .catch(function () { markAll.submit(); })
+                    .then(function () { button.disabled = false; });
+            });
+        }
         document.addEventListener('click', function (event) {
             if (!menu.contains(event.target)) { close(false); }
         });
