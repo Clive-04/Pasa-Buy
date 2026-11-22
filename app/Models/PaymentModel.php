@@ -19,6 +19,9 @@ class PaymentModel extends Model
         'status',
         'reference_no',
         'description',
+        'direction',
+        'balance_after',
+        'idempotency_key',
         'created_at'
     ];
 

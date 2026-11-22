@@ -2,91 +2,55 @@
 
 namespace App\Controllers;
 
-use App\Models\UserModel;
+use App\Libraries\Money;
 use App\Models\PaymentModel;
+use App\Models\UserModel;
+use App\Services\WalletService;
 
 class Wallet extends BaseController
 {
     public function index()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
+        $config = config('PasaBuy');
+        $userId = $this->currentUserId();
 
-        $userId = session('user_id');
-
-        $userModel = new UserModel();
-        $paymentModel = new PaymentModel();
-
-        $user = $userModel->find($userId);
-
-        $transactions = $paymentModel
-            ->where('user_id', $userId)
-            ->orWhere('receiver_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->findAll();
+        $payments = new PaymentModel();
+        $payments->where('user_id', $userId)->orderBy('created_at', 'DESC')->orderBy('id', 'DESC');
 
         return view('wallet_page', [
-            'title' => 'Wallet | Pasa-Buy',
-            'user' => $user,
-            'transactions' => $transactions
+            'title'          => 'Wallet | Pasa-Buy',
+            'user'           => (new UserModel())->find($userId),
+            'transactions'   => $payments->paginate($config->perPage),
+            'pager'          => $payments->pager,
+            // One-time key: resubmitting this exact form never credits twice.
+            'idempotencyKey' => bin2hex(random_bytes(16)),
+            'topUpMax'       => Money::format($config->demoTopUpMaxCents),
+            'walletCap'      => Money::format($config->demoWalletCapCents),
         ]);
     }
 
     public function topUp()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
+        $result = null;
+
+        $response = $this->attempt(
+            function () use (&$result): void {
+                $result = (new WalletService())->addDemoCredits(
+                    $this->currentUserId(),
+                    trim((string) $this->request->getPost('amount')),
+                    (string) $this->request->getPost('idempotency_key'),
+                );
+            },
+            'Demo credits added to your wallet. These are simulated funds, not real money.',
+            '/wallet',
+            true,
+        );
+
+        // A repeated submission of the same form is a no-op, not an error.
+        if (is_array($result) && $result['credited'] === false) {
+            return redirect()->to('/wallet')->with('success', 'That top-up was already processed, so it was not added twice.');
         }
 
-        $userId = session('user_id');
-        $amount = (float) $this->request->getPost('amount');
-        $source = trim((string) $this->request->getPost('source'));
-        $referenceNo = trim((string) $this->request->getPost('reference_no'));
-
-        $allowedSources = ['gcash', 'maya', 'bank_transfer'];
-
-        if ($amount <= 0) {
-            return redirect()->back()->with('error', 'Please enter a valid top-up amount.');
-        }
-
-        if (!in_array($source, $allowedSources, true)) {
-            return redirect()->back()->with('error', 'Please select a valid top-up method.');
-        }
-
-        $db = db_connect();
-        $userModel = new UserModel();
-        $paymentModel = new PaymentModel();
-
-        $db->transStart();
-
-        $user = $userModel->find($userId);
-        $currentBalance = (float) ($user['wallet_balance'] ?? 0);
-        $newBalance = $currentBalance + $amount;
-
-        $userModel->update($userId, [
-            'wallet_balance' => $newBalance
-        ]);
-
-        $paymentModel->insert([
-            'user_id' => $userId,
-            'request_id' => null,
-            'receiver_id' => null,
-            'amount' => $amount,
-            'type' => 'top_up',
-            'source' => $source,
-            'status' => 'completed',
-            'reference_no' => $referenceNo ?: null,
-            'description' => 'Wallet top-up via ' . ucfirst(str_replace('_', ' ', $source)),
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $db->transComplete();
-
-        if (!$db->transStatus()) {
-            return redirect()->back()->with('error', 'Top-up failed.');
-        }
-
-        return redirect()->to('/wallet')->with('success', 'Wallet topped up successfully.');
+        return $response;
     }
 }

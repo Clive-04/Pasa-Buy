@@ -41,7 +41,7 @@ class Dashboard extends BaseController
             ->where('status', 'delivered')
             ->countAllResults();
 
-        $walletBalance = (float) ($user['wallet_balance'] ?? 0);
+        $walletBalance = (string) ($user['wallet_balance'] ?? '0.00');
 
         $myActiveRequests = $requestModel
             ->where('user_id', $userId)

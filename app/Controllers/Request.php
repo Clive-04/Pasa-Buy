@@ -2,538 +2,269 @@
 
 namespace App\Controllers;
 
+use App\Libraries\FeePolicy;
+use App\Libraries\Money;
+use App\Models\AcceptedRequestModel;
 use App\Models\RequestModel;
 use App\Models\UserModel;
-use App\Models\AcceptedRequestModel;
-use App\Models\PaymentModel;
-use App\Models\RequestNotificationModel;
+use App\Services\RequestLifecycle;
+use App\Services\WalletService;
 
+/**
+ * Request pages. All state changes are delegated to RequestLifecycle /
+ * WalletService, which perform them atomically with row locks.
+ * Authentication is enforced by the `auth` route filter.
+ */
 class Request extends BaseController
 {
     public function create()
     {
-        $data['title'] = 'Post Request | Pasa-Buy';
-        return view('post_request_page', $data);
+        return view('post_request_page', [
+            'title'           => 'Post Request | Pasa-Buy',
+            'categories'      => RequestLifecycle::CATEGORIES,
+            'platformFeeRate' => FeePolicy::PLATFORM_FEE_BASIS_POINTS / 100,
+        ]);
     }
 
     public function process()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
+        $config = config('PasaBuy');
 
-        $requestModel = new RequestModel();
-        $paymentMethod = trim((string) $this->request->getPost('payment_method'));
-
-        $paymentStatus = $paymentMethod === 'cod' ? 'cod_pending' : 'unpaid';
-
-        $estimatedPrice = (float) ($this->request->getPost('estimated_price') ?: 0.00);
-        $serviceFee = (float) ($this->request->getPost('service_fee') ?: 0.00);
-
-        /*
-            TAX RULE:
-            Example = 10% tax based on service fee
-            You can change this anytime
-        */
-        $taxRate = 0.10;
-        $tax = $estimatedPrice * $taxRate;
-
-        $data = [
-            'user_id'           => session('user_id'),
-            'item_name'         => $this->request->getPost('item_name'),
-            'category'          => $this->request->getPost('category'),
-            'quantity'          => $this->request->getPost('quantity') ?: 1,
-            'brand'             => $this->request->getPost('brand'),
-            'item_notes'        => $this->request->getPost('item_notes'),
-            'store_name'        => $this->request->getPost('store_name'),
-            'alt_store'         => $this->request->getPost('alt_store'),
-            'store_address'     => $this->request->getPost('store_address'),
-            'delivery_address'  => $this->request->getPost('delivery_address'),
-            'contact_number'    => $this->request->getPost('contact_number'),
-            'landmark'          => $this->request->getPost('landmark'),
-            'delivery_notes'    => $this->request->getPost('delivery_notes'),
-            'estimated_price'   => $estimatedPrice,
-            'service_fee'       => $serviceFee,
-            'tax'               => $tax,
-            'payment_method'    => $paymentMethod,
-            'payment_status'    => $paymentStatus,
-            'paid_at'           => null,
-            'urgency'           => $this->request->getPost('urgency'),
-            'status'            => 'pending'
+        $rules = [
+            'item_name'        => ['label' => 'Item name', 'rules' => 'required|max_length[255]'],
+            'category'         => ['label' => 'Category', 'rules' => 'required|in_list[' . implode(',', RequestLifecycle::CATEGORIES) . ']'],
+            'quantity'         => ['label' => 'Quantity', 'rules' => 'required|is_natural_no_zero|less_than_equal_to[999]'],
+            'brand'            => ['label' => 'Brand', 'rules' => 'permit_empty|max_length[255]'],
+            'item_notes'       => ['label' => 'Item notes', 'rules' => 'permit_empty|max_length[1000]'],
+            'store_name'       => ['label' => 'Store name', 'rules' => 'required|max_length[255]'],
+            'alt_store'        => ['label' => 'Alternative store', 'rules' => 'permit_empty|max_length[255]'],
+            'store_address'    => ['label' => 'Store address', 'rules' => 'required|max_length[500]'],
+            'delivery_address' => ['label' => 'Delivery address', 'rules' => 'required|max_length[500]'],
+            'contact_number'   => ['label' => 'Contact number', 'rules' => 'required|regex_match[/^(\+639|09)\d{9}$/]'],
+            'landmark'         => ['label' => 'Landmark', 'rules' => 'permit_empty|max_length[255]'],
+            'delivery_notes'   => ['label' => 'Delivery notes', 'rules' => 'permit_empty|max_length[1000]'],
+            'estimated_price'  => ['label' => 'Estimated price', 'rules' => 'required|regex_match[/^\d{1,8}(\.\d{1,2})?$/]'],
+            'service_fee'      => ['label' => 'Service fee', 'rules' => 'required|regex_match[/^\d{1,8}(\.\d{1,2})?$/]'],
+            'payment_method'   => ['label' => 'Payment method', 'rules' => 'required|in_list[' . implode(',', RequestLifecycle::PAYMENT_METHODS) . ']'],
+            'urgency'          => ['label' => 'Urgency', 'rules' => 'required|in_list[' . implode(',', RequestLifecycle::URGENCIES) . ']'],
         ];
 
-        $requiredFields = [
-            'item_name',
-            'category',
-            'store_name',
-            'store_address',
-            'delivery_address',
-            'contact_number',
-            'payment_method',
-            'urgency'
+        $messages = [
+            'contact_number'  => ['regex_match' => 'Enter a Philippine mobile number like 09171234567.'],
+            'estimated_price' => ['regex_match' => 'Enter an amount like 150 or 150.50.'],
+            'service_fee'     => ['regex_match' => 'Enter an amount like 50 or 49.50.'],
         ];
 
-        foreach ($requiredFields as $field) {
-            if (empty($data[$field])) {
-                return redirect()->back()->with('error', 'Please fill in all required fields.');
-            }
+        $input = [];
+
+        foreach (array_keys($rules) as $field) {
+            $input[$field] = trim((string) $this->request->getPost($field));
         }
 
-        if ($requestModel->insert($data)) {
-            return redirect()->to('/my-requests')->with('success', 'Request posted successfully!');
+        $input['contact_number'] = preg_replace('/[\s-]/', '', $input['contact_number']);
+
+        $validation = service('validation')->setRules($rules, $messages);
+
+        if (! $validation->run($input)) {
+            return $this->backWithErrors($validation->getErrors());
         }
 
-        return redirect()->back()->with('error', 'Failed to post request. Please try again.');
+        if (Money::toCents($input['estimated_price']) > $config->maxItemPriceCents) {
+            return $this->backWithErrors(['estimated_price' => 'Estimated price must not exceed ' . Money::format($config->maxItemPriceCents) . '.']);
+        }
+
+        if (Money::toCents($input['service_fee']) > $config->maxServiceFeeCents) {
+            return $this->backWithErrors(['service_fee' => 'Service fee must not exceed ' . Money::format($config->maxServiceFeeCents) . '.']);
+        }
+
+        return $this->attempt(
+            fn () => (new RequestLifecycle())->create($this->currentUserId(), $input),
+            'Request posted. Nearby runners can now accept it.',
+            '/my-requests',
+            true,
+        );
     }
 
     public function browse()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login to browse requests.');
-        }
+        $config   = config('PasaBuy');
+        $model    = new RequestModel();
+        $search   = trim((string) $this->request->getGet('search'));
+        $category = (string) $this->request->getGet('category');
+        $urgency  = (string) $this->request->getGet('urgency');
+        $sort     = (string) $this->request->getGet('sort');
 
-        $requestModel = new RequestModel();
-
-        $query = $requestModel
+        $model->select('id, user_id, item_name, category, quantity, store_name, store_address, landmark, estimated_price, service_fee, platform_fee, payment_method, urgency, status, created_at')
             ->where('status', 'pending')
-            ->where('user_id !=', session('user_id'));
+            ->where('user_id !=', $this->currentUserId());
 
-        $search   = $this->request->getGet('search');
-        $category = $this->request->getGet('category');
-        $urgency  = $this->request->getGet('urgency');
-        $sort     = $this->request->getGet('sort');
-
-        if (!empty($search)) {
-            $query->groupStart()
-                ->like('item_name', $search)
-                ->orLike('store_name', $search)
-                ->groupEnd();
+        if ($search !== '') {
+            $model->groupStart()->like('item_name', $search)->orLike('store_name', $search)->groupEnd();
         }
 
-        if (!empty($category)) {
-            $query->where('category', $category);
+        if (in_array($category, RequestLifecycle::CATEGORIES, true)) {
+            $model->where('category', $category);
         }
 
-        if (!empty($urgency)) {
-            $query->where('urgency', $urgency);
+        if (in_array($urgency, RequestLifecycle::URGENCIES, true)) {
+            $model->where('urgency', $urgency);
         }
 
-        if ($sort === 'highest_fee') {
-            $query->orderBy('service_fee', 'DESC');
-        } else {
-            $query->orderBy('created_at', 'DESC');
-        }
+        $sort === 'highest_fee'
+            ? $model->orderBy('service_fee', 'DESC')->orderBy('id', 'DESC')
+            : $model->orderBy('created_at', 'DESC')->orderBy('id', 'DESC');
 
-        $data['requests'] = $query->findAll();
-        $data['title'] = 'Browse Requests | Pasa-Buy';
-
-        return view('browse_requests_page', $data);
+        return view('browse_requests_page', [
+            'title'      => 'Browse Requests | Pasa-Buy',
+            'requests'   => $model->paginate($config->perPage),
+            'pager'      => $model->pager,
+            'categories' => RequestLifecycle::CATEGORIES,
+            'filters'    => compact('search', 'category', 'urgency', 'sort'),
+        ]);
     }
 
     public function accept($id)
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
-
-        $requestModel = new RequestModel();
-        $acceptedRequestModel = new AcceptedRequestModel();
-        $userModel = new UserModel();
-        $notificationModel = new RequestNotificationModel();
-
-        $runnerId = session('user_id');
-        $request = $requestModel->find($id);
-
-        if (!$request || $request['status'] !== 'pending') {
-            return redirect()->to('/browse-requests')->with('error', 'Request not available for acceptance.');
-        }
-
-        if ((string) $request['user_id'] === (string) $runnerId) {
-            return redirect()->to('/browse-requests')->with('error', 'You cannot accept your own request.');
-        }
-
-        $existingAccepted = $acceptedRequestModel
-            ->where('request_id', $id)
-            ->first();
-
-        if ($existingAccepted) {
-            return redirect()->to('/browse-requests')->with('error', 'This request has already been accepted.');
-        }
-
-        $requestModel->update($id, ['status' => 'accepted']);
-
-        $acceptedRequestModel->insert([
-            'request_id'  => $id,
-            'runner_id'   => $runnerId,
-            'status'      => 'accepted',
-            'accepted_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $runner = $userModel->find($runnerId);
-        $runnerName = trim(($runner['first_name'] ?? '') . ' ' . ($runner['last_name'] ?? ''));
-
-        $notificationModel->insert([
-            'user_id'    => $request['user_id'],
-            'sender_id'  => $runnerId,
-            'request_id' => $id,
-            'type'       => 'request_accepted',
-            'title'      => 'Your request was accepted',
-            'content'    => $runnerName . ' accepted your request for ' . $request['item_name'] . '.',
-            'is_read'    => 0,
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
-
-        return redirect()->to('/accepted-requests')->with('success', 'Request accepted successfully.');
-    }
-
-    public function acceptedRequests()
-    {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
-
-        $status = $this->request->getGet('status');
-
-        $builder = db_connect()->table('accepted_requests ar')
-            ->select('ar.id as accepted_id, ar.request_id, ar.runner_id, ar.status as accepted_status, ar.accepted_at, r.*, u.first_name, u.last_name, u.id as user_id')
-            ->join('requests r', 'r.id = ar.request_id')
-            ->join('users u', 'u.id = r.user_id')
-            ->where('ar.runner_id', session('user_id'));
-
-        if (!empty($status) && $status !== 'all') {
-            $builder->where('ar.status', $status);
-        }
-
-        $data['acceptedRequests'] = $builder
-            ->orderBy('ar.accepted_at', 'DESC')
-            ->get()
-            ->getResultArray();
-
-        $data['title'] = 'Accepted Requests | Pasa-Buy';
-        $data['currentStatus'] = $status;
-
-        return view('accepted_requests_page', $data);
-    }
-
-    public function payRunner($requestId)
-    {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
-
-        $requestModel = new RequestModel();
-        $acceptedRequestModel = new AcceptedRequestModel();
-        $userModel = new UserModel();
-        $paymentModel = new PaymentModel();
-        $notificationModel = new RequestNotificationModel();
-        $db = db_connect();
-
-        $request = $requestModel->find($requestId);
-
-        if (!$request) {
-            return redirect()->back()->with('error', 'Request not found.');
-        }
-
-        if ((int) $request['user_id'] !== (int) session('user_id')) {
-            return redirect()->back()->with('error', 'Only the requester can make this payment.');
-        }
-
-        if ($request['payment_method'] === 'cod') {
-            return redirect()->back()->with('error', 'COD requests are paid in person, not through wallet.');
-        }
-
-        if ($request['payment_status'] === 'paid') {
-            return redirect()->back()->with('error', 'This request is already paid.');
-        }
-
-        if (!in_array($request['status'], ['accepted', 'on_the_way'], true)) {
-            return redirect()->back()->with('error', 'You can only pay when the request is already accepted or on the way.');
-        }
-
-        $acceptedInfo = $acceptedRequestModel->where('request_id', $requestId)->first();
-
-        if (!$acceptedInfo) {
-            return redirect()->back()->with('error', 'No runner assigned yet.');
-        }
-
-        $requester = $userModel->find(session('user_id'));
-        $runner = $userModel->find($acceptedInfo['runner_id']);
-
-        if (!$runner) {
-            return redirect()->back()->with('error', 'Runner not found.');
-        }
-
-        $amount = (float) $request['estimated_price'] + (float) $request['service_fee'];
-        $requesterBalance = (float) ($requester['wallet_balance'] ?? 0);
-
-        if ($requesterBalance < $amount) {
-            return redirect()->back()->with('error', 'Insufficient wallet balance.');
-        }
-
-        $db->transStart();
-
-        $userModel->update($requester['id'], [
-            'wallet_balance' => $requesterBalance - $amount
-        ]);
-
-        $runnerBalance = (float) ($runner['wallet_balance'] ?? 0);
-        $userModel->update($runner['id'], [
-            'wallet_balance' => $runnerBalance + $amount
-        ]);
-
-        $paymentSource = $request['payment_method'];
-
-        $paymentModel->insert([
-            'user_id' => $requester['id'],
-            'request_id' => $requestId,
-            'receiver_id' => $runner['id'],
-            'amount' => $amount,
-            'type' => 'request_payment',
-            'source' => $paymentSource,
-            'status' => 'completed',
-            'reference_no' => null,
-            'description' => 'Paid runner for request #' . $requestId,
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $paymentModel->insert([
-            'user_id' => $runner['id'],
-            'request_id' => $requestId,
-            'receiver_id' => null,
-            'amount' => $amount,
-            'type' => 'commission_received',
-            'source' => $paymentSource,
-            'status' => 'completed',
-            'reference_no' => null,
-            'description' => 'Received payment for request #' . $requestId,
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $requestModel->update($requestId, [
-            'payment_status' => 'paid',
-            'paid_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $notificationModel->insert([
-            'user_id'    => $runner['id'],
-            'sender_id'  => $requester['id'],
-            'request_id' => $requestId,
-            'type'       => 'runner_paid',
-            'title'      => 'Requester already paid',
-            'content'    => 'The requester paid you for request #' . $requestId . '. You can now complete the delivery.',
-            'is_read'    => 0,
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $db->transComplete();
-
-        if (!$db->transStatus()) {
-            return redirect()->back()->with('error', 'Payment failed.');
-        }
-
-        return redirect()->back()->with('success', 'Runner paid successfully through wallet.');
+        return $this->attempt(
+            fn () => (new RequestLifecycle())->accept((int) $id, $this->currentUserId()),
+            'Request accepted. Message the requester and mark it On the Way when you set off.',
+            '/accepted-requests',
+        );
     }
 
     public function updateAcceptedStatus($requestId)
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
-        }
+        $status    = (string) $this->request->getPost('status');
+        $lifecycle = new RequestLifecycle();
+        $runnerId  = $this->currentUserId();
 
-        $newStatus = $this->request->getPost('status');
-        $codConfirmed = $this->request->getPost('cod_confirmed');
-        $allowedStatuses = ['on_the_way', 'delivered'];
+        return match ($status) {
+            'on_the_way' => $this->attempt(
+                fn () => $lifecycle->markOnTheWay((int) $requestId, $runnerId),
+                'Marked as On the Way. The requester has been notified.',
+                '/accepted-requests',
+            ),
+            'delivered' => $this->attempt(
+                fn () => $lifecycle->markDelivered((int) $requestId, $runnerId, $this->request->getPost('cod_confirmed') === '1'),
+                'Marked as Delivered. The requester has been notified.',
+                '/accepted-requests',
+            ),
+            default => redirect()->to('/accepted-requests')->with('error', 'Invalid status selected.'),
+        };
+    }
 
-        if (!in_array($newStatus, $allowedStatuses, true)) {
-            return redirect()->to('/accepted-requests')->with('error', 'Invalid status selected.');
-        }
-
-        $acceptedRequestModel = new AcceptedRequestModel();
-        $requestModel = new RequestModel();
-        $notificationModel = new RequestNotificationModel();
-
-        $accepted = $acceptedRequestModel
-            ->where('request_id', $requestId)
-            ->where('runner_id', session('user_id'))
-            ->first();
-
-        if (!$accepted) {
-            return redirect()->to('/accepted-requests')->with('error', 'Accepted request not found.');
-        }
-
-        if ($accepted['status'] === 'delivered') {
-            return redirect()->to('/accepted-requests')->with('error', 'This request is already marked as delivered.');
-        }
-
-        if ($accepted['status'] === 'accepted' && $newStatus === 'delivered') {
-            return redirect()->to('/accepted-requests')->with('error', 'Please mark the request as On the Way before Delivered.');
-        }
-
-        $request = $requestModel->find($requestId);
-
-        if (!$request) {
-            return redirect()->to('/accepted-requests')->with('error', 'Request not found.');
-        }
-
-        if ($newStatus === 'delivered') {
-            if ($request['payment_method'] === 'cod') {
-
-            if ($codConfirmed !== '1') {
-                return redirect()->to('/accepted-requests')
-                    ->with('error','Please confirm that COD payment was received first.');
-            }
-
-            $db = db_connect();
-            $userModel = new UserModel();
-
-            $requester = $userModel->find($request['user_id']);
-
-            if (!$requester) {
-                return redirect()->to('/accepted-requests')
-                    ->with('error','Requester not found.');
-            }
-
-            $taxAmount = (float)$request['tax'];
-            $walletBalance = (float)($requester['wallet_balance'] ?? 0);
-
-            // Block completion if requester has insufficient wallet funds
-            if ($walletBalance < $taxAmount) {
-                return redirect()->to('/accepted-requests')
-                    ->with('error',
-                        'Delivery cannot be completed. Requester has insufficient wallet balance for platform tax.'
-                    );
-            }
-
-            $db->transStart();
-
-            // Deduct tax from requester wallet
-            $userModel->update($requester['id'], [
-                'wallet_balance' => $walletBalance - $taxAmount
-            ]);
-
-            // mark COD settled
-            $requestModel->update($requestId, [
-                'payment_status' => 'paid_cod',
-                'paid_at' => date('Y-m-d H:i:s')
-            ]);
-
-            $db->transComplete();
-
-            if (!$db->transStatus()) {
-                return redirect()->to('/accepted-requests')
-                    ->with('error','Failed processing COD tax deduction.');
-            }
-        } else {
-                if ($request['payment_status'] !== 'paid') {
-                    return redirect()->to('/accepted-requests')->with('error', 'The requester must pay first before you can mark this as delivered.');
-                }
-            }
-        }
-
-        $acceptedRequestModel->update($accepted['id'], ['status' => $newStatus]);
-        $requestModel->update($requestId, ['status' => $newStatus]);
-
-        if ($newStatus === 'on_the_way') {
-            $notificationModel->insert([
-                'user_id'    => $request['user_id'],
-                'sender_id'  => session('user_id'),
-                'request_id' => $requestId,
-                'type'       => 'on_the_way',
-                'title'      => 'Your request is on the way',
-                'content'    => 'The runner marked your request #' . $requestId . ' as on the way.',
-                'is_read'    => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
-        }
-
-        if ($newStatus === 'delivered') {
-            $notificationModel->insert([
-                'user_id'    => $request['user_id'],
-                'sender_id'  => session('user_id'),
-                'request_id' => $requestId,
-                'type'       => 'delivered',
-                'title'      => 'Your request was delivered',
-                'content'    => 'The runner marked your request #' . $requestId . ' as delivered.',
-                'is_read'    => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
-
-            if ($request['payment_method'] === 'cod') {
-                $notificationModel->insert([
-                    'user_id'    => $request['user_id'],
-                    'sender_id'  => session('user_id'),
-                    'request_id' => $requestId,
-                    'type'       => 'cod_paid',
-                    'title'      => 'COD payment confirmed',
-                    'content'    => 'The runner confirmed that COD payment was received for request #' . $requestId . '.',
-                    'is_read'    => 0,
-                    'created_at' => date('Y-m-d H:i:s')
-                ]);
-            }
-        }
-
-        return redirect()->to('/accepted-requests')->with(
-            'success',
-            'Request status updated to ' . ucfirst(str_replace('_', ' ', $newStatus)) . '.'
+    public function payRunner($requestId)
+    {
+        return $this->attempt(
+            fn () => (new WalletService())->payForRequest((int) $requestId, $this->currentUserId()),
+            'Payment sent to the runner from your wallet.',
+            '/request-details/' . (int) $requestId,
         );
+    }
+
+    public function cancel($requestId)
+    {
+        return $this->attempt(
+            fn () => (new RequestLifecycle())->cancel((int) $requestId, $this->currentUserId()),
+            'Request cancelled.',
+            '/my-requests',
+        );
+    }
+
+    public function acceptedRequests()
+    {
+        $config = config('PasaBuy');
+        $status = (string) $this->request->getGet('status');
+        $model  = new AcceptedRequestModel();
+
+        $model->select('accepted_requests.id AS accepted_id, accepted_requests.request_id, accepted_requests.runner_id,
+                accepted_requests.status AS accepted_status, accepted_requests.accepted_at,
+                r.item_name, r.quantity, r.store_name, r.urgency, r.payment_method, r.payment_status,
+                r.estimated_price, r.service_fee, r.platform_fee, r.total_amount, r.status AS request_status,
+                u.first_name, u.last_name, u.id AS user_id')
+            ->join('requests r', 'r.id = accepted_requests.request_id')
+            ->join('users u', 'u.id = r.user_id')
+            ->where('accepted_requests.runner_id', $this->currentUserId());
+
+        if (in_array($status, ['accepted', 'on_the_way', 'delivered', 'cancelled'], true)) {
+            $model->where('accepted_requests.status', $status);
+        } else {
+            $status = '';
+        }
+
+        $runner = (new UserModel())->select('wallet_balance')->find($this->currentUserId());
+
+        return view('accepted_requests_page', [
+            'title'            => 'Accepted Requests | Pasa-Buy',
+            'acceptedRequests' => $model->orderBy('accepted_requests.accepted_at', 'DESC')->paginate($config->perPage),
+            'pager'            => $model->pager,
+            'currentStatus'    => $status,
+            'walletBalance'    => $runner['wallet_balance'] ?? '0.00',
+        ]);
     }
 
     public function details($id = null)
     {
-        if (!$id || !session()->has('user_id')) {
-            return redirect()->to('/browse-requests');
-        }
+        $request = (new RequestModel())->find((int) $id);
 
-        $requestModel = new RequestModel();
-        $userModel = new UserModel();
-        $acceptedRequestModel = new AcceptedRequestModel();
-
-        $request = $requestModel->find($id);
-
-        if (!$request) {
+        if ($request === null) {
             return redirect()->to('/browse-requests')->with('error', 'Request not found.');
         }
 
-        $requester = $userModel->find($request['user_id']);
+        $acceptedInfo = (new AcceptedRequestModel())->where('request_id', $request['id'])->first();
+        $viewerId     = $this->currentUserId();
+        $isRequester  = (int) $request['user_id'] === $viewerId;
+        $isRunner     = $acceptedInfo !== null && (int) $acceptedInfo['runner_id'] === $viewerId;
+        $isAdmin      = $this->isAdmin();
 
-        if (!$requester) {
-            return redirect()->to('/browse-requests')->with('error', 'Requester not found.');
+        // Non-participants may only look at open requests they could accept.
+        if (! $isRequester && ! $isRunner && ! $isAdmin && $request['status'] !== 'pending') {
+            return redirect()->to('/browse-requests')->with('error', 'This request is no longer available.');
         }
 
-        $acceptedInfo = $acceptedRequestModel->where('request_id', $id)->first();
+        $requester = (new UserModel())
+            ->select('id, first_name, last_name, profile_photo')
+            ->find($request['user_id']);
 
-        $data['request'] = $request;
-        $data['requester'] = $requester;
-        $data['acceptedInfo'] = $acceptedInfo;
-        $data['title'] = 'Request Details | Pasa-Buy';
-        $data['requestId'] = $id;
+        $runner = $acceptedInfo !== null
+            ? (new UserModel())->select('id, first_name, last_name')->find($acceptedInfo['runner_id'])
+            : null;
 
-        return view('request_details_page', $data);
+        $viewer = (new UserModel())->select('wallet_balance')->find($viewerId);
+
+        return view('request_details_page', [
+            'title'        => 'Request Details | Pasa-Buy',
+            'request'      => $request,
+            'requester'    => $requester,
+            'runner'       => $runner,
+            'acceptedInfo' => $acceptedInfo,
+            'isRequester'  => $isRequester,
+            'isRunner'     => $isRunner,
+            // Exact address and phone are shared only with the participants.
+            'canSeeContact' => $isRequester || $isRunner || $isAdmin,
+            'walletBalance' => $viewer['wallet_balance'] ?? '0.00',
+        ]);
     }
 
     public function myRequests()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
+        $config = config('PasaBuy');
+        $status = (string) $this->request->getGet('status');
+        $model  = new RequestModel();
+
+        $model->where('user_id', $this->currentUserId());
+
+        if (in_array($status, ['pending', 'accepted', 'on_the_way', 'delivered', 'cancelled'], true)) {
+            $model->where('status', $status);
+        } else {
+            $status = '';
         }
 
-        $requestModel = new RequestModel();
-        $userId = session('user_id');
-        $status = $this->request->getGet('status');
-
-        $query = $requestModel->where('user_id', $userId);
-
-        if (!empty($status) && $status !== 'all') {
-            $query->where('status', $status);
-        }
-
-        $data['requests'] = $query
-            ->orderBy('created_at', 'DESC')
-            ->findAll();
-
-        $data['title'] = 'My Requests | Pasa-Buy';
-        $data['currentStatus'] = $status;
-
-        return view('my_requests_page', $data);
+        return view('my_requests_page', [
+            'title'         => 'My Requests | Pasa-Buy',
+            'requests'      => $model->orderBy('created_at', 'DESC')->orderBy('id', 'DESC')->paginate($config->perPage),
+            'pager'         => $model->pager,
+            'currentStatus' => $status,
+        ]);
     }
 }
