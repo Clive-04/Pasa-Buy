@@ -1,7 +1,8 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
+<?php $currentRating = (string) (old('rating') ?? ($myRating['rating'] ?? '')); ?>
 
-<main class="dashboard-page">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
@@ -11,44 +12,47 @@
                     <div>
                         <span class="page-badge">Community Profile</span>
                         <h1>User Profile</h1>
-                        <p>View this user and leave a rating.</p>
+                        <p>View this user's public profile.</p>
                     </div>
                 </div>
+
+                <?= $this->include('includes/flash') ?>
 
                 <div class="profile-layout">
                     <div class="profile-card">
                         <div class="profile-header">
                             <div class="profile-avatar">
-                                <?php if (!empty($profileUser['profile_photo'])): ?>
-                                    <img src="<?= base_url('uploads/profile_photos/' . $profileUser['profile_photo']) ?>" alt="Profile Photo">
+                                <?php if (avatar_url($profileUser['profile_photo'] ?? null)): ?>
+                                    <img src="<?= esc(avatar_url($profileUser['profile_photo']), 'attr') ?>" alt="">
                                 <?php else: ?>
-                                    <span>👤</span>
+                                    <span aria-hidden="true">👤</span>
                                 <?php endif; ?>
                             </div>
 
                             <h2><?= esc(trim(($profileUser['first_name'] ?? '') . ' ' . ($profileUser['last_name'] ?? ''))) ?></h2>
-                            <p>@<?= esc($profileUser['username'] ?? 'username') ?></p>
+                            <p><?= ! empty($profileUser['username']) ? '@' . esc($profileUser['username']) : '' ?></p>
                         </div>
 
                         <div class="profile-stats">
                             <div class="profile-stat-box">
-                                <h3><?= esc($totalRequests) ?></h3>
-                                <p>Total Request(s)</p>
+                                <h3><?= (int) $totalRequests ?></h3>
+                                <p>Requests posted</p>
                             </div>
 
                             <div class="profile-stat-box">
-                                <h3><?= esc($averageRating) ?></h3>
-                                <p>User Rating</p>
+                                <?php if ($averageRating !== null): ?>
+                                    <h3><?= esc($averageRating) ?> <span aria-hidden="true">★</span></h3>
+                                    <p>From <?= (int) $ratingCount ?> rating<?= $ratingCount === 1 ? '' : 's' ?></p>
+                                <?php else: ?>
+                                    <h3>—</h3>
+                                    <p>No ratings yet</p>
+                                <?php endif; ?>
                             </div>
                         </div>
 
                         <div class="profile-about">
                             <h3>About Me</h3>
-                            <p>
-                                <?= !empty($profileUser['about_me'])
-                                    ? esc($profileUser['about_me'])
-                                    : 'This user has not added an About Me yet.' ?>
-                            </p>
+                            <p><?= ! empty($profileUser['about_me']) ? esc($profileUser['about_me']) : 'This user has not added an About Me yet.' ?></p>
                         </div>
                     </div>
 
@@ -57,27 +61,28 @@
 
                         <?php if ($isOwnProfile): ?>
                             <p>You cannot rate your own account.</p>
+                        <?php elseif (! $canRate): ?>
+                            <p>You can rate someone after a delivered request between you (as requester or runner).</p>
                         <?php else: ?>
-                            <form action="<?= base_url('users/' . $profileUser['id'] . '/rate') ?>" method="POST" class="modal-form">
+                            <form action="<?= base_url('users/' . (int) $profileUser['id'] . '/rate') ?>" method="post" class="modal-form" data-submit-once>
+                                <?= csrf_field() ?>
                                 <div class="form-group">
                                     <label for="rating">Your Rating</label>
                                     <select id="rating" name="rating" required>
                                         <option value="">Select rating</option>
-                                        <option value="5" <?= (!empty($myRating) && $myRating['rating'] == 5) ? 'selected' : '' ?>>5 - Excellent</option>
-                                        <option value="4" <?= (!empty($myRating) && $myRating['rating'] == 4) ? 'selected' : '' ?>>4 - Very Good</option>
-                                        <option value="3" <?= (!empty($myRating) && $myRating['rating'] == 3) ? 'selected' : '' ?>>3 - Good</option>
-                                        <option value="2" <?= (!empty($myRating) && $myRating['rating'] == 2) ? 'selected' : '' ?>>2 - Fair</option>
-                                        <option value="1" <?= (!empty($myRating) && $myRating['rating'] == 1) ? 'selected' : '' ?>>1 - Poor</option>
+                                        <?php foreach ([5 => 'Excellent', 4 => 'Very Good', 3 => 'Good', 2 => 'Fair', 1 => 'Poor'] as $value => $label): ?>
+                                            <option value="<?= $value ?>" <?= $currentRating === (string) $value ? 'selected' : '' ?>><?= $value ?> - <?= $label ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="feedback">Feedback</label>
-                                    <textarea id="feedback" name="feedback" rows="4"><?= esc($myRating['feedback'] ?? '') ?></textarea>
+                                    <textarea id="feedback" name="feedback" rows="4" maxlength="1000"><?= esc((string) (old('feedback') ?? ($myRating['feedback'] ?? ''))) ?></textarea>
                                 </div>
 
-                                <button type="submit" class="auth-btn primary-btn">
-                                    <?= !empty($myRating) ? 'Update Rating' : 'Submit Rating' ?>
+                                <button type="submit" class="auth-btn primary-btn" data-busy-label="Saving…">
+                                    <?= ! empty($myRating) ? 'Update Rating' : 'Submit Rating' ?>
                                 </button>
                             </form>
                         <?php endif; ?>

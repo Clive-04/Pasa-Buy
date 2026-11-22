@@ -1,97 +1,112 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
+<?php
+$categoryLabels = [
+    'food' => 'Food', 'medicine' => 'Medicine', 'school_supplies' => 'School Supplies',
+    'household' => 'Household', 'personal_care' => 'Personal Care', 'other' => 'Other',
+];
+$timeAgo = static function (string $timestamp): string {
+    $diff = max(0, time() - strtotime($timestamp));
 
-<main class="dashboard-page">
+    return match (true) {
+        $diff < 60    => 'just now',
+        $diff < 3600  => floor($diff / 60) . ' min ago',
+        $diff < 86400 => floor($diff / 3600) . ' h ago',
+        default       => floor($diff / 86400) . ' d ago',
+    };
+};
+?>
+
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
             <div class="request-content-panel">
+                <?= $this->include('includes/flash') ?>
+
                 <div class="page-top">
                     <div>
                         <span class="page-badge">Community Feed</span>
                         <h1>Browse Requests</h1>
-                        <p>Find nearby requests you can accept and complete.</p>
+                        <p>Find nearby requests you can accept and complete. You earn the service fee minus a 10% platform fee.</p>
                     </div>
 
                     <a href="<?= base_url('dashboard') ?>" class="page-back-btn">Back to Dashboard</a>
                 </div>
 
-               <form method="get" action="<?= base_url('browse-requests') ?>" class="filter-bar" id="filterForm">
-                    <input type="text" name="search" placeholder="Search item or store"
-                        value="<?= esc($_GET['search'] ?? '') ?>"
-                        onkeyup="debounceSubmit()">
+                <form method="get" action="<?= base_url('browse-requests') ?>" class="filter-bar" role="search" aria-label="Filter requests">
+                    <label for="filterSearch" class="visually-hidden">Search item or store</label>
+                    <input type="search" id="filterSearch" name="search" placeholder="Search item or store" maxlength="100"
+                           value="<?= esc($filters['search']) ?>">
 
-                    <select name="category" onchange="this.form.submit()">
+                    <label for="filterCategory" class="visually-hidden">Category</label>
+                    <select id="filterCategory" name="category" data-autosubmit>
                         <option value="">All Categories</option>
-                        <option value="food" <?= (($_GET['category'] ?? '') === 'food') ? 'selected' : '' ?>>Food</option>
-                        <option value="medicine" <?= (($_GET['category'] ?? '') === 'medicine') ? 'selected' : '' ?>>Medicine</option>
-                        <option value="school_supplies" <?= (($_GET['category'] ?? '') === 'school_supplies') ? 'selected' : '' ?>>
-                            School Supplies
-                        </option>
-                        <option value="household" <?= (($_GET['category'] ?? '') === 'household') ? 'selected' : '' ?>>Household</option>
-                        <option value="personal_care" <?= (($_GET['category'] ?? '') === 'personal_care') ? 'selected' : '' ?>>
-                            Personal Care
-                        </option>
-                        <option value="other" <?= (($_GET['category'] ?? '') === 'other') ? 'selected' : '' ?>>
-                            Other
-                        </option>
+                        <?php foreach ($categoryLabels as $value => $label): ?>
+                            <option value="<?= $value ?>" <?= $filters['category'] === $value ? 'selected' : '' ?>><?= $label ?></option>
+                        <?php endforeach; ?>
                     </select>
 
-                    <select name="urgency" onchange="this.form.submit()">
+                    <label for="filterUrgency" class="visually-hidden">Urgency</label>
+                    <select id="filterUrgency" name="urgency" data-autosubmit>
                         <option value="">All Urgency</option>
-                        <option value="normal" <?= (($_GET['urgency'] ?? '') === 'normal') ? 'selected' : '' ?>>Normal</option>
-                        <option value="urgent" <?= (($_GET['urgency'] ?? '') === 'urgent') ? 'selected' : '' ?>>Urgent</option>
-                        <option value="asap" <?= (($_GET['urgency'] ?? '') === 'asap') ? 'selected' : '' ?>>ASAP</option>
+                        <?php foreach (['normal' => 'Normal', 'urgent' => 'Urgent', 'asap' => 'ASAP'] as $value => $label): ?>
+                            <option value="<?= $value ?>" <?= $filters['urgency'] === $value ? 'selected' : '' ?>><?= $label ?></option>
+                        <?php endforeach; ?>
                     </select>
 
-                    <select name="sort" onchange="this.form.submit()">
+                    <label for="filterSort" class="visually-hidden">Sort</label>
+                    <select id="filterSort" name="sort" data-autosubmit>
                         <option value="latest">Sort by Latest</option>
-                        <option value="highest_fee" <?= (($_GET['sort'] ?? '') === 'highest_fee') ? 'selected' : '' ?>>Highest Fee</option>
+                        <option value="highest_fee" <?= $filters['sort'] === 'highest_fee' ? 'selected' : '' ?>>Highest Fee</option>
                     </select>
-            </form>
+
+                    <button type="submit" class="btn-gradient">Search</button>
+                </form>
 
                 <div class="request-card-grid">
-                    <?php if (!empty($requests)): ?>
+                    <?php if (! empty($requests)): ?>
                         <?php foreach ($requests as $request): ?>
-                            <?php
-                            $posted = strtotime($request['created_at']);
-                            $now = time();
-                            $diff = $now - $posted;
-                            if ($diff < 60) {
-                                $time = $diff . ' secs ago';
-                            } elseif ($diff < 3600) {
-                                $time = floor($diff / 60) . ' mins ago';
-                            } elseif ($diff < 86400) {
-                                $time = floor($diff / 3600) . ' hours ago';
-                            } else {
-                                $time = floor($diff / 86400) . ' days ago';
-                            }
-                            ?>
-                            <div class="request-card">
+                            <article class="request-card">
                                 <div class="request-card-top">
-                                    <span class="request-tag <?php echo strtolower($request['urgency']); ?>"><?php echo ucfirst($request['urgency']); ?></span>
-                                    <span class="request-distance">Nearby</span>
+                                    <span class="request-tag <?= esc($request['urgency'], 'attr') ?>"><?= esc(ucfirst($request['urgency'])) ?></span>
+                                    <span class="request-distance"><?= esc(payment_method_label($request['payment_method'])) ?></span>
                                 </div>
-                                <h3><?php echo $request['item_name']; ?></h3>
-                                <p>Store: <?php echo $request['store_name']; ?></p>
-                                <p>Fee Offer: ₱<?php echo $request['service_fee']; ?></p>
-                                <p>Posted: <?php echo $time; ?></p>
+                                <h3><?= esc($request['item_name']) ?> <small>×<?= (int) $request['quantity'] ?></small></h3>
+                                <p>Store: <?= esc($request['store_name']) ?></p>
+                                <?php if (! empty($request['landmark'])): ?>
+                                    <p>Near: <?= esc($request['landmark']) ?></p>
+                                <?php endif; ?>
+                                <p>Item: <?= money($request['estimated_price']) ?> • Fee offer: <strong><?= money($request['service_fee']) ?></strong></p>
+                                <p>Posted <?= esc($timeAgo($request['created_at'])) ?></p>
                                 <div class="request-card-actions">
-                                    <a href="<?= base_url('request-details/' . $request['id']) ?>" class="btn-light">View Details</a>
-                                    <form action="<?= base_url('request/accept/' . $request['id']) ?>" method="post" style="display:inline;">
-                                        <button type="submit" class="btn-gradient">Accept</button>
+                                    <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn-light">View Details</a>
+                                    <form action="<?= base_url('request/accept/' . (int) $request['id']) ?>" method="post" class="inline-form" data-submit-once>
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn-gradient" data-busy-label="Accepting…">Accept</button>
                                     </form>
                                 </div>
-                            </div>
+                            </article>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <p>No requests available at the moment.</p>
+                        <div class="empty-state">
+                            <p>No open requests match your filters right now.</p>
+                            <a href="<?= base_url('browse-requests') ?>" class="btn-light">Clear filters</a>
+                        </div>
                     <?php endif; ?>
                 </div>
+
+                <div class="pb-pager"><?= $pager->links() ?></div>
             </div>
         </section>
     </div>
 </main>
+
+<script>
+document.querySelectorAll('[data-autosubmit]').forEach(function (select) {
+    select.addEventListener('change', function () { select.form.submit(); });
+});
+</script>
 
 <?= $this->include('includes/footer') ?>

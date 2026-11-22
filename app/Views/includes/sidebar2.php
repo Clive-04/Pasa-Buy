@@ -1,65 +1,49 @@
 <?php
-use App\Models\UserModel;
+$sidebarUserId = (int) session('user_id');
+$sidebarUser   = $sidebarUserId > 0
+    ? db_connect()->table('users')->select('first_name, last_name, profile_photo')->where('id', $sidebarUserId)->get()->getRowArray()
+    : null;
 
-$db = db_connect();
-
-if (session()->has('user_id')) {
-    $userModel = new UserModel();
-    $user = $userModel->find(session('user_id'));
-
-    $user_name = session('user_name');
-    $first_name = explode(' ', $user_name)[0] ?? 'User';
-    $avatar = strtoupper(substr($first_name, 0, 1));
-} else {
-    $user = null;
-    $first_name = 'Guest';
-    $avatar = 'G';
-}
-
-$requestNotifModel = new \App\Models\RequestNotificationModel();
-$notifCount = 0;
+$notifCount        = 0;
 $messageNotifCount = 0;
 
-if (session()->has('user_id')) {
-    $notifCount = $requestNotifModel
-        ->where('user_id', session('user_id'))
-        ->where('is_read', 0)
-        ->countAllResults();
+if ($sidebarUserId > 0) {
+    $notifCount = db_connect()->table('request_notifications')
+        ->where('user_id', $sidebarUserId)->where('is_read', 0)->countAllResults();
 
-    $messageNotifCount = $db->table('notifications')
-        ->where('user_id', session('user_id'))
-        ->where('type', 'message')
-        ->where('is_read', 0)
-        ->countAllResults();
+    $messageNotifCount = db_connect()->table('notifications')
+        ->where('user_id', $sidebarUserId)->where('type', 'message')->where('is_read', 0)->countAllResults();
 }
+
+$badge = static fn (int $n): string => $n > 9 ? '9+' : (string) $n;
 ?>
 
-<button class="sidebar-toggle" type="button" aria-label="Open sidebar" aria-expanded="false" aria-controls="dashboardSidebar">
+<button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="dashboardSidebar">
     ☰
 </button>
 
 <div class="sidebar-overlay"></div>
 
-<aside class="dashboard-sidebar" id="dashboardSidebar">
+<aside class="dashboard-sidebar" id="dashboardSidebar" aria-label="Account menu">
     <div class="sidebar-mobile-top">
         <span class="sidebar-mobile-title">Menu</span>
-        <button class="sidebar-close" type="button" aria-label="Close sidebar">✕</button>
+        <button class="sidebar-close" type="button" aria-label="Close menu">✕</button>
     </div>
 
     <div class="dashboard-profile-card">
         <div class="profile-avatar">
-            <?php if (!empty($user['profile_photo'])): ?>
-                <img src="<?= base_url('uploads/profile_photos/' . $user['profile_photo']) ?>" alt="Profile Photo">
+            <?php if (avatar_url($sidebarUser['profile_photo'] ?? null)): ?>
+                <img src="<?= esc(avatar_url($sidebarUser['profile_photo']), 'attr') ?>" alt="">
             <?php else: ?>
-                <?= $avatar ?>
+                <?= esc(initials($sidebarUser['first_name'] ?? 'U')) ?>
             <?php endif; ?>
         </div>
 
-        <h3><?= esc($first_name) ?></h3>
+        <h3><?= esc($sidebarUser['first_name'] ?? 'User') ?></h3>
         <p>Community User</p>
     </div>
 
-    <nav class="dashboard-menu">
+    <nav class="dashboard-menu" aria-label="Dashboard">
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link">Dashboard</a>
         <a href="<?= base_url('post-request') ?>" class="dashboard-link">Post a Request</a>
         <a href="<?= base_url('browse-requests') ?>" class="dashboard-link">Browse Requests</a>
@@ -69,19 +53,23 @@ if (session()->has('user_id')) {
 
         <a href="<?= base_url('notifications') ?>" class="dashboard-link dashboard-link-with-badge">
             <span>Notifications</span>
-            <?php if ($notifCount > 0): ?>
-                <span class="notif-badge"><?= $notifCount > 9 ? '9+' : $notifCount ?></span>
-            <?php endif; ?>
+            <span class="notif-badge" data-unread="notifications" <?= $notifCount > 0 ? '' : 'hidden' ?>>
+                <?= $badge($notifCount) ?><span class="visually-hidden"> unread</span>
+            </span>
         </a>
 
         <a href="<?= base_url('messages') ?>" class="dashboard-link dashboard-link-with-badge">
             <span>Messages</span>
-            <?php if ($messageNotifCount > 0): ?>
-                <span class="notif-badge"><?= $messageNotifCount > 9 ? '9+' : $messageNotifCount ?></span>
-            <?php endif; ?>
+            <span class="notif-badge" data-unread="messages" <?= $messageNotifCount > 0 ? '' : 'hidden' ?>>
+                <?= $badge($messageNotifCount) ?><span class="visually-hidden"> unread</span>
+            </span>
         </a>
 
         <a href="<?= base_url('profile') ?>" class="dashboard-link">Profile</a>
-        <a href="<?= base_url('logout') ?>" class="dashboard-link logout-link">Logout</a>
+
+        <form action="<?= base_url('logout') ?>" method="post">
+            <?= csrf_field() ?>
+            <button type="submit" class="dashboard-link logout-link">Logout</button>
+        </form>
     </nav>
 </aside>

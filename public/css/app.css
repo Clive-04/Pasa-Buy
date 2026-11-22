@@ -1,0 +1,452 @@
+/*
+ * Shared components added for the demo release: flash/alerts, demo banner,
+ * form errors, dialogs, pagination, ledger table, accessibility helpers.
+ * Uses the existing Pasa-Buy palette (teal #14b8a6 → sky #0ea5e9, slate text).
+ */
+
+:root {
+    --pb-ink: #0f172a;
+    --pb-muted: #64748b;
+    --pb-line: #e5e7eb;
+    --pb-surface: #ffffff;
+    --pb-soft: #f8fafc;
+    --pb-teal: #14b8a6;
+    --pb-teal-dark: #0f766e;
+    --pb-sky: #0ea5e9;
+    --pb-success-bg: #d1fae5;
+    --pb-success-ink: #065f46;
+    --pb-error-bg: #fee2e2;
+    --pb-error-ink: #991b1b;
+    --pb-warn-bg: #fff7ed;
+    --pb-warn-ink: #9a3412;
+    --pb-info-bg: #e0f2fe;
+    --pb-info-ink: #075985;
+    --pb-radius: 14px;
+    --pb-focus: 0 0 0 3px rgba(14, 165, 233, 0.45);
+}
+
+/* ---------------------------------------------------------------- a11y */
+
+.skip-link {
+    position: absolute;
+    left: 12px;
+    top: -60px;
+    z-index: 10000;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: var(--pb-ink);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.skip-link:focus {
+    top: 12px;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--pb-sky);
+    outline-offset: 2px;
+    box-shadow: var(--pb-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* -------------------------------------------------------- demo banner */
+
+.demo-banner {
+    background: var(--pb-warn-bg);
+    color: var(--pb-warn-ink);
+    border-bottom: 1px solid #fed7aa;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* -------------------------------------------------------------- flash */
+
+.flash-stack {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.flash {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: var(--pb-radius);
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.flash-success { background: var(--pb-success-bg); color: var(--pb-success-ink); }
+.flash-error   { background: var(--pb-error-bg);   color: var(--pb-error-ink); }
+.flash-info    { background: var(--pb-info-bg);    color: var(--pb-info-ink); }
+.flash-warn    { background: var(--pb-warn-bg);    color: var(--pb-warn-ink); }
+
+.flash-dismiss {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    min-width: 32px;
+    min-height: 32px;
+    border-radius: 8px;
+}
+
+.flash ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+/* -------------------------------------------------------------- forms */
+
+.field-error {
+    margin: 6px 0 0;
+    color: var(--pb-error-ink);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+[aria-invalid="true"] {
+    border-color: #ef4444 !important;
+    background: #fff7f7 !important;
+}
+
+.field-hint {
+    margin: 6px 0 0;
+    color: var(--pb-muted);
+    font-size: 0.82rem;
+}
+
+.required-mark {
+    color: #b91c1c;
+}
+
+/* Form sections are <fieldset>s for screen readers; keep the card look. */
+fieldset.form-section {
+    min-width: 0;
+    margin: 0;
+}
+
+fieldset.form-section > legend {
+    float: left;
+    width: 100%;
+    padding: 0;
+}
+
+fieldset.form-section > legend + * {
+    clear: both;
+}
+
+button[disabled],
+.btn-gradient[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+button[aria-busy="true"] {
+    cursor: progress;
+}
+
+/* "Link-looking" logout button inside the sidebar menu. */
+.dashboard-menu form {
+    margin: 0;
+}
+
+.dashboard-menu button.dashboard-link {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+/* ---------------------------------------------------------- money box */
+
+.money-breakdown {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border-radius: var(--pb-radius);
+    background: var(--pb-soft);
+    border: 1px solid var(--pb-line);
+}
+
+.money-breakdown .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.money-breakdown .row span {
+    color: var(--pb-muted);
+}
+
+.money-breakdown .row.total {
+    border-top: 1px dashed #cbd5e1;
+    padding-top: 8px;
+    font-weight: 700;
+}
+
+.money-breakdown .note {
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    color: var(--pb-muted);
+}
+
+/* ------------------------------------------------------------ dialogs */
+
+dialog.pb-dialog {
+    width: min(520px, calc(100vw - 32px));
+    border: none;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
+    color: var(--pb-ink);
+}
+
+dialog.pb-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.pb-dialog-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.pb-dialog-head h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.pb-dialog-head p {
+    margin: 6px 0 0;
+    color: var(--pb-muted);
+}
+
+.pb-dialog-close {
+    border: none;
+    background: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 10px;
+}
+
+.pb-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 18px;
+}
+
+.pb-check {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 12px;
+    font-weight: 500;
+}
+
+.pb-check input {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+}
+
+/* ---------------------------------------------------------- pagination */
+
+.pb-pager {
+    margin-top: 20px;
+}
+
+.pb-pager ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    justify-content: center;
+}
+
+.pb-pager a,
+.pb-pager span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid #dbe3ea;
+    background: var(--pb-surface);
+    color: var(--pb-ink);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.pb-pager .active a,
+.pb-pager [aria-current="page"] {
+    background: linear-gradient(135deg, var(--pb-teal), var(--pb-sky));
+    color: #fff;
+    border-color: transparent;
+}
+
+/* ------------------------------------------------------------- tables */
+
+.pb-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--pb-line);
+    border-radius: var(--pb-radius);
+    background: var(--pb-surface);
+}
+
+.pb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.pb-table th,
+.pb-table td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--pb-line);
+    vertical-align: top;
+}
+
+.pb-table th {
+    background: var(--pb-soft);
+    color: #475569;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pb-table tr:last-child td {
+    border-bottom: none;
+}
+
+.pb-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.amount-credit { color: #15803d; font-weight: 700; }
+.amount-debit  { color: #b91c1c; font-weight: 700; }
+
+/* Stack table rows as cards on narrow screens. */
+@media (max-width: 640px) {
+    .pb-table thead {
+        display: none;
+    }
+
+    .pb-table tr {
+        display: block;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--pb-line);
+    }
+
+    .pb-table td {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border: none;
+        padding: 6px 14px;
+        text-align: right;
+    }
+
+    .pb-table td::before {
+        content: attr(data-label);
+        color: var(--pb-muted);
+        font-weight: 600;
+        text-align: left;
+    }
+
+    .pb-table .num {
+        text-align: right;
+    }
+}
+
+/* -------------------------------------------------------------- misc */
+
+.status-pill.cancelled {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.notif-badge[hidden] {
+    display: none !important;
+}
+
+.inline-form {
+    display: inline;
+    margin: 0;
+}
+
+.empty-state {
+    padding: 28px 16px;
+    text-align: center;
+    color: var(--pb-muted);
+}
+
+.empty-state p {
+    margin: 0 0 12px;
+}
+
+.reconcile-ok   { color: #15803d; font-weight: 700; }
+.reconcile-warn { color: #b91c1c; font-weight: 700; }
+
+/* Touch targets: keep interactive controls at least 44px tall on mobile. */
+@media (max-width: 900px) {
+    .btn-gradient,
+    .btn-light,
+    .btn-primary,
+    .dashboard-link,
+    .nav-link,
+    .tab-btn {
+        min-height: 44px;
+    }
+}

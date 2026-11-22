@@ -1,39 +1,38 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
+<?php $topUpFailed = session('error') !== null && old('amount') !== null; ?>
 
-<main class="dashboard-page">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
             <div class="request-content-panel">
-                <?php if (session()->getFlashdata('success')): ?>
-                    <div class="alert alert-success" style="padding:12px; background:#d1fae5; color:#065f46; border-radius:8px; margin-bottom:16px;">
-                        <?= session()->getFlashdata('success') ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (session()->getFlashdata('error')): ?>
-                    <div class="alert alert-error" style="padding:12px; background:#fee2e2; color:#991b1b; border-radius:8px; margin-bottom:16px;">
-                        <?= session()->getFlashdata('error') ?>
-                    </div>
-                <?php endif; ?>
+                <?= $this->include('includes/flash') ?>
 
                 <div class="page-top">
                     <div>
-                        <span class="page-badge">Funds</span>
+                        <span class="page-badge"><?= is_demo_mode() ? 'Demo Funds' : 'Funds' ?></span>
                         <h1>My Wallet</h1>
-                        <p>Track your balance and transaction history.</p>
+                        <p>Track your balance and every movement in and out of your wallet.</p>
                     </div>
 
-                    <button type="button" class="page-back-btn" onclick="openTopUpModal()">Top Up</button>
+                    <?php if (is_demo_mode()): ?>
+                        <button type="button" class="page-back-btn" data-open-dialog="topUpDialog">Add Demo Credits</button>
+                    <?php endif; ?>
                 </div>
+
+                <?php if (is_demo_mode()): ?>
+                    <p class="flash flash-warn" role="note">
+                        This is a demo. Wallet credits are simulated and cannot be withdrawn, and no GCash, Maya or bank payment is involved.
+                    </p>
+                <?php endif; ?>
 
                 <div class="dashboard-stats" style="margin-bottom:24px;">
                     <div class="stat-box" style="max-width: 320px;">
                         <span class="stat-label">Current Balance</span>
-                        <h2>₱<?= number_format((float) ($user['wallet_balance'] ?? 0), 2) ?></h2>
-                        <p>Your available wallet balance</p>
+                        <h2><?= money($user['wallet_balance'] ?? '0') ?></h2>
+                        <p><?= is_demo_mode() ? 'Demo credits available' : 'Available balance' ?></p>
                     </div>
                 </div>
 
@@ -42,116 +41,86 @@
                         <h3>Transaction History</h3>
                     </div>
 
-                    <div class="request-list">
-                        <?php if (!empty($transactions)): ?>
-                            <?php foreach ($transactions as $transaction): ?>
-                                <div class="request-item">
-                                    <div>
-                                        <h4><?= esc($transaction['description']) ?></h4>
-                                        <p>
-                                            <?= ucfirst(str_replace('_', ' ', $transaction['type'])) ?>
-                                            <?php if (!empty($transaction['source'])): ?>
-                                                • <?= ucfirst(str_replace('_', ' ', $transaction['source'])) ?>
-                                            <?php endif; ?>
-                                            <?php if (!empty($transaction['request_id'])): ?>
-                                                • Request #<?= esc($transaction['request_id']) ?>
-                                            <?php endif; ?>
-                                        </p>
-                                        <small><?= date('M j, Y g:i A', strtotime($transaction['created_at'])) ?></small>
-                                    </div>
-
-                                    <div style="font-weight:700; color:#111827;">
-                                        ₱<?= number_format((float) ($transaction['amount'] ?? 0), 2) ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="request-item">
-                                <div>
-                                    <h4>No transactions yet</h4>
-                                    <p>Your wallet activity will appear here.</p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                    <?php if (! empty($transactions)): ?>
+                        <div class="pb-table-wrap">
+                            <table class="pb-table">
+                                <caption class="visually-hidden">Wallet transactions, newest first</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Request</th>
+                                        <th scope="col" class="num">Amount</th>
+                                        <th scope="col" class="num">Balance after</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($transactions as $transaction): ?>
+                                        <?php $isCredit = $transaction['direction'] === 'credit'; ?>
+                                        <tr>
+                                            <td data-label="Date"><?= esc(date('M j, Y g:i A', strtotime($transaction['created_at']))) ?></td>
+                                            <td data-label="Description">
+                                                <strong><?= esc(ledger_label($transaction['type'])) ?></strong><br>
+                                                <small><?= esc($transaction['description'] ?? '') ?></small>
+                                            </td>
+                                            <td data-label="Request">
+                                                <?php if (! empty($transaction['request_id'])): ?>
+                                                    <a href="<?= base_url('request-details/' . (int) $transaction['request_id']) ?>">#<?= (int) $transaction['request_id'] ?></a>
+                                                <?php else: ?>
+                                                    —
+                                                <?php endif; ?>
+                                            </td>
+                                            <td data-label="Amount" class="num <?= $isCredit ? 'amount-credit' : 'amount-debit' ?>">
+                                                <?= $isCredit ? '+' : '−' ?><?= money($transaction['amount']) ?>
+                                                <span class="visually-hidden"><?= $isCredit ? 'credit' : 'debit' ?></span>
+                                            </td>
+                                            <td data-label="Balance after" class="num">
+                                                <?= $transaction['balance_after'] !== null ? money($transaction['balance_after']) : '—' ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pb-pager"><?= $pager->links() ?></div>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <p>No transactions yet. Your wallet activity will appear here.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </section>
     </div>
 </main>
 
-<div id="topUpModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-    <div style="width:100%; max-width:520px; background:#fff; border-radius:24px; padding:24px; box-shadow:0 25px 60px rgba(15,23,42,.18);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-            <div>
-                <h2 style="margin:0;">Top Up Wallet</h2>
-                <p style="margin:6px 0 0; color:#6b7280;">Choose where the top-up will come from.</p>
-            </div>
-            <button type="button" onclick="closeTopUpModal()" style="border:none; background:none; font-size:28px; cursor:pointer;">&times;</button>
+<?php if (is_demo_mode()): ?>
+<dialog class="pb-dialog" id="topUpDialog" aria-labelledby="topUpTitle"<?= $topUpFailed ? ' data-autopen' : '' ?>>
+    <div class="pb-dialog-head">
+        <div>
+            <h2 id="topUpTitle">Add demo credits</h2>
+            <p>Simulated money for trying Pasa-Buy. Up to <?= esc($topUpMax) ?> at a time; wallets are capped at <?= esc($walletCap) ?>.</p>
+        </div>
+        <button type="button" class="pb-dialog-close" data-close-dialog aria-label="Close">&times;</button>
+    </div>
+
+    <form action="<?= base_url('wallet/top-up') ?>" method="post" data-submit-once>
+        <?= csrf_field() ?>
+        <input type="hidden" name="idempotency_key" value="<?= esc($idempotencyKey, 'attr') ?>">
+
+        <div class="form-group">
+            <label for="amount">Amount (₱)</label>
+            <input type="number" step="0.01" min="0.01" max="5000" name="amount" id="amount" inputmode="decimal"
+                   placeholder="e.g. 500" required value="<?= esc((string) old('amount')) ?>"
+                   style="width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:12px;">
         </div>
 
-        <form action="<?= base_url('wallet/top-up') ?>" method="post">
-            <div style="margin-bottom:14px;">
-                <label for="amount" style="display:block; margin-bottom:8px; font-weight:600;">Amount</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    min="1"
-                    name="amount"
-                    id="amount"
-                    placeholder="Enter amount"
-                    required
-                    style="width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:12px;"
-                >
-            </div>
-
-            <div style="margin-bottom:14px;">
-                <label for="source" style="display:block; margin-bottom:8px; font-weight:600;">Top-Up Method</label>
-                <select
-                    name="source"
-                    id="source"
-                    required
-                    style="width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:12px;"
-                >
-                    <option value="">Select top-up method</option>
-                    <option value="gcash">GCash</option>
-                    <option value="maya">Maya</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                </select>
-            </div>
-
-            <div style="margin-bottom:20px;">
-                <label for="reference_no" style="display:block; margin-bottom:8px; font-weight:600;">Reference Number (Optional)</label>
-                <input
-                    type="text"
-                    name="reference_no"
-                    id="reference_no"
-                    placeholder="Enter reference number"
-                    style="width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:12px;"
-                >
-            </div>
-
-            <div style="display:flex; gap:12px; justify-content:flex-end;">
-                <button type="button" onclick="closeTopUpModal()" class="dashboard-btn secondary-btn">Cancel</button>
-                <button type="submit" class="dashboard-btn primary-btn">Confirm Top Up</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-function openTopUpModal() {
-    document.getElementById('topUpModal').style.display = 'flex';
-}
-function closeTopUpModal() {
-    document.getElementById('topUpModal').style.display = 'none';
-}
-window.addEventListener('click', function (e) {
-    const modal = document.getElementById('topUpModal');
-    if (e.target === modal) {
-        closeTopUpModal();
-    }
-});
-</script>
+        <div class="pb-dialog-actions">
+            <button type="button" class="btn-light" data-close-dialog>Cancel</button>
+            <button type="submit" class="btn-gradient" data-busy-label="Adding…">Add credits</button>
+        </div>
+    </form>
+</dialog>
+<?php endif; ?>
 
 <?= $this->include('includes/footer') ?>

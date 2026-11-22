@@ -1,7 +1,7 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 
-<main class="page-section">
+<main class="page-section" id="main-content">
     <div class="about-wrapper">
         <section class="about-intro">
             <h1>About Neighborly</h1>

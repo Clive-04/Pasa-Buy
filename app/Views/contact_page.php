@@ -1,7 +1,7 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 
-<main class="contact-page">
+<main class="contact-page" id="main-content">
     <div class="contact-wrapper">
 
         <section class="contact-hero">

@@ -1,11 +1,13 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 
-<main class="dashboard-page">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
+            <?= $this->include('includes/flash') ?>
+
             <div class="dashboard-hero">
                 <div>
                     <span class="dashboard-badge">Welcome Back</span>
@@ -42,8 +44,8 @@
 
                 <div class="stat-box">
                     <span class="stat-label">Wallet Balance</span>
-                    <h2>₱<?= number_format((float) ($walletBalance ?? 0), 2) ?></h2>
-                    <p>Available wallet funds</p>
+                    <h2><?= money($walletBalance ?? '0') ?></h2>
+                    <p><?= is_demo_mode() ? 'Demo credits available' : 'Available wallet funds' ?></p>
                 </div>
             </div>
 
@@ -60,10 +62,10 @@
                                 <div class="request-item">
                                     <div>
                                         <h4><?= esc($request['item_name']) ?></h4>
-                                        <p><?= esc($request['store_name']) ?> • <?= ucfirst(str_replace('_', ' ', $request['status'])) ?></p>
+                                        <p><?= esc($request['store_name']) ?> • <?= esc(status_label($request['status'])) ?></p>
                                     </div>
-                                    <a href="<?= base_url('request-details/' . $request['id']) ?>" class="status-badge <?= esc($request['status']) ?>">
-                                        <?= ucfirst(str_replace('_', ' ', $request['status'])) ?>
+                                    <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="status-badge <?= esc($request['status'], 'attr') ?>">
+                                        <?= esc(status_label($request['status'])) ?>
                                     </a>
                                 </div>
                             <?php endforeach; ?>
@@ -90,9 +92,9 @@
                                 <div class="request-item">
                                     <div>
                                         <h4><?= esc($request['item_name']) ?></h4>
-                                        <p>Fee: ₱<?= number_format((float) ($request['service_fee'] ?? 0), 2) ?></p>
+                                        <p>Fee offer: <?= money($request['service_fee']) ?></p>
                                     </div>
-                                    <a href="<?= base_url('request-details/' . $request['id']) ?>" class="mini-btn">View</a>
+                                    <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="mini-btn">View</a>
                                 </div>
                             <?php endforeach; ?>
                         <?php else: ?>
@@ -120,7 +122,7 @@
                                     <div>
                                         <h4><?= esc($activity['title']) ?></h4>
                                         <p><?= esc($activity['content']) ?></p>
-                                        <small><?= date('M j, Y g:i A', strtotime($activity['created_at'])) ?></small>
+                                        <small><?= esc(date('M j, Y g:i A', strtotime($activity['created_at']))) ?></small>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -143,22 +145,22 @@
 
                     <div class="quick-actions">
                         <a href="<?= base_url('post-request') ?>" class="quick-action-card">
-                            <span>📝</span>
+                            <span aria-hidden="true">📝</span>
                             <p>Post New Request</p>
                         </a>
 
                         <a href="<?= base_url('browse-requests') ?>" class="quick-action-card">
-                            <span>📍</span>
+                            <span aria-hidden="true">📍</span>
                             <p>Browse Requests</p>
                         </a>
 
                         <a href="<?= base_url('wallet') ?>" class="quick-action-card">
-                            <span>💰</span>
+                            <span aria-hidden="true">💰</span>
                             <p>Open Wallet</p>
                         </a>
 
                         <a href="<?= base_url('notifications') ?>" class="quick-action-card">
-                            <span>🔔</span>
+                            <span aria-hidden="true">🔔</span>
                             <p>View Notifications</p>
                         </a>
                     </div>

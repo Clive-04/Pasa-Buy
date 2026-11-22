@@ -1,7 +1,7 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 
-<main class="dashboard-page">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
@@ -11,30 +11,34 @@
                     <div>
                         <span class="page-badge">Community Search</span>
                         <h1>Search Users</h1>
-                        <p>Find users and open their profile to leave a rating.</p>
+                        <p>Find users by name or username and open their profile.</p>
                     </div>
                 </div>
 
+                <?= $this->include('includes/flash') ?>
+
                 <?php if ($keyword === ''): ?>
-                    <p>Type a name, username, or email in the navbar search.</p>
+                    <p>Type a name or username in the search box at the top of the page.</p>
                 <?php elseif (empty($users)): ?>
                     <p>No users found for <strong><?= esc($keyword) ?></strong>.</p>
                 <?php else: ?>
+                    <p class="visually-hidden" role="status"><?= count($users) ?> users found</p>
                     <div class="user-search-grid">
                         <?php foreach ($users as $user): ?>
-                            <a href="<?= base_url('users/' . $user['id']) ?>" class="user-search-card">
+                            <a href="<?= base_url('users/' . (int) $user['id']) ?>" class="user-search-card">
                                 <div class="user-search-avatar">
-                                    <?php if (!empty($user['profile_photo'])): ?>
-                                        <img src="<?= base_url('uploads/profile_photos/' . $user['profile_photo']) ?>" alt="Profile Photo">
+                                    <?php if (avatar_url($user['profile_photo'] ?? null)): ?>
+                                        <img src="<?= esc(avatar_url($user['profile_photo']), 'attr') ?>" alt="">
                                     <?php else: ?>
-                                        <?= strtoupper(substr($user['first_name'] ?? 'U', 0, 1)) ?>
+                                        <?= esc(initials($user['first_name'] ?? 'U', $user['last_name'] ?? '')) ?>
                                     <?php endif; ?>
                                 </div>
 
                                 <div>
-                                    <h3><?= esc(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?></h3>
-                                    <p>@<?= esc($user['username'] ?? 'username') ?></p>
-                                    <small><?= esc($user['email'] ?? '') ?></small>
+                                    <h3><?= esc(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''))) ?></h3>
+                                    <?php if (! empty($user['username'])): ?>
+                                        <p>@<?= esc($user['username']) ?></p>
+                                    <?php endif; ?>
                                 </div>
                             </a>
                         <?php endforeach; ?>

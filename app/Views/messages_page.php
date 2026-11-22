@@ -1,23 +1,13 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 
-<main class="dashboard-page">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
             <div class="messages-page-panel">
-                <?php if (session()->getFlashdata('success')): ?>
-                    <div class="alert alert-success" style="padding:12px; background:#d1fae5; color:#065f46; border-radius:8px; margin-bottom:16px;">
-                        <?= session()->getFlashdata('success') ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (session()->getFlashdata('error')): ?>
-                    <div class="alert alert-error" style="padding:12px; background:#fee2e2; color:#991b1b; border-radius:8px; margin-bottom:16px;">
-                        <?= session()->getFlashdata('error') ?>
-                    </div>
-                <?php endif; ?>
+                <?= $this->include('includes/flash') ?>
 
                 <div class="page-top">
                     <div>
@@ -43,9 +33,12 @@
                                 <input type="hidden" name="request_id" value="<?= esc($requestId) ?>">
                             <?php endif; ?>
 
+                            <label for="conversationSearch" class="visually-hidden">Search conversations</label>
                             <input
-                                type="text"
+                                type="search"
+                                id="conversationSearch"
                                 name="search"
+                                maxlength="100"
                                 placeholder="Search conversation"
                                 value="<?= esc($search ?? '') ?>"
                             >
@@ -64,7 +57,7 @@
                                         $hasUnread = ((int) ($conversation['unread_count'] ?? 0)) > 0;
                                     ?>
 
-                                    <a href="<?= base_url('messages?user_id=' . $conversation['user_id'] . (!empty($conversation['request_id']) ? '&request_id=' . $conversation['request_id'] : '')) ?>"
+                                    <a href="<?= base_url('messages?user_id=' . (int) $conversation['user_id'] . (!empty($conversation['request_id']) ? '&request_id=' . (int) $conversation['request_id'] : '')) ?>"
                                        class="conversation-item <?= $isActive ? 'active' : '' ?> <?= $hasUnread ? 'has-unread' : '' ?>"
                                        style="text-decoration:none;">
                                         <div class="conversation-avatar"><?= esc($avatarLetter) ?></div>
@@ -103,7 +96,7 @@
                                     <div>
                                         <h2><?= esc(trim(($selectedUser['first_name'] ?? '') . ' ' . ($selectedUser['last_name'] ?? ''))) ?></h2>
                                         <?php if (!empty($requestId)): ?>
-                                            <p>Regarding Request #<?= esc($requestId) ?></p>
+                                            <p>Regarding <a href="<?= base_url('request-details/' . (int) $requestId) ?>">Request #<?= (int) $requestId ?></a></p>
                                         <?php else: ?>
                                             <p>Conversation</p>
                                         <?php endif; ?>
@@ -111,7 +104,7 @@
                                 </div>
                             </div>
 
-                            <div class="chat-body" id="chatBody">
+                            <div class="chat-body" id="chatBody" role="log" aria-label="Conversation">
                                 <?php if (!empty($messages)): ?>
                                     <?php
                                         $currentDate = '';
@@ -137,13 +130,13 @@
 
                                                 <?php if (!empty($msg['attachment_path'])): ?>
                                                     <div style="margin-top:8px;">
-                                                        <a href="<?= base_url($msg['attachment_path']) ?>" target="_blank" class="btn-light">
+                                                        <a href="<?= base_url('messages/attachment/' . (int) $msg['id']) ?>" target="_blank" rel="noopener" class="btn-light">
                                                             Open Attachment: <?= esc($msg['attachment_name']) ?>
                                                         </a>
                                                     </div>
                                                 <?php endif; ?>
 
-                                                <span class="message-time"><?= date('g:i A', strtotime($msg['created_at'])) ?></span>
+                                                <span class="message-time"><?= esc(date('g:i A', strtotime($msg['created_at']))) ?></span>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
@@ -152,19 +145,21 @@
                                 <?php endif; ?>
                             </div>
 
-                            <form action="<?= base_url('messages/send') ?>" method="post" enctype="multipart/form-data" class="chat-input-bar">
+                            <form action="<?= base_url('messages/send') ?>" method="post" enctype="multipart/form-data" class="chat-input-bar" data-submit-once>
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="receiver_id" value="<?= esc($selectedUserId) ?>">
                                 <input type="hidden" name="request_id" value="<?= esc($requestId ?? '') ?>">
 
-                                <label for="attachment" class="attach-btn" title="Attach file" style="cursor:pointer;">📎</label>
-                                <input type="file" name="attachment" id="attachment" style="display:none;">
+                                <label for="attachment" class="attach-btn" title="Attach a file (JPG, PNG, WEBP, PDF or DOCX, max 5 MB)" style="cursor:pointer;">📎<span class="visually-hidden">Attach a file (JPG, PNG, WEBP, PDF or DOCX, max 5 MB)</span></label>
+                                <input type="file" name="attachment" id="attachment" class="visually-hidden" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx">
 
                                 <div class="attachment-preview" id="attachmentPreview" style="display:none;">
                                     <span id="attachmentName"></span>
-                                    <button type="button" id="removeAttachment" style="margin-left:8px; border:none; background:none; cursor:pointer;">✕</button>
+                                    <button type="button" id="removeAttachment" aria-label="Remove attachment" style="margin-left:8px; border:none; background:none; cursor:pointer;">✕</button>
                                 </div>
 
-                                <input type="text" name="message" placeholder="Type message...">
+                                <label for="messageText" class="visually-hidden">Message</label>
+                                <input type="text" id="messageText" name="message" placeholder="Type message..." maxlength="<?= (int) $maxLength ?>" value="<?= esc((string) old('message')) ?>" autocomplete="off">
                                 <button type="submit" class="send-btn">Send</button>
                             </form>
                         <?php else: ?>
@@ -205,6 +200,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 attachmentPreview.style.display = 'none';
             }
         });
+    }
+
+    var chatBody = document.getElementById('chatBody');
+    if (chatBody) {
+        chatBody.scrollTop = chatBody.scrollHeight;
     }
 
     if (removeAttachment) {

@@ -1,58 +1,42 @@
 <?php
-use App\Models\UserModel;
-
-if (session()->has('user_id')) {
-    $userModel = new UserModel();
-    $user = $userModel->find(session('user_id'));
-
-    $user_name = session('user_name');
-    $first_name = explode(' ', $user_name)[0] ?? 'Admin';
-    $avatar = strtoupper(substr($first_name, 0, 1));
-} else {
-    $user = null;
-    $first_name = 'Admin';
-    $avatar = 'A';
-}
+$adminUser = db_connect()->table('users')
+    ->select('first_name, profile_photo')
+    ->where('id', (int) session('user_id'))
+    ->get()->getRowArray();
 ?>
 
-<button class="sidebar-toggle" type="button" aria-label="Open sidebar">
+<button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="dashboardSidebar">
     ☰
 </button>
 
 <div class="sidebar-overlay"></div>
 
-<aside class="dashboard-sidebar" id="dashboardSidebar">
+<aside class="dashboard-sidebar" id="dashboardSidebar" aria-label="Admin menu">
 
-    <!-- MOBILE HEADER -->
     <div class="sidebar-mobile-top">
         <span class="sidebar-mobile-title">Admin Menu</span>
-        <button class="sidebar-close" type="button">✕</button>
+        <button class="sidebar-close" type="button" aria-label="Close menu">✕</button>
     </div>
 
-    <!-- PROFILE -->
     <div class="dashboard-profile-card">
         <div class="profile-avatar">
-            <?php if (!empty($user['profile_photo'])): ?>
-                <img src="<?= base_url('uploads/profile_photos/' . $user['profile_photo']) ?>" alt="Profile Photo">
+            <?php if (avatar_url($adminUser['profile_photo'] ?? null)): ?>
+                <img src="<?= esc(avatar_url($adminUser['profile_photo']), 'attr') ?>" alt="">
             <?php else: ?>
-                <?= $avatar ?>
+                <?= esc(initials($adminUser['first_name'] ?? 'A')) ?>
             <?php endif; ?>
         </div>
 
-        <h3><?= esc($first_name) ?></h3>
+        <h3><?= esc($adminUser['first_name'] ?? 'Admin') ?></h3>
         <p>Administrator</p>
     </div>
 
-    <!-- MENU -->
-    <nav class="dashboard-menu">
+    <nav class="dashboard-menu" aria-label="Admin">
+        <a href="<?= base_url('admin/dashboard') ?>" class="dashboard-link">Dashboard</a>
 
-        <a href="<?= base_url('admin/dashboard') ?>" class="dashboard-link">
-            Dashboard
-        </a>
-
-        <a href="<?= base_url('logout') ?>" class="dashboard-link logout-link">
-            Logout
-        </a>
-
+        <form action="<?= base_url('logout') ?>" method="post">
+            <?= csrf_field() ?>
+            <button type="submit" class="dashboard-link logout-link">Logout</button>
+        </form>
     </nav>
 </aside>
