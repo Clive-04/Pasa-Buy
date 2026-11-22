@@ -15,7 +15,11 @@ class Health extends BaseController
         $checks = ['app' => 'ok', 'database' => 'fail', 'storage' => 'fail'];
 
         try {
-            db_connect()->query('SELECT 1');
+            // Not just "can connect": the migrated schema must be present
+            // (an empty or wrongly-restored database must report failure).
+            $db = db_connect();
+            $db->query('SELECT 1 FROM `migrations` LIMIT 1');
+            $db->query('SELECT 1 FROM `users` LIMIT 1');
             $checks['database'] = 'ok';
         } catch (Throwable) {
             // reported as fail
