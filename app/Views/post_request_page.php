@@ -14,17 +14,14 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
 
         <section class="dashboard-main">
             <div class="post-request-content-panel">
+                <?= page_header([
+                    'crumbs'  => [['Dashboard', 'dashboard'], ['Post a request', null]],
+                    'eyebrow' => 'I need something',
+                    'title'   => 'Post a request',
+                    'lead'    => 'Tell runners what to buy, where, and where to bring it. Fields marked * are required. Your exact address and number are only shown to the runner who accepts.',
+                ]) ?>
+
                 <?= $this->include('includes/flash') ?>
-
-                <div class="post-request-header">
-                    <div>
-                        <span class="page-badge">Create Request</span>
-                        <h1>Post a Request</h1>
-                        <p>Fill in the item, store, delivery, and payment details for your request. Fields marked <span class="required-mark">*</span> are required.</p>
-                    </div>
-
-                    <a href="<?= base_url('dashboard') ?>" class="page-back-btn">Back to Dashboard</a>
-                </div>
 
                 <p class="flash flash-info" id="draftNotice" role="status" hidden>
                     A saved draft was restored. <button type="button" class="btn-light" id="discardDraft">Discard draft</button>
@@ -181,8 +178,8 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
                             </fieldset>
 
                             <div class="form-actions">
-                                <button type="button" class="form-btn secondary-btn" id="saveDraft">Save Draft</button>
-                                <button type="submit" class="form-btn primary-btn" data-busy-label="Posting…">Post Request</button>
+                                <button type="button" class="form-btn secondary-btn" id="saveDraft"><?= icon('save') ?> Save draft</button>
+                                <button type="submit" class="form-btn primary-btn" data-busy-label="Posting…"><?= icon('send') ?> Post request</button>
                             </div>
                             <p class="field-hint" id="draftStatus" role="status" aria-live="polite"></p>
                         </form>

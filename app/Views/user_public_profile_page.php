@@ -8,13 +8,11 @@
 
         <section class="dashboard-main">
             <div class="profile-content-panel">
-                <div class="page-top">
-                    <div>
-                        <span class="page-badge">Community Profile</span>
-                        <h1>User Profile</h1>
-                        <p>View this user's public profile.</p>
-                    </div>
-                </div>
+                <?= page_header([
+                    'crumbs' => [['Search people', 'users/search'], [trim($profileUser['first_name'] . ' ' . $profileUser['last_name']), null]],
+                    'title'  => trim($profileUser['first_name'] . ' ' . $profileUser['last_name']),
+                    'lead'   => 'Public profile. Email, phone and address are private and never shown here.',
+                ]) ?>
 
                 <?= $this->include('includes/flash') ?>
 

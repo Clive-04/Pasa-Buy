@@ -1,75 +1,49 @@
-<?php
-$sidebarUserId = (int) session('user_id');
-$sidebarUser   = $sidebarUserId > 0
-    ? db_connect()->table('users')->select('first_name, last_name, profile_photo')->where('id', $sidebarUserId)->get()->getRowArray()
-    : null;
-
-$notifCount        = 0;
-$messageNotifCount = 0;
-
-if ($sidebarUserId > 0) {
-    $notifCount = db_connect()->table('request_notifications')
-        ->where('user_id', $sidebarUserId)->where('is_read', 0)->countAllResults();
-
-    $messageNotifCount = db_connect()->table('notifications')
-        ->where('user_id', $sidebarUserId)->where('type', 'message')->where('is_read', 0)->countAllResults();
-}
-
-$badge = static fn (int $n): string => $n > 9 ? '9+' : (string) $n;
-?>
-
-<button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="dashboardSidebar">
-    ☰
-</button>
-
+<?php $me = current_user(); ?>
 <div class="sidebar-overlay"></div>
 
-<aside class="dashboard-sidebar" id="dashboardSidebar" aria-label="Account menu">
+<aside class="dashboard-sidebar app-sidebar" id="dashboardSidebar" aria-label="Main menu">
     <div class="sidebar-mobile-top">
         <span class="sidebar-mobile-title">Menu</span>
-        <button class="sidebar-close" type="button" aria-label="Close menu">✕</button>
+        <button class="sidebar-close icon-btn" type="button" aria-label="Close menu"><?= icon('x') ?></button>
     </div>
 
-    <div class="dashboard-profile-card">
-        <div class="profile-avatar">
-            <?php if (avatar_url($sidebarUser['profile_photo'] ?? null)): ?>
-                <img src="<?= esc(avatar_url($sidebarUser['profile_photo']), 'attr') ?>" alt="">
-            <?php else: ?>
-                <?= esc(initials($sidebarUser['first_name'] ?? 'U')) ?>
-            <?php endif; ?>
-        </div>
+    <a href="<?= base_url('profile') ?>" class="side-profile<?= nav_attrs('profile') ?>">
+        <?= avatar($me, 'md') ?>
+        <span>
+            <strong><?= esc(trim(($me['first_name'] ?? '') . ' ' . ($me['last_name'] ?? ''))) ?></strong>
+            <small>View my profile <?= icon('chevron') ?></small>
+        </span>
+    </a>
 
-        <h3><?= esc($sidebarUser['first_name'] ?? 'User') ?></h3>
-        <p>Community User</p>
-    </div>
+    <a href="<?= base_url('wallet') ?>" class="side-balance<?= nav_attrs('wallet') ?>">
+        <span><?= icon('wallet') ?> <?= is_demo_mode() ? 'Demo wallet' : 'Wallet' ?></span>
+        <strong><?= money($me['wallet_balance'] ?? '0') ?></strong>
+    </a>
 
-    <nav class="dashboard-menu" aria-label="Dashboard">
-        <a href="<?= base_url('dashboard') ?>" class="dashboard-link">Dashboard</a>
-        <a href="<?= base_url('post-request') ?>" class="dashboard-link">Post a Request</a>
-        <a href="<?= base_url('browse-requests') ?>" class="dashboard-link">Browse Requests</a>
-        <a href="<?= base_url('my-requests') ?>" class="dashboard-link">My Requests</a>
-        <a href="<?= base_url('accepted-requests') ?>" class="dashboard-link">Accepted Requests</a>
-        <a href="<?= base_url('wallet') ?>" class="dashboard-link">Wallet</a>
+    <nav class="side-nav" aria-label="Pages">
+        <a href="<?= base_url('dashboard') ?>" class="side-link<?= nav_attrs('dashboard') ?>"><?= icon('dashboard') ?><span>Dashboard</span></a>
 
-        <a href="<?= base_url('notifications') ?>" class="dashboard-link dashboard-link-with-badge">
-            <span>Notifications</span>
-            <span class="notif-badge" data-unread="notifications" <?= $notifCount > 0 ? '' : 'hidden' ?>>
-                <?= $badge($notifCount) ?><span class="visually-hidden"> unread</span>
-            </span>
-        </a>
+        <p class="side-heading" id="navRequesting">I need something</p>
+        <a href="<?= base_url('post-request') ?>" class="side-link<?= nav_attrs('post-request') ?>"><?= icon('plus') ?><span>Post a request<small>Ask a runner to buy it</small></span></a>
+        <a href="<?= base_url('my-requests') ?>" class="side-link<?= nav_attrs('my-requests') ?>"><?= icon('list') ?><span>My requests<small>Track what you asked for</small></span></a>
 
-        <a href="<?= base_url('messages') ?>" class="dashboard-link dashboard-link-with-badge">
-            <span>Messages</span>
-            <span class="notif-badge" data-unread="messages" <?= $messageNotifCount > 0 ? '' : 'hidden' ?>>
-                <?= $badge($messageNotifCount) ?><span class="visually-hidden"> unread</span>
-            </span>
-        </a>
+        <p class="side-heading">I want to earn</p>
+        <a href="<?= base_url('browse-requests') ?>" class="side-link<?= nav_attrs('browse-requests') ?>"><?= icon('search') ?><span>Find requests<small>Errands you can run</small></span></a>
+        <a href="<?= base_url('accepted-requests') ?>" class="side-link<?= nav_attrs('accepted-requests') ?>"><?= icon('truck') ?><span>My deliveries<small>Errands you accepted</small></span></a>
 
-        <a href="<?= base_url('profile') ?>" class="dashboard-link">Profile</a>
+        <p class="side-heading">Account</p>
+        <a href="<?= base_url('messages') ?>" class="side-link<?= nav_attrs('messages') ?>"><?= icon('message') ?><span>Messages</span><?= unread_badge('messages') ?></a>
+        <a href="<?= base_url('notifications') ?>" class="side-link<?= nav_attrs('notifications') ?>"><?= icon('bell') ?><span>Notifications</span><?= unread_badge('notifications') ?></a>
+        <a href="<?= base_url('wallet') ?>" class="side-link<?= nav_attrs('wallet') ?>"><?= icon('wallet') ?><span>Wallet</span></a>
+        <a href="<?= base_url('profile') ?>" class="side-link<?= nav_attrs('profile') ?>"><?= icon('user') ?><span>Profile</span></a>
 
-        <form action="<?= base_url('logout') ?>" method="post">
+        <p class="side-heading">Help</p>
+        <a href="<?= base_url('about') ?>" class="side-link<?= nav_attrs('about') ?>"><?= icon('info') ?><span>About Pasa-Buy</span></a>
+        <a href="<?= base_url('contact') ?>" class="side-link<?= nav_attrs('contact') ?>"><?= icon('help') ?><span>Contact us</span></a>
+
+        <form action="<?= base_url('logout') ?>" method="post" class="side-logout">
             <?= csrf_field() ?>
-            <button type="submit" class="dashboard-link logout-link">Logout</button>
+            <button type="submit" class="side-link side-link-danger"><?= icon('logout') ?><span>Log out</span></button>
         </form>
     </nav>
 </aside>

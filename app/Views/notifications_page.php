@@ -1,67 +1,60 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
+<?php
+$iconFor = static fn (string $type): string => match ($type) {
+    'request_accepted'  => 'user',
+    'on_the_way'        => 'truck',
+    'delivered'         => 'check-circle',
+    'runner_paid'       => 'wallet',
+    'cod_paid'          => 'cash',
+    'request_cancelled' => 'x-circle',
+    default             => 'bell',
+};
+?>
 
 <main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
-            <div class="request-content-panel">
-                <?= $this->include('includes/flash') ?>
+            <?= page_header([
+                'crumbs'  => [['Dashboard', 'dashboard'], ['Notifications', null]],
+                'title'   => 'Notifications',
+                'lead'    => 'Updates about your requests and deliveries. Select one to open the request it is about.',
+                'actions' => '<form action="' . base_url('notifications/mark-all-read') . '" method="post" class="inline-form">' . csrf_field()
+                    . '<button type="submit" class="btn btn-secondary">' . icon('check') . ' Mark all as read</button></form>',
+            ]) ?>
 
-                <div class="page-top">
-                    <div>
-                        <span class="page-badge">Updates</span>
-                        <h1>Notifications</h1>
-                        <p>Stay updated about request activity and payments.</p>
-                    </div>
+            <?= $this->include('includes/flash') ?>
 
-                    <form action="<?= base_url('notifications/mark-all-read') ?>" method="post">
-                        <?= csrf_field() ?>
-                        <button type="submit" class="page-back-btn">Mark All as Read</button>
-                    </form>
-                </div>
-
-                <div class="notifications-list">
-                    <?php if (!empty($notifications)): ?>
+            <section class="card">
+                <?php if (! empty($notifications)): ?>
+                    <div class="row-list">
                         <?php foreach ($notifications as $notification): ?>
-                            <?php
-                                $icon = '🔔';
-                                if ($notification['type'] === 'request_accepted') $icon = '📦';
-                                if ($notification['type'] === 'on_the_way') $icon = '🚚';
-                                if ($notification['type'] === 'delivered') $icon = '✅';
-                                if ($notification['type'] === 'runner_paid') $icon = '💸';
-                                if ($notification['type'] === 'cod_paid') $icon = '💵';
-                                if ($notification['type'] === 'request_cancelled') $icon = '✖️';
-                            ?>
-
-                            <a href="<?= base_url('notifications/open/' . (int) $notification['id']) ?>"
-                               class="notification-card <?= !$notification['is_read'] ? 'unread' : '' ?>"
-                               style="display:flex; gap:14px; text-decoration:none; color:inherit; margin-bottom:16px; padding:16px; border:1px solid #e5e7eb; border-radius:16px; background:#fff;">
-                                <div style="font-size:24px; line-height:1;" aria-hidden="true">
-                                    <?= $icon ?>
-                                </div>
-
-                                <div style="flex:1;">
-                                    <h3 style="margin:0 0 6px;"><?= esc($notification['title']) ?></h3>
-                                    <p style="margin:0 0 6px; color:#4b5563;"><?= esc($notification['content']) ?></p>
-                                    <small style="color:#6b7280;"><?= esc(date('M j, Y g:i A', strtotime($notification['created_at']))) ?></small>
-                                </div>
-
-                                <?php if (!$notification['is_read']): ?>
-                                    <div style="width:10px; height:10px; background:#2563eb; border-radius:999px; margin-top:8px;"><span class="visually-hidden">Unread</span></div>
+                            <a href="<?= base_url('notifications/open/' . (int) $notification['id']) ?>" class="row-item<?= ! $notification['is_read'] ? ' is-unread' : '' ?>">
+                                <?= icon($iconFor((string) $notification['type'])) ?>
+                                <span class="row-main">
+                                    <strong><?= esc($notification['title']) ?><?= ! $notification['is_read'] ? ' <span class="visually-hidden">(unread)</span>' : '' ?></strong>
+                                    <span><?= esc($notification['content']) ?></span>
+                                    <span style="display:block; font-size:.78rem;"><?= esc(date('M j, Y g:i A', strtotime($notification['created_at']))) ?> · <?= esc(time_ago($notification['created_at'])) ?></span>
+                                </span>
+                                <?php if (! $notification['is_read']): ?>
+                                    <span class="badge" style="min-width:10px; height:10px; padding:0;" aria-hidden="true"></span>
                                 <?php endif; ?>
+                                <?= icon('chevron') ?>
                             </a>
                         <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="no-requests">
-                            <p>No notifications yet.</p>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                <?php else: ?>
+                    <div class="empty-state">
+                        <?= icon('bell') ?>
+                        <h3>You're all caught up</h3>
+                        <p>When someone accepts, pays for or delivers one of your requests, you'll see it here.</p>
+                    </div>
+                <?php endif; ?>
+            </section>
 
-                <div class="pb-pager"><?= $pager->links() ?></div>
-            </div>
+            <div class="pb-pager"><?= $pager->links() ?></div>
         </section>
     </div>
 </main>

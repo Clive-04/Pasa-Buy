@@ -1,7 +1,7 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
 <?php
-$tabs = ['' => 'All', 'pending' => 'Pending', 'accepted' => 'Accepted', 'on_the_way' => 'On the Way', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'];
+$tabs = ['' => 'All', 'pending' => 'Waiting for runner', 'accepted' => 'Accepted', 'on_the_way' => 'On the way', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'];
 ?>
 
 <main class="dashboard-page" id="main-content">
@@ -9,66 +9,79 @@ $tabs = ['' => 'All', 'pending' => 'Pending', 'accepted' => 'Accepted', 'on_the_
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
-            <div class="request-content-panel">
-                <?= $this->include('includes/flash') ?>
+            <?= page_header([
+                'crumbs'  => [['Dashboard', 'dashboard'], ['My requests', null]],
+                'eyebrow' => 'I need something',
+                'title'   => 'My requests',
+                'lead'    => 'Everything you have asked runners to buy for you, and what needs to happen next.',
+                'actions' => '<a href="' . base_url('post-request') . '" class="btn btn-primary">' . icon('plus') . ' Post a request</a>',
+            ]) ?>
 
-                <div class="page-top">
-                    <div>
-                        <span class="page-badge">Request History</span>
-                        <h1>My Requests</h1>
-                        <p>Track your posted requests and their current status.</p>
-                    </div>
+            <?= $this->include('includes/flash') ?>
 
-                    <a href="<?= base_url('post-request') ?>" class="page-back-btn">New Request</a>
-                </div>
+            <nav class="request-tabs" aria-label="Filter by status">
+                <?php foreach ($tabs as $value => $label): ?>
+                    <a href="<?= base_url('my-requests' . ($value !== '' ? '?status=' . $value : '')) ?>"
+                       class="tab-btn <?= $currentStatus === $value ? 'active' : '' ?>"<?= $currentStatus === $value ? ' aria-current="page"' : '' ?>><?= $label ?></a>
+                <?php endforeach; ?>
+            </nav>
 
-                <nav class="request-tabs" aria-label="Filter by status">
-                    <?php foreach ($tabs as $value => $label): ?>
-                        <a href="<?= base_url('my-requests' . ($value !== '' ? '?status=' . $value : '')) ?>"
-                           class="tab-btn <?= $currentStatus === $value ? 'active' : '' ?>"<?= $currentStatus === $value ? ' aria-current="page"' : '' ?>><?= $label ?></a>
-                    <?php endforeach; ?>
-                </nav>
-
-                <div class="my-request-list">
-                    <?php if (! empty($requests)): ?>
-                        <?php foreach ($requests as $request): ?>
-                            <article class="my-request-card">
-                                <div class="my-request-main">
-                                    <h3><?= esc($request['item_name']) ?> (<?= (int) $request['quantity'] ?>)</h3>
-                                    <p><?= esc($request['store_name']) ?> • Posted <?= esc(date('M j, Y g:i A', strtotime($request['created_at']))) ?></p>
-                                    <p>
-                                        You pay <?= money($request['total_amount']) ?> • <?= esc(payment_method_label($request['payment_method'])) ?>
-                                        • <?= esc(payment_status_label($request['payment_status'])) ?>
-                                    </p>
+            <div class="req-list">
+                <?php if (! empty($requests)): ?>
+                    <?php foreach ($requests as $request): ?>
+                        <?php
+                        $next  = next_step($request, 'requester');
+                        $needsPayment = in_array($request['status'], ['accepted', 'on_the_way'], true)
+                            && $request['payment_method'] !== 'cod' && $request['payment_status'] === 'unpaid';
+                        ?>
+                        <article class="req-card">
+                            <div class="req-card-head">
+                                <div>
+                                    <h3><a href="<?= base_url('request-details/' . (int) $request['id']) ?>"><?= esc($request['item_name']) ?></a></h3>
+                                    <ul class="req-meta" style="margin-top:6px;">
+                                        <li><?= icon('store') ?> <?= esc($request['store_name']) ?></li>
+                                        <li><?= icon($request['payment_method'] === 'cod' ? 'cash' : 'wallet') ?> You pay <strong><?= money($request['total_amount']) ?></strong></li>
+                                        <li><?= icon('clock') ?> <?= esc(time_ago($request['created_at'])) ?></li>
+                                    </ul>
                                 </div>
-
-                                <div class="my-request-meta">
+                                <div class="req-card-tags">
                                     <span class="request-tag <?= esc($request['urgency'], 'attr') ?>"><?= esc(ucfirst($request['urgency'])) ?></span>
                                     <span class="status-pill <?= esc($request['status'], 'attr') ?>"><?= esc(status_label($request['status'])) ?></span>
-                                    <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn-light">View</a>
-                                    <?php if ($request['status'] === 'pending'): ?>
-                                        <button type="button" class="btn-light" data-open-dialog="cancelDialog"
-                                                data-form-action="<?= esc(base_url('request/cancel/' . (int) $request['id']), 'attr') ?>">Cancel</button>
-                                    <?php elseif (in_array($request['status'], ['accepted', 'on_the_way'], true) && $request['payment_method'] !== 'cod' && $request['payment_status'] === 'unpaid'): ?>
-                                        <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn-gradient">Pay runner</a>
-                                    <?php endif; ?>
                                 </div>
-                            </article>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="no-requests">
-                            <?php if ($currentStatus === ''): ?>
-                                <p>You haven't posted any requests yet.</p>
-                                <a href="<?= base_url('post-request') ?>" class="btn-primary">Post Your First Request</a>
-                            <?php else: ?>
-                                <p>No <?= esc(strtolower(status_label($currentStatus))) ?> requests.</p>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                            </div>
 
-                <div class="pb-pager"><?= $pager->links() ?></div>
+                            <?= request_steps($request, true) ?>
+
+                            <p class="req-next tone-<?= esc($next['tone'], 'attr') ?>" style="margin:0;"><?= icon($next['tone'] === 'action' ? 'arrow-right' : 'info') ?> <span><strong><?= esc($next['title']) ?>.</strong> <?= esc($next['text']) ?></span></p>
+
+                            <div class="req-actions">
+                                <?php if ($request['status'] === 'pending'): ?>
+                                    <button type="button" class="btn btn-danger btn-sm" data-open-dialog="cancelDialog"
+                                            data-form-action="<?= esc(base_url('request/cancel/' . (int) $request['id']), 'attr') ?>"><?= icon('x-circle') ?> Cancel</button>
+                                <?php endif; ?>
+                                <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn <?= $needsPayment ? 'btn-primary' : 'btn-secondary' ?> btn-sm">
+                                    <?= $needsPayment ? icon('wallet') . ' Pay runner' : icon('eye') . ' View details' ?>
+                                </a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="card empty-state">
+                        <?= icon('package') ?>
+                        <?php if ($currentStatus === ''): ?>
+                            <h3>You haven't posted any requests yet</h3>
+                            <p>Post what you need from a nearby store, and a runner from your community will buy and deliver it.</p>
+                            <a href="<?= base_url('post-request') ?>" class="btn btn-primary"><?= icon('plus') ?> Post your first request</a>
+                        <?php else: ?>
+                            <h3>Nothing here</h3>
+                            <p>You have no requests with the status "<?= esc($tabs[$currentStatus] ?? status_label($currentStatus)) ?>".</p>
+                            <a href="<?= base_url('my-requests') ?>" class="btn btn-secondary">Show all requests</a>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
+
+            <div class="pb-pager"><?= $pager->links() ?></div>
         </section>
     </div>
 </main>
@@ -84,8 +97,8 @@ $tabs = ['' => 'All', 'pending' => 'Pending', 'accepted' => 'Accepted', 'on_the_
     <form method="post" data-dynamic-action data-submit-once>
         <?= csrf_field() ?>
         <div class="pb-dialog-actions">
-            <button type="button" class="btn-light" data-close-dialog>Keep request</button>
-            <button type="submit" class="btn-gradient" data-busy-label="Cancelling…">Cancel request</button>
+            <button type="button" class="btn btn-secondary" data-close-dialog>Keep request</button>
+            <button type="submit" class="btn btn-danger-solid" data-busy-label="Cancelling…"><?= icon('x-circle') ?> Yes, cancel it</button>
         </div>
     </form>
 </dialog>

@@ -28,11 +28,15 @@
 
         function render(name, count) {
             document.querySelectorAll('[data-unread="' + name + '"]').forEach(function (badge) {
-                var label = badge.querySelector('.visually-hidden');
+                var text = count > 9 ? '9+' : String(count);
+                var changed = badge.firstChild.nodeValue !== text;
                 badge.hidden = count <= 0;
-                badge.firstChild.nodeValue = count > 9 ? '9+' : String(count);
-                if (label) {
-                    badge.appendChild(label);
+                badge.firstChild.nodeValue = text;
+                if (changed && count > 0) {
+                    // replay the pop animation so new activity is noticed
+                    badge.style.animation = 'none';
+                    void badge.offsetWidth;
+                    badge.style.animation = '';
                 }
             });
         }
@@ -133,12 +137,35 @@
     }
 
     // ------------------------------------------------------------- flash
+    function dismiss(flash) {
+        if (!flash || flash.classList.contains('is-leaving')) {
+            return;
+        }
+        flash.classList.add('is-leaving');
+        var done = function () { flash.remove(); };
+        flash.addEventListener('animationend', done, { once: true });
+        window.setTimeout(done, 400); // reduced motion: no animationend guarantee
+    }
+
     function initFlash() {
         document.addEventListener('click', function (event) {
             var button = event.target.closest('[data-dismiss-flash]');
             if (button) {
-                button.closest('.flash').remove();
+                dismiss(button.closest('.flash'));
             }
+        });
+
+        // Success messages leave on their own; hovering or focusing pauses.
+        document.querySelectorAll('.flash[data-autodismiss]').forEach(function (flash) {
+            var delay = parseInt(flash.getAttribute('data-autodismiss'), 10) || 6000;
+            var timer = null;
+            var start = function () { timer = window.setTimeout(function () { dismiss(flash); }, delay); };
+            var stop = function () { window.clearTimeout(timer); };
+            flash.addEventListener('mouseenter', stop);
+            flash.addEventListener('mouseleave', start);
+            flash.addEventListener('focusin', stop);
+            flash.addEventListener('focusout', start);
+            start();
         });
     }
 

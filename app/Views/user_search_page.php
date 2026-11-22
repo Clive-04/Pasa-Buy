@@ -7,20 +7,32 @@
 
         <section class="dashboard-main">
             <div class="profile-content-panel">
-                <div class="page-top">
-                    <div>
-                        <span class="page-badge">Community Search</span>
-                        <h1>Search Users</h1>
-                        <p>Find users by name or username and open their profile.</p>
-                    </div>
-                </div>
+                <?= page_header([
+                    'crumbs' => [['Dashboard', 'dashboard'], ['Search people', null]],
+                    'title'  => 'Search people',
+                    'lead'   => 'Find requesters and runners by name or username, then open their profile to see ratings.',
+                ]) ?>
+
+                <form action="<?= base_url('users/search') ?>" method="get" class="card filter-bar" role="search" style="padding:14px; margin-bottom: var(--sp-4);">
+                    <label for="peopleSearch" class="visually-hidden">Name or username</label>
+                    <input type="search" id="peopleSearch" name="q" value="<?= esc($keyword) ?>" placeholder="Name or username" maxlength="100" <?= $keyword === '' ? 'autofocus' : '' ?>>
+                    <button type="submit" class="btn btn-primary"><?= icon('search') ?> Search</button>
+                </form>
 
                 <?= $this->include('includes/flash') ?>
 
                 <?php if ($keyword === ''): ?>
-                    <p>Type a name or username in the search box at the top of the page.</p>
+                    <div class="empty-state">
+                        <?= icon('users') ?>
+                        <h3>Search for people</h3>
+                        <p>Type a name or username above.</p>
+                    </div>
                 <?php elseif (empty($users)): ?>
-                    <p>No users found for <strong><?= esc($keyword) ?></strong>.</p>
+                    <div class="empty-state">
+                        <?= icon('search') ?>
+                        <h3>No one found</h3>
+                        <p>No users match <strong><?= esc($keyword) ?></strong>. Check the spelling or try a username.</p>
+                    </div>
                 <?php else: ?>
                     <p class="visually-hidden" role="status"><?= count($users) ?> users found</p>
                     <div class="user-search-grid">

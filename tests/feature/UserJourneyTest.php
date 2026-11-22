@@ -104,8 +104,8 @@ final class UserJourneyTest extends FeatureTestCase
 
         // Requester sees what to pay in cash; no pay button.
         $details = $this->getAs($requester, 'request-details/' . $requestId);
-        $details->assertSee('pay the runner ₱230.00 in cash');
-        $details->assertDontSee('Pay Runner from Wallet');
+        $details->assertSee('Pay the runner ₱230.00 in cash');
+        $details->assertDontSee('payRunnerDialog');
 
         // Delivery without confirming cash is refused; with confirmation it settles.
         $this->postAs($runner, 'request/status/' . $requestId, ['status' => 'delivered']);
@@ -168,7 +168,7 @@ final class UserJourneyTest extends FeatureTestCase
 
         $profile = $this->getAs($user, 'profile');
         $profile->assertSee('3.5');
-        $profile->assertSee('Average from 2 ratings');
+        $profile->assertSee('3.5 from 2 ratings');
     }
 
     public function testPagesNoLongerAutoRefresh(): void

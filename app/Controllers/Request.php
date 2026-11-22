@@ -227,7 +227,7 @@ class Request extends BaseController
             ->find($request['user_id']);
 
         $runner = $acceptedInfo !== null
-            ? (new UserModel())->select('id, first_name, last_name')->find($acceptedInfo['runner_id'])
+            ? (new UserModel())->select('id, first_name, last_name, profile_photo')->find($acceptedInfo['runner_id'])
             : null;
 
         $viewer = (new UserModel())->select('wallet_balance')->find($viewerId);

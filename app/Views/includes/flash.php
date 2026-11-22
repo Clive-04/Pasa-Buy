@@ -1,7 +1,8 @@
 <?php
 /*
  * Flash messages for every page. Always escaped. Errors use role="alert"
- * (announced immediately), successes role="status" (announced politely).
+ * (announced immediately) and stay until dismissed; successes use
+ * role="status" and fade out after a few seconds (paused on hover/focus).
  */
 $flashSuccess = session()->getFlashdata('success');
 $flashError   = session()->getFlashdata('error');
@@ -10,7 +11,8 @@ $flashErrors  = session('errors');
 <?php if ($flashSuccess || $flashError): ?>
     <div class="flash-stack">
         <?php if ($flashSuccess): ?>
-            <div class="flash flash-success" role="status">
+            <div class="flash flash-success" role="status" data-autodismiss="6000">
+                <?= icon('check-circle') ?>
                 <span><?= esc($flashSuccess) ?></span>
                 <button type="button" class="flash-dismiss" data-dismiss-flash aria-label="Dismiss message">&times;</button>
             </div>
@@ -18,6 +20,7 @@ $flashErrors  = session('errors');
 
         <?php if ($flashError): ?>
             <div class="flash flash-error" role="alert">
+                <?= icon('alert') ?>
                 <div>
                     <span><?= esc($flashError) ?></span>
                     <?php if (is_array($flashErrors) && count($flashErrors) > 1): ?>

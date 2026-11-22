@@ -7,17 +7,13 @@
 
         <section class="dashboard-main">
             <div class="messages-page-panel">
+                <?= page_header([
+                    'crumbs' => [['Dashboard', 'dashboard'], ['Messages', null]],
+                    'title'  => 'Messages',
+                    'lead'   => 'Chat with the requesters and runners on your errands. Pick a conversation on the left.',
+                ]) ?>
+
                 <?= $this->include('includes/flash') ?>
-
-                <div class="page-top">
-                    <div>
-                        <span class="page-badge">Communication</span>
-                        <h1>Messages</h1>
-                        <p>Coordinate with requesters and runners through direct chat.</p>
-                    </div>
-
-                    <a href="<?= base_url('dashboard') ?>" class="page-back-btn">Back to Dashboard</a>
-                </div>
 
                 <div class="messages-layout">
                     <aside class="conversations-panel">
@@ -79,7 +75,7 @@
                             <?php else: ?>
                                 <div class="conversation-item">
                                     <div class="conversation-info">
-                                        <p>No conversations found.</p>
+                                        <p>No conversations yet. Chats start from a request page.</p>
                                     </div>
                                 </div>
                             <?php endif; ?>
@@ -173,7 +169,12 @@
                             </div>
 
                             <div class="chat-body" id="chatBody">
-                                <div class="chat-date">No conversation selected</div>
+                                <div class="empty-state">
+                                    <?= icon('message') ?>
+                                    <h3>No conversation open</h3>
+                                    <p>Pick a chat on the left. To start a new one, open a request and choose <strong>Message runner</strong> or <strong>Ask the requester</strong>.</p>
+                                    <a href="<?= base_url('my-requests') ?>" class="btn btn-secondary btn-sm"><?= icon('list') ?> My requests</a>
+                                </div>
                             </div>
                         <?php endif; ?>
                     </section>

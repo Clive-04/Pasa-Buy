@@ -12,15 +12,13 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
         <?= $this->include('includes/admin_sidebar') ?>
 
         <section class="dashboard-main" style="width: 100%;">
-            <?= $this->include('includes/flash') ?>
+            <?= page_header([
+                'eyebrow' => 'Administrator',
+                'title'   => 'Admin overview',
+                'lead'    => 'Monitor requests and the platform fees recorded in the wallet ledger.' . (is_demo_mode() ? ' All amounts are demo credits.' : ''),
+            ]) ?>
 
-            <div class="dashboard-hero">
-                <div>
-                    <span class="dashboard-badge">Admin Panel</span>
-                    <h1>Admin Dashboard</h1>
-                    <p>Monitor requests and the platform fees recorded in the wallet ledger.<?= is_demo_mode() ? ' All amounts are demo credits.' : '' ?></p>
-                </div>
-            </div>
+            <?= $this->include('includes/flash') ?>
 
             <div class="dashboard-stats">
                 <div class="stat-box">
@@ -60,7 +58,7 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
 
             <div class="dashboard-card">
                 <div class="card-header">
-                    <h2 style="font-size:1.1rem; margin:0;"><?= $tab === 'delivered' ? 'Delivered Requests' : 'Ongoing Requests' ?></h2>
+                    <h2><?= icon($tab === 'delivered' ? 'check-circle' : 'clock') ?> <?= $tab === 'delivered' ? 'Delivered requests' : 'Ongoing requests' ?></h2>
                     <nav class="request-tabs" aria-label="Request list">
                         <a href="<?= base_url('admin/dashboard') ?>" class="tab-btn <?= $tab === 'ongoing' ? 'active' : '' ?>"<?= $tab === 'ongoing' ? ' aria-current="page"' : '' ?>>Ongoing (<?= (int) $ongoingCount ?>)</a>
                         <a href="<?= base_url('admin/dashboard?tab=delivered') ?>" class="tab-btn <?= $tab === 'delivered' ? 'active' : '' ?>"<?= $tab === 'delivered' ? ' aria-current="page"' : '' ?>>Delivered (<?= (int) $counts['delivered'] ?>)</a>
@@ -95,7 +93,7 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
                                         <td data-label="Platform fee" class="num"><?= money($request['platform_fee']) ?></td>
                                         <td data-label="Actions">
                                             <?php if ($cancellable($request)): ?>
-                                                <button type="button" class="btn-light" data-open-dialog="adminCancelDialog"
+                                                <button type="button" class="btn btn-danger btn-sm" data-open-dialog="adminCancelDialog"
                                                         data-form-action="<?= esc(base_url('admin/request/cancel/' . (int) $request['id']), 'attr') ?>">Cancel</button>
                                             <?php endif; ?>
                                         </td>
@@ -128,7 +126,7 @@ $cancellable = static fn (array $r): bool => in_array($r['status'], ['pending', 
         <?= csrf_field() ?>
         <div class="pb-dialog-actions">
             <button type="button" class="btn-light" data-close-dialog>Keep</button>
-            <button type="submit" class="btn-gradient" data-busy-label="Cancelling…">Cancel request</button>
+            <button type="submit" class="btn btn-danger-solid" data-busy-label="Cancelling…">Yes, cancel it</button>
         </div>
     </form>
 </dialog>

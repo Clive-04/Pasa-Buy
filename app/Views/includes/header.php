@@ -29,7 +29,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <script src="<?= base_url('js/sidebar-active.js') ?>" defer></script>
     <script src="<?= base_url('js/responsive-layout.js') ?>" defer></script>
     <script src="<?= base_url('js/app.js') ?>" defer></script>
 </head>

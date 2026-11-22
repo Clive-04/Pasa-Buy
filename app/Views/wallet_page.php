@@ -8,19 +8,15 @@
 
         <section class="dashboard-main">
             <div class="request-content-panel">
+                <?= page_header([
+                    'crumbs'  => [['Dashboard', 'dashboard'], ['Wallet', null]],
+                    'eyebrow' => is_demo_mode() ? 'Demo funds' : 'Funds',
+                    'title'   => 'My wallet',
+                    'lead'    => 'Your balance and every movement in and out of it. Requesters pay runners from here; runners receive their earnings here.',
+                    'actions' => is_demo_mode() ? '<button type="button" class="btn btn-primary" data-open-dialog="topUpDialog">' . icon('plus') . ' Add demo credits</button>' : '',
+                ]) ?>
+
                 <?= $this->include('includes/flash') ?>
-
-                <div class="page-top">
-                    <div>
-                        <span class="page-badge"><?= is_demo_mode() ? 'Demo Funds' : 'Funds' ?></span>
-                        <h1>My Wallet</h1>
-                        <p>Track your balance and every movement in and out of your wallet.</p>
-                    </div>
-
-                    <?php if (is_demo_mode()): ?>
-                        <button type="button" class="page-back-btn" data-open-dialog="topUpDialog">Add Demo Credits</button>
-                    <?php endif; ?>
-                </div>
 
                 <?php if (is_demo_mode()): ?>
                     <p class="flash flash-warn" role="note">
