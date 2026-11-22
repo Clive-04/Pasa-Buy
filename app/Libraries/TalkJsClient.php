@@ -111,7 +111,7 @@ class TalkJsClient
             throw new ServiceException('Chat is not configured.');
         }
 
-        $http = $this->http ?? service('curlrequest', ['timeout' => 15, 'http_errors' => false], null, false);
+        $http = $this->http ?? \Config\Services::curlrequest(['timeout' => 15, 'http_errors' => false], null, null, false);
 
         try {
             $response = $http->request($method, rtrim($this->config->apiBase, '/') . '/v1/' . rawurlencode($this->config->appId) . $path, [

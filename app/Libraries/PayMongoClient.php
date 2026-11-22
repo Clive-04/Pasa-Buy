@@ -139,7 +139,7 @@ class PayMongoClient
             throw new ServiceException('Only PayMongo test keys are allowed in this demo.');
         }
 
-        $http = $this->http ?? service('curlrequest', ['timeout' => 20, 'http_errors' => false], null, false);
+        $http = $this->http ?? \Config\Services::curlrequest(['timeout' => 20, 'http_errors' => false], null, null, false);
 
         try {
             $options = [
