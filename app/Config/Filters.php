@@ -36,6 +36,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'auth'          => \App\Filters\AuthFilter::class,
         'admin'         => \App\Filters\AdminFilter::class,
+        'pbheaders'     => \App\Filters\SecurityHeadersFilter::class,
     ];
 
     /**
@@ -82,6 +83,7 @@ class Filters extends BaseFilters
         ],
         'after' => [
             'secureheaders',
+            'pbheaders',
         ],
     ];
 

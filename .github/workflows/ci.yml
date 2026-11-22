@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Static checks (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: intl, mbstring, mysqli, gd, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json / composer.lock
+        run: composer validate --strict --no-check-publish
+
+      - name: Install dependencies (locked)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Audit dependencies for known vulnerabilities
+        run: composer audit --no-interaction
+
+      - name: PHP syntax check
+        run: find app public tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+
+  tests:
+    name: PHPUnit (PHP ${{ matrix.php }}, ${{ matrix.db }})
+    runs-on: ubuntu-latest
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3']
+        db: ['mysql:8.0', 'mariadb:10.6']
+    services:
+      database:
+        image: ${{ matrix.db }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: pasa_buy_test
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pasa_buy_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      # CodeIgniter reads dotted keys from underscore variants.
+      database_tests_hostname: 127.0.0.1
+      database_tests_username: root
+      database_tests_password: root
+      database_tests_database: pasa_buy_test
+      database_tests_port: 3306
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: intl, mbstring, mysqli, gd, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies (locked)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare writable directories
+        run: mkdir -p writable/cache writable/logs writable/session writable/uploads
+
+      - name: Run test suite (includes multi-process MySQL concurrency tests)
+        run: vendor/bin/phpunit --no-coverage --colors=never
