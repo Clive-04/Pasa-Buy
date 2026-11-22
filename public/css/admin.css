@@ -1,0 +1,120 @@
+/* =========================
+   ADMIN DASHBOARD ONLY
+   (scoped with .admin-page)
+   ========================= */
+
+.admin-page {
+    background: #f4f6f9;
+}
+
+.admin-page .dashboard-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 30px;
+}
+
+/* HERO */
+.admin-page .dashboard-hero {
+    background: linear-gradient(135deg, #00b4db, #0083b0);
+    color: white;
+    padding: 40px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+}
+
+/* BADGE */
+.admin-page .dashboard-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+/* STATS */
+.admin-page .dashboard-stats {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* STAT BOX */
+.admin-page .stat-box {
+    flex: 1;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.admin-page .stat-box h2 {
+    font-size: 28px;
+    margin: 10px 0;
+}
+
+/* CARD */
+.admin-page .dashboard-card {
+    background: #ffffff;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* REQUEST ITEM */
+.admin-page{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.request-item {
+    padding: 20px;
+}
+
+/* STATUS BADGE */
+.admin-page .status-badge {
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: #ddd;
+}
+
+/* STATUS COLORS */
+.admin-page .status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.admin-page .status-badge.ongoing {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.admin-page .status-badge.completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* FORCE ADMIN TO USE FULL WIDTH */
+.admin-page .dashboard-container {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .admin-page .dashboard-stats {
+        flex-direction: column;
+    }
+
+    .admin-page .request-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}

@@ -4,12 +4,12 @@
 <main class="page-section">
     <div class="about-wrapper">
         <section class="about-intro">
-            <h1>About Pasa-Buy</h1>
+            <h1>About Neighborly</h1>
             <p>
-                Pasa-Buy is a community-based platform that helps people request or deliver nearby items quickly and conveniently.
+                Neighborly is a local technology startup founded in 2026 in Lucban, Quezon.
             </p>
             <p>
-                It supports local communities by making errands easier and creating opportunities for people to help one another.
+                It develops community-based digital platforms that connect residents, support local businesses, and make everyday transactions faster, easier, and more accessible.
             </p>
         </section>
 

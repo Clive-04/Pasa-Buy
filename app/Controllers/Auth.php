@@ -39,6 +39,7 @@ class Auth extends BaseController
             'phone_number' => $this->request->getPost('phone'),
             'password' => password_hash($password, PASSWORD_DEFAULT),
             'address' => $this->request->getPost('address'),
+            'role' => 'user' // 👈 default
         ];
 
         // Basic validation
@@ -70,14 +71,20 @@ class Auth extends BaseController
         $user = $userModel->where('email', $email)->first();
 
         if ($user && password_verify($password, $user['password'])) {
-            // Set session
-            session()->set('user_id', $user['id']);
-            session()->set('user_name', $user['first_name'] . ' ' . $user['last_name']);
-            session()->set('user_email', $user['email']);
+            session()->set([
+                'user_id' => $user['id'],
+                'user_name' => $user['first_name'] . ' ' . $user['last_name'],
+                'user_email' => $user['email'],
+                'role' => $user['role'], // 👈 ADD THIS
+                'isLoggedIn' => true     // 👈 ADD THIS
+            ]);
 
-            return redirect()->to('/dashboard')->with('success', 'Login successful.');
-        } else {
-            return redirect()->back()->with('error', 'Invalid email or password.');
+            // 👇 redirect based on role
+            if ($user['role'] === 'admin') {
+                return redirect()->to('/admin/dashboard');
+            } else {
+                return redirect()->to('/dashboard');
+            }
         }
     }
 

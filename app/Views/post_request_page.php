@@ -18,8 +18,12 @@
                 </div>
 
                 <div class="post-request-grid">
+
+                    <!-- FORM -->
                     <section class="post-request-form-card">
                         <form action="<?= base_url('request/process') ?>" method="POST" class="post-request-form">
+
+                            <!-- ITEM -->
                             <div class="form-section">
                                 <h2>Item Details</h2>
 
@@ -59,6 +63,7 @@
                                 </div>
                             </div>
 
+                            <!-- STORE -->
                             <div class="form-section">
                                 <h2>Store Details</h2>
 
@@ -80,6 +85,7 @@
                                 </div>
                             </div>
 
+                            <!-- DELIVERY -->
                             <div class="form-section">
                                 <h2>Delivery Details</h2>
 
@@ -106,6 +112,7 @@
                                 </div>
                             </div>
 
+                            <!-- PAYMENT -->
                             <div class="form-section">
                                 <h2>Payment and Urgency</h2>
 
@@ -150,37 +157,54 @@
                         </form>
                     </section>
 
+                    <!-- SUMMARY CARD -->
                     <aside class="request-summary-card">
                         <h2>Request Summary</h2>
 
                         <div class="summary-box">
                             <div class="summary-row">
                                 <span>Item</span>
-                                <strong>Not set</strong>
+                                <strong id="summaryItem">Not set</strong>
                             </div>
+
                             <div class="summary-row">
                                 <span>Quantity</span>
-                                <strong>0</strong>
+                                <strong id="summaryQuantity">0</strong>
                             </div>
+
                             <div class="summary-row">
                                 <span>Store</span>
-                                <strong>Not set</strong>
+                                <strong id="summaryStore">Not set</strong>
                             </div>
+
                             <div class="summary-row">
                                 <span>Estimated Price</span>
-                                <strong>₱0.00</strong>
+                                <strong>₱<span id="summaryEstimated">0.00</span></strong>
                             </div>
+
                             <div class="summary-row">
                                 <span>Service Fee</span>
-                                <strong>₱0.00</strong>
+                                <strong>₱<span id="summaryServiceFee">0.00</span></strong>
                             </div>
+
+                            <div class="summary-row">
+                                <span>Tax (10%)</span>
+                                <strong>₱<span id="summaryTax">0.00</span></strong>
+                            </div>
+
+                            <div class="summary-row">
+                                <span>Total</span>
+                                <strong>₱<span id="summaryTotal">0.00</span></strong>
+                            </div>
+
                             <div class="summary-row">
                                 <span>Urgency</span>
-                                <strong>Not set</strong>
+                                <strong id="summaryUrgency">Not set</strong>
                             </div>
+
                             <div class="summary-row">
                                 <span>Payment</span>
-                                <strong>Not set</strong>
+                                <strong id="summaryPayment">Not set</strong>
                             </div>
                         </div>
 
@@ -189,10 +213,59 @@
                             <p>Be specific with your item details and location so nearby runners can accept your request faster.</p>
                         </div>
                     </aside>
+
                 </div>
             </div>
         </section>
     </div>
 </main>
+
+<!-- LIVE SYNC SCRIPT -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const item = document.getElementById("item_name");
+    const qty = document.getElementById("quantity");
+    const store = document.getElementById("store_name");
+
+    const estimated = document.getElementById("estimated_price");
+    const fee = document.getElementById("service_fee");
+
+    const urgency = document.getElementById("urgency");
+    const payment = document.getElementById("payment_method");
+
+    function update() {
+
+        const est = parseFloat(estimated.value) || 0;
+        const sf = parseFloat(fee.value) || 0;
+
+        const tax = est * 0.10;
+        const total = est + sf + tax;
+
+        document.getElementById("summaryItem").innerText = item.value || "Not set";
+        document.getElementById("summaryQuantity").innerText = qty.value || "0";
+        document.getElementById("summaryStore").innerText = store.value || "Not set";
+
+        document.getElementById("summaryEstimated").innerText = est.toFixed(2);
+        document.getElementById("summaryServiceFee").innerText = sf.toFixed(2);
+        document.getElementById("summaryTax").innerText = tax.toFixed(2);
+        document.getElementById("summaryTotal").innerText = total.toFixed(2);
+
+        document.getElementById("summaryUrgency").innerText = urgency.value || "Not set";
+        document.getElementById("summaryPayment").innerText = payment.value || "Not set";
+    }
+
+    [
+        item, qty, store,
+        estimated, fee,
+        urgency, payment
+    ].forEach(el => {
+        el.addEventListener("input", update);
+        el.addEventListener("change", update);
+    });
+
+    update();
+});
+</script>
 
 <?= $this->include('includes/footer') ?>

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="5">
     <link rel="icon" type="image/png" href="<?= base_url('public/img/favicon.PNG') ?>">
 
     <title><?= esc($title ?? 'Pasa-Buy') ?></title>
@@ -16,6 +17,7 @@
     <link rel="stylesheet" href="<?= base_url('public/css/about.css') ?>">
     <link rel="stylesheet" href="<?= base_url('public/css/contact.css') ?>">
     <link rel="stylesheet" href="<?= base_url('public/css/profile.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('public/css/admin.css') ?>">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -7,7 +7,7 @@
     </div>
 
     <div class="footer-bottom">
-        <p>&copy; 2026 Pasa-Buy. All rights reserved.</p>
+        <p>&copy; 2026 Pasa-Buy • Partnered with Neighborly. All rights reserved.</p>
     </div>
 </footer>
 </body>

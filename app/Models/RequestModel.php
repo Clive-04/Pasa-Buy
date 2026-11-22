@@ -25,6 +25,7 @@ class RequestModel extends Model
         'delivery_notes',
         'estimated_price',
         'service_fee',
+        'tax',
         'payment_method',
         'payment_status',
         'paid_at',

@@ -49,3 +49,8 @@ $routes->post('/users/(:num)/rate', 'UserSearch::rate/$1');
 $routes->get('/notifications', 'RequestNotification::index');
 $routes->get('/notifications/open/(:num)', 'RequestNotification::open/$1');
 $routes->post('/notifications/mark-all-read', 'RequestNotification::markAllRead');
+
+$routes->group('admin', ['filter' => 'admin'], function($routes) {
+    $routes->get('dashboard', 'AdminController::dashboard');
+});
+$routes->post('/admin/request/delete/(:num)', 'AdminController::deleteRequest/$1');

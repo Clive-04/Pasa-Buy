@@ -27,6 +27,17 @@ class Request extends BaseController
 
         $paymentStatus = $paymentMethod === 'cod' ? 'cod_pending' : 'unpaid';
 
+        $estimatedPrice = (float) ($this->request->getPost('estimated_price') ?: 0.00);
+        $serviceFee = (float) ($this->request->getPost('service_fee') ?: 0.00);
+
+        /*
+            TAX RULE:
+            Example = 10% tax based on service fee
+            You can change this anytime
+        */
+        $taxRate = 0.10;
+        $tax = $estimatedPrice * $taxRate;
+
         $data = [
             'user_id'           => session('user_id'),
             'item_name'         => $this->request->getPost('item_name'),
@@ -41,8 +52,9 @@ class Request extends BaseController
             'contact_number'    => $this->request->getPost('contact_number'),
             'landmark'          => $this->request->getPost('landmark'),
             'delivery_notes'    => $this->request->getPost('delivery_notes'),
-            'estimated_price'   => $this->request->getPost('estimated_price') ?: 0.00,
-            'service_fee'       => $this->request->getPost('service_fee') ?: 0.00,
+            'estimated_price'   => $estimatedPrice,
+            'service_fee'       => $serviceFee,
+            'tax'               => $tax,
             'payment_method'    => $paymentMethod,
             'payment_status'    => $paymentStatus,
             'paid_at'           => null,
@@ -365,15 +377,53 @@ class Request extends BaseController
 
         if ($newStatus === 'delivered') {
             if ($request['payment_method'] === 'cod') {
-                if ($codConfirmed !== '1') {
-                    return redirect()->to('/accepted-requests')->with('error', 'Please confirm that COD payment was received first.');
-                }
 
-                $requestModel->update($requestId, [
-                    'payment_status' => 'paid_cod',
-                    'paid_at' => date('Y-m-d H:i:s')
-                ]);
-            } else {
+            if ($codConfirmed !== '1') {
+                return redirect()->to('/accepted-requests')
+                    ->with('error','Please confirm that COD payment was received first.');
+            }
+
+            $db = db_connect();
+            $userModel = new UserModel();
+
+            $requester = $userModel->find($request['user_id']);
+
+            if (!$requester) {
+                return redirect()->to('/accepted-requests')
+                    ->with('error','Requester not found.');
+            }
+
+            $taxAmount = (float)$request['tax'];
+            $walletBalance = (float)($requester['wallet_balance'] ?? 0);
+
+            // Block completion if requester has insufficient wallet funds
+            if ($walletBalance < $taxAmount) {
+                return redirect()->to('/accepted-requests')
+                    ->with('error',
+                        'Delivery cannot be completed. Requester has insufficient wallet balance for platform tax.'
+                    );
+            }
+
+            $db->transStart();
+
+            // Deduct tax from requester wallet
+            $userModel->update($requester['id'], [
+                'wallet_balance' => $walletBalance - $taxAmount
+            ]);
+
+            // mark COD settled
+            $requestModel->update($requestId, [
+                'payment_status' => 'paid_cod',
+                'paid_at' => date('Y-m-d H:i:s')
+            ]);
+
+            $db->transComplete();
+
+            if (!$db->transStatus()) {
+                return redirect()->to('/accepted-requests')
+                    ->with('error','Failed processing COD tax deduction.');
+            }
+        } else {
                 if ($request['payment_status'] !== 'paid') {
                     return redirect()->to('/accepted-requests')->with('error', 'The requester must pay first before you can mark this as delivered.');
                 }
