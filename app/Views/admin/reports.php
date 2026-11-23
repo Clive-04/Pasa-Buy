@@ -47,6 +47,8 @@ $statusLabel = ['open' => 'New', 'reviewing' => 'Reviewing', 'resolved' => 'Reso
                                 <p class="text-muted">
                                     <?= esc(trim($r['reporter_first'] . ' ' . $r['reporter_last'])) ?> reported
                                     <a class="link" href="<?= base_url('users/' . (int) $r['reported_user_id']) ?>"><?= esc(trim($r['reported_first'] . ' ' . $r['reported_last'])) ?></a>
+                                    <?= $r['reported_status'] === 'suspended' ? '<span class="acct-state is-suspended">' . icon('lock') . ' Suspended</span>' : '' ?>
+                                    · <a class="link" href="<?= base_url('admin/users?' . http_build_query(['q' => trim($r['reported_first'] . ' ' . $r['reported_last'])])) ?>">Manage account</a>
                                     · <time datetime="<?= esc($r['created_at'], 'attr') ?>"><?= esc(time_ago($r['created_at'])) ?></time>
                                 </p>
                             </div>
@@ -94,7 +96,7 @@ $statusLabel = ['open' => 'New', 'reviewing' => 'Reviewing', 'resolved' => 'Reso
                     </article>
                 <?php endforeach; ?>
             </div>
-            <p class="chat-footnote"><?= icon('info') ?> Resolving a report doesn't change accounts, errands or payments. Handle those through the request pages.</p>
+            <p class="chat-footnote"><?= icon('info') ?> Resolving a report doesn’t change accounts, errands or payments. Use “Manage account” to suspend someone, and the Requests page for errands.</p>
         </section>
     </div>
 </main>

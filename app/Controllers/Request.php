@@ -104,7 +104,9 @@ class Request extends BaseController
 
         $model->select('id, user_id, item_name, category, quantity, store_name, store_address, landmark, estimated_price, service_fee, platform_fee, payment_method, urgency, status, created_at')
             ->where('status', 'pending')
-            ->where('user_id !=', $this->currentUserId());
+            ->where('user_id !=', $this->currentUserId())
+            // Requests from suspended accounts are not offered to runners.
+            ->where("user_id NOT IN (SELECT id FROM users WHERE status = 'suspended')", null, false);
 
         if ($search !== '') {
             $model->groupStart()->like('item_name', $search)->orLike('store_name', $search)->groupEnd();

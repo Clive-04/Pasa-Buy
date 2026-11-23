@@ -76,6 +76,14 @@
                     if (action && form) {
                         form.setAttribute('action', action);
                     }
+                    // data-fill-name="Ana" on the opener -> text of [data-fill="name"] in the dialog;
+                    // [data-hide-if-zero="pending"] hides when data-fill-pending is 0.
+                    Array.prototype.forEach.call(opener.attributes, function (attr) {
+                        if (attr.name.indexOf('data-fill-') !== 0) { return; }
+                        var key = attr.name.slice(10);
+                        dialog.querySelectorAll('[data-fill="' + key + '"]').forEach(function (el) { el.textContent = attr.value; });
+                        dialog.querySelectorAll('[data-hide-if-zero="' + key + '"]').forEach(function (el) { el.hidden = attr.value === '0'; });
+                    });
                     dialog.showModal();
                 }
                 return;

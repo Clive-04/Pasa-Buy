@@ -137,8 +137,15 @@ class Auth extends BaseController
             return $back('Invalid email or password.');
         }
 
-        // Successful login: forget earlier failures and prevent session fixation.
+        // Correct password: forget earlier failures. A suspended account is told
+        // so only now, so the message never reveals which emails exist.
         $throttler->remove($key);
+
+        if (($user['status'] ?? 'active') === 'suspended') {
+            return $back('This account is suspended. If you think this is a mistake, contact the Pasa-Buy team from the Contact page.');
+        }
+
+        // Prevent session fixation.
         session()->regenerate(true);
 
         if (password_needs_rehash($user['password'], PASSWORD_DEFAULT)) {

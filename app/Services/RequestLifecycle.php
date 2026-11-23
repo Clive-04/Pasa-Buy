@@ -106,6 +106,12 @@ class RequestLifecycle extends TransactionalService
                 throw new ServiceException('Account not found.');
             }
 
+            $requesterStatus = $this->db->table('users')->select('status')->where('id', (int) $request['user_id'])->get()->getRow('status');
+
+            if ($requesterStatus === 'suspended') {
+                throw new ServiceException('This request is no longer available.');
+            }
+
             if ($request['payment_method'] === 'cod') {
                 $feeCents = Money::toCents($request['platform_fee']);
 

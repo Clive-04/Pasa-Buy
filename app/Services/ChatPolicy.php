@@ -83,8 +83,14 @@ class ChatPolicy
             return $deny('You cannot message yourself.');
         }
 
-        if ($this->db->table('users')->where('id', $receiver)->countAllResults() === 0) {
+        $statuses = array_column($this->db->table('users')->select('id, status')->whereIn('id', [$sender, $receiver])->get()->getResultArray(), 'status', 'id');
+
+        if (! isset($statuses[$receiver])) {
             return $deny('That user could not be found.');
+        }
+
+        if (in_array('suspended', $statuses, true)) {
+            return $deny('This account is suspended, so new messages are turned off. Earlier messages are kept.');
         }
 
         if ($this->isBlockedEitherWay($sender, $receiver)) {

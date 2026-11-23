@@ -79,11 +79,16 @@ final class UserJourneyTest extends FeatureTestCase
         $this->assertSame(1, $this->countRows('user_ratings', ['rated_user_id' => $runner, 'request_id' => $requestId]));
 
         // Admin report reflects recorded collections and reconciles.
-        $report = $this->getAs($admin, 'admin/dashboard?tab=delivered', 'admin');
+        $report = $this->getAs($admin, 'admin/dashboard', 'admin');
         $report->assertOK();
         $report->assertSee('₱4.50');
         $report->assertSee('Balanced');
-        $report->assertSee('all balances match their ledgers');
+        $report->assertDontSee('differs from its ledger');
+        $report->assertDontSee('differ from their ledgers');
+
+        $delivered = $this->getAs($admin, 'admin/requests?status=delivered', 'admin');
+        $delivered->assertSee('#' . $requestId);
+        $this->getAs($admin, 'admin/users?check=ledger', 'admin')->assertSee('0 accounts match');
     }
 
     public function testPostRequestPrefillsDeliveryDetailsButKeepsThemEditable(): void

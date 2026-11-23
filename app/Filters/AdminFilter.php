@@ -24,7 +24,13 @@ class AdminFilter implements FilterInterface
             return redirect()->to('/login')->with('error', 'Please log in first.');
         }
 
-        $user = db_connect()->table('users')->select('role')->where('id', $userId)->get()->getRowArray();
+        $user = db_connect()->table('users')->select('role, status')->where('id', $userId)->get()->getRowArray();
+
+        if ($user !== null && $user['status'] === 'suspended') {
+            $session->destroy();
+
+            return redirect()->to('/login')->with('error', 'This account is suspended.');
+        }
 
         if ($user === null || $user['role'] !== 'admin') {
             $session->set('role', $user['role'] ?? 'user');

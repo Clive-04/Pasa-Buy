@@ -268,8 +268,12 @@ final class ProfilesSearchAndNavTest extends FeatureTestCase
     {
         $admin = $this->createUser(['role' => 'admin']);
 
-        $this->getAs($admin, 'admin/dashboard?tab=delivered', 'admin')
-            ->assertSee('href="' . base_url('admin/dashboard?tab=delivered') . '" class="side-link is-active" aria-current="page"', null);
+        $this->getAs($admin, 'admin/dashboard', 'admin')
+            ->assertSee('href="' . base_url('admin/dashboard') . '" class="side-link is-active" aria-current="page"', null);
+        $this->getAs($admin, 'admin/requests?status=delivered', 'admin')
+            ->assertSee('href="' . base_url('admin/requests') . '" class="side-link is-active" aria-current="page"', null);
+        $this->getAs($admin, 'admin/users', 'admin')
+            ->assertSee('href="' . base_url('admin/users') . '" class="side-link is-active" aria-current="page"', null);
         $this->getAs($admin, 'admin/reports', 'admin')
             ->assertSee('href="' . base_url('admin/reports') . '" class="side-link is-active" aria-current="page"', null);
     }

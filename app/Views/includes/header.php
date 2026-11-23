@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="<?= asset('css/pages.css') ?>" data-turbo-track="reload">
     <link rel="stylesheet" href="<?= asset('css/colour.css') ?>" data-turbo-track="reload">
     <link rel="stylesheet" href="<?= asset('css/brand-pages.css') ?>" data-turbo-track="reload">
+    <link rel="stylesheet" href="<?= asset('css/admin.css') ?>" data-turbo-track="reload">
     <link rel="stylesheet" href="<?= asset('css/motion.css') ?>" data-turbo-track="reload">
 
     <?php

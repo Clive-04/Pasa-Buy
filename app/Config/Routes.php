@@ -82,6 +82,12 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 $routes->group('admin', ['filter' => 'admin'], static function (RouteCollection $routes): void {
     $routes->get('dashboard', 'AdminController::dashboard');
     $routes->post('request/cancel/(:num)', 'AdminController::cancelRequest/$1');
+    $routes->get('requests', 'AdminController::requests');
+    $routes->get('requests/export', 'AdminController::exportRequests');
+    $routes->get('users', 'AdminController::users');
+    $routes->post('users/(:num)/suspend', 'AdminController::suspendUser/$1');
+    $routes->post('users/(:num)/restore', 'AdminController::restoreUser/$1');
+    $routes->get('topups', 'AdminController::topups');
     $routes->get('reports', 'AdminController::reports');
     $routes->post('reports/(:num)', 'AdminController::updateReport/$1');
 });
