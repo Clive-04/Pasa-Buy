@@ -33,7 +33,7 @@
 .path-card:active { transform: translateY(-1px) scale(0.99); transition-duration: var(--dur-press); }
 .path-icon {
     grid-row: span 3; display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px;
-    border-radius: 16px; background: linear-gradient(135deg, var(--aqua), var(--teal)); color: #00262a;
+    border-radius: 16px; background: linear-gradient(135deg, var(--aqua), var(--teal)); color: #061a36;
 }
 .path-icon .i { width: 26px; height: 26px; }
 .path-card.path-earn .path-icon { background: var(--hero); color: var(--aqua); }

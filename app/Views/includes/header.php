@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
-    <meta name="theme-color" content="#f2f7f5" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#061a14" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#eef2f9" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#060e1c" media="(prefers-color-scheme: dark)">
     <meta name="csrf-token-name" content="<?= esc(csrf_token(), 'attr') ?>">
     <meta name="csrf-token" content="<?= esc(csrf_hash(), 'attr') ?>">
     <link rel="icon" type="image/png" href="<?= base_url('img/favicon.PNG') ?>">

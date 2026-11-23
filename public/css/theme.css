@@ -1,9 +1,10 @@
 /*
  * Pasa-Buy theme — tokens, base and app shell.
  *
- * Palette: "Ocean tide" (Figma combination 81, from the AEGIS note
- * "100 Color Combinations To Influence Your Next Design"):
- *   #00D1D1 aqua · #4152D7 indigo · #01ACAE teal · #005C5C deep teal
+ * Palette: "Harbor blue" (Clive's choice of 2026-11-23: blue-focused;
+ * replaces the earlier "Ocean tide" teal palette):
+ *   #2459E0 primary blue · #38B6F5 sky · #1E7FD6 mid blue · #0B1D3A navy
+ *   with amber/terracotta as the single warm accent for attention items.
  *
  * Light theme by default, dark theme when the device prefers it, and a
  * manual override stored per browser (<html data-theme="light|dark">).
@@ -16,41 +17,42 @@
 :root {
     color-scheme: light;
 
-    /* palette (fixed) */
-    --indigo: #4152d7;
-    --aqua: #00d1d1;
-    --teal: #01acae;
-    --deep: #005c5c;
+    /* palette (fixed) — "Harbor blue": primary blue, sky accent, mid blue, navy.
+       The old token names are kept so every rule using them follows along. */
+    --indigo: #2459e0;   /* primary blue */
+    --aqua: #38b6f5;     /* sky accent */
+    --teal: #1e7fd6;     /* mid blue */
+    --deep: #0b1d3a;     /* navy */
 
-    /* surfaces */
-    --bg: #f3f7fa;
+    /* surfaces (cool, blue-tinted neutrals) */
+    --bg: #eef2f9;
     --surface: #ffffff;
-    --surface-2: #f7fafc;
-    --soft: #eaf1f5;
-    --line: #dbe5ec;
-    --line-strong: #bccfd9;
-    --overlay: rgba(4, 20, 26, 0.5);
+    --surface-2: #f5f8fd;
+    --soft: #e8eef8;
+    --line: #dbe3ef;
+    --line-strong: #bfcbdd;
+    --overlay: rgba(6, 16, 34, 0.5);
 
     /* text */
-    --ink: #0b2530;
-    --ink-2: #2c4652;
-    --muted: #546d79;
+    --ink: #0c1a2e;
+    --ink-2: #2b3c55;
+    --muted: #55657d;
 
     /* brand roles */
-    --brand: #4152d7;
-    --brand-hover: #3443c2;
-    --brand-press: #2c39a8;
+    --brand: #2459e0;
+    --brand-hover: #1d4ac2;
+    --brand-press: #183ea3;
     --on-brand: #ffffff;
-    --brand-ink: #3443c2;
-    --brand-soft: #eaedfd;
-    --brand-soft-ink: #2c39a8;
-    --accent: #01acae;
-    --focus: rgba(65, 82, 215, 0.35);
+    --brand-ink: #1d4ac2;
+    --brand-soft: #e8efff;
+    --brand-soft-ink: #183ea3;
+    --accent: #1e7fd6;
+    --focus: rgba(36, 89, 224, 0.35);
 
-    /* hero surfaces: deep teal → indigo in both themes */
-    --hero: linear-gradient(135deg, #005c5c 0%, #0a5e73 45%, #3341c2 100%);
-    --on-hero: #f0fbfc;
-    --on-hero-muted: #c3e7ee;
+    /* hero surfaces: navy → blue */
+    --hero: linear-gradient(135deg, #0b1d3a 0%, #133a7a 52%, #2459e0 100%);
+    --on-hero: #f2f6ff;
+    --on-hero-muted: #c4d3f2;
 
 
     /* semantic */
@@ -91,13 +93,13 @@
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
         color-scheme: dark;
-        --bg: #04141a; --surface: #0a222b; --surface-2: #0d2a34; --soft: #0e2c37;
-        --line: #1a4250; --line-strong: #285a69; --overlay: rgba(0, 0, 0, 0.6);
-        --ink: #e3f3f6; --ink-2: #bcd8de; --muted: #8ab0ba;
-        --brand: #00d1d1; --brand-hover: #2fe0e0; --brand-press: #00b5b5; --on-brand: #00262a;
-        --brand-ink: #5ce6e6; --brand-soft: rgba(0, 209, 209, 0.12); --brand-soft-ink: #7ff0f0;
-        --accent: #00d1d1; --focus: rgba(0, 209, 209, 0.5);
-        --hero: linear-gradient(135deg, #005c5c 0%, #0a4a5e 50%, #2a36a0 100%);
+        --bg: #060e1c; --surface: #0c182c; --surface-2: #102039; --soft: #12233f;
+        --line: #1d304f; --line-strong: #2a4268; --overlay: rgba(0, 0, 0, 0.6);
+        --ink: #e6edf9; --ink-2: #bdcbe3; --muted: #8b9dbb;
+        --brand: #5b8cff; --brand-hover: #7aa2ff; --brand-press: #4a7af0; --on-brand: #061229;
+        --brand-ink: #8fb0ff; --brand-soft: rgba(91, 140, 255, 0.14); --brand-soft-ink: #b4caff;
+        --accent: #38b6f5; --focus: rgba(91, 140, 255, 0.5);
+        --hero: linear-gradient(135deg, #0b1d3a 0%, #12306a 55%, #2149c4 100%);
         --success-bg: rgba(74, 222, 128, 0.12); --success-ink: #86efac; --success-line: rgba(74, 222, 128, 0.3);
         --warn-bg: rgba(251, 191, 36, 0.12);    --warn-ink: #fcd34d;    --warn-line: rgba(251, 191, 36, 0.3);
         --danger: #f87171; --danger-bg: rgba(248, 113, 113, 0.12); --danger-ink: #fca5a5; --danger-line: rgba(248, 113, 113, 0.35);
@@ -118,13 +120,13 @@
 /* explicit dark choice (same values as above) */
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #04141a; --surface: #0a222b; --surface-2: #0d2a34; --soft: #0e2c37;
-    --line: #1a4250; --line-strong: #285a69; --overlay: rgba(0, 0, 0, 0.6);
-    --ink: #e3f3f6; --ink-2: #bcd8de; --muted: #8ab0ba;
-    --brand: #00d1d1; --brand-hover: #2fe0e0; --brand-press: #00b5b5; --on-brand: #00262a;
-    --brand-ink: #5ce6e6; --brand-soft: rgba(0, 209, 209, 0.12); --brand-soft-ink: #7ff0f0;
-    --accent: #00d1d1; --focus: rgba(0, 209, 209, 0.5);
-    --hero: linear-gradient(135deg, #005c5c 0%, #0a4a5e 50%, #2a36a0 100%);
+    --bg: #060e1c; --surface: #0c182c; --surface-2: #102039; --soft: #12233f;
+    --line: #1d304f; --line-strong: #2a4268; --overlay: rgba(0, 0, 0, 0.6);
+    --ink: #e6edf9; --ink-2: #bdcbe3; --muted: #8b9dbb;
+    --brand: #5b8cff; --brand-hover: #7aa2ff; --brand-press: #4a7af0; --on-brand: #061229;
+    --brand-ink: #8fb0ff; --brand-soft: rgba(91, 140, 255, 0.14); --brand-soft-ink: #b4caff;
+    --accent: #38b6f5; --focus: rgba(91, 140, 255, 0.5);
+    --hero: linear-gradient(135deg, #0b1d3a 0%, #12306a 55%, #2149c4 100%);
     --success-bg: rgba(74, 222, 128, 0.12); --success-ink: #86efac; --success-line: rgba(74, 222, 128, 0.3);
     --warn-bg: rgba(251, 191, 36, 0.12);    --warn-ink: #fcd34d;    --warn-line: rgba(251, 191, 36, 0.3);
     --danger: #f87171; --danger-bg: rgba(248, 113, 113, 0.12); --danger-ink: #fca5a5; --danger-line: rgba(248, 113, 113, 0.35);

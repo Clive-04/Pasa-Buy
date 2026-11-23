@@ -3,7 +3,7 @@
  * and pages.css.
  *
  * Direction: crisp and purposeful rather than decorative.
- *  - Colour where it carries meaning: the deep-teal navigation rail, status
+ *  - Colour where it carries meaning: the navy navigation rail, status
  *    and category markers, money amounts, the current page.
  *  - Cards are solid surfaces with a 1px border, a hairline under their
  *    title row and a modest radius. No glows, gradient tiles or fades.
@@ -16,41 +16,37 @@
 /* ================================================================ TOKENS */
 :root {
     /*
-     * Light mode: warm cream canvas against the cool deep-teal rail, warm
-     * hairlines, and shadows tinted toward the brand teal (tinted neutrals
-     * read as deliberate; flat grey-white reads as unfinished).
+     * "Harbor blue" light mode: cool blue-tinted canvas, a navy rail, blue
+     * feature tiles, and shadows tinted toward navy. Amber/terracotta is the
+     * single warm accent, kept for things that need the user.
      */
-    --canvas: #f4efe6;
-    --surface-2: #faf6ef;
-    --soft: #f1ebe0;
-    --line: #e6dfd2;
-    --line-strong: #d6ccbb;
-    --card-border: #e4dccf;
+    --canvas: #eef2f9;
+    --card-border: #d9e1ee;
     --card-radius: 14px;
-    --hairline: #eee7dc;
-    --label-ink: #00696b;
-    --card-shadow: 0 1px 2px rgba(7, 56, 59, 0.05), 0 10px 24px -14px rgba(7, 56, 59, 0.22);
+    --hairline: #e4eaf4;
+    --label-ink: #1d4ac2;
+    --card-shadow: 0 1px 2px rgba(11, 29, 58, 0.05), 0 10px 24px -14px rgba(11, 29, 58, 0.22);
 
-    /* feature cards (the few blocks that matter most) */
-    --mint: #dff2ec;      --mint-ink: #064e4a;   --mint-line: #c3e6dc;
-    --sand: #f8e6cf;      --sand-ink: #7a3412;   --sand-line: #efd3ae;
+    /* feature cards ("mint" is the historical name: now a soft blue) */
+    --mint: #e4eeff;      --mint-ink: #12357a;   --mint-line: #c9dafb;
+    --sand: #fbead3;      --sand-ink: #7a3412;   --sand-line: #f1d4ad;
     --terracotta: #c2562b;
-    --topbar-bg: rgba(244, 239, 230, 0.88);
+    --topbar-bg: rgba(238, 242, 249, 0.9);
 
-    /* navigation rail (deep teal in light mode) */
-    --rail: #07383b;
-    --rail-line: #0f4c50;
-    --rail-ink: #d4ecec;
-    --rail-muted: #84b4b5;
+    /* navigation rail (navy in light mode) */
+    --rail: #0b1d3a;
+    --rail-line: #17305a;
+    --rail-ink: #dbe5f7;
+    --rail-muted: #8ea3c8;
     --rail-hover: rgba(255, 255, 255, 0.07);
-    --rail-active: rgba(255, 255, 255, 0.13);
-    --rail-marker: #3fe0e0;
+    --rail-active: rgba(255, 255, 255, 0.12);
+    --rail-marker: #5fb8ff;
 
     /* category markers */
     --cat-food: #d48a00;
     --cat-medicine: #d6455f;
-    --cat-school_supplies: #4152d7;
-    --cat-household: #01979a;
+    --cat-school_supplies: #2459e0;
+    --cat-household: #0f8aa0;
     --cat-personal_care: #8455e8;
     --cat-other: #7b8fa1;
 
@@ -59,25 +55,25 @@
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        --canvas: #04141a;
-        --card-border: #1a4250;
-        --hairline: #15394a;
-        --label-ink: #5ce6e6;
-        --rail: #071c24;
-        --rail-line: #153845;
-        --rail-ink: #cde7ec;
-        --rail-muted: #7ea6b0;
+        --canvas: #060e1c;
+        --card-border: #1d304f;
+        --hairline: #172a48;
+        --label-ink: #8fb0ff;
+        --rail: #081428;
+        --rail-line: #16284a;
+        --rail-ink: #d6e1f5;
+        --rail-muted: #8396ba;
         --rail-hover: rgba(255, 255, 255, 0.05);
-        --rail-active: rgba(0, 209, 209, 0.12);
-        --rail-marker: #00d1d1;
+        --rail-active: rgba(91, 140, 255, 0.16);
+        --rail-marker: #5b8cff;
         --cat-food: #fbbf24;
         --cat-medicine: #fb7185;
-        --cat-school_supplies: #a5b4fc;
-        --cat-household: #2fe0e0;
+        --cat-school_supplies: #8fb0ff;
+        --cat-household: #38c6e0;
         --cat-personal_care: #c4b5fd;
         --cat-other: #94a3b8;
         --money-ink: #86efac;
-        --mint: rgba(0, 209, 209, 0.10); --mint-ink: #9ff3ef; --mint-line: rgba(0, 209, 209, 0.25);
+        --mint: rgba(91, 140, 255, 0.12); --mint-ink: #b4caff; --mint-line: rgba(91, 140, 255, 0.28);
         --sand: rgba(251, 191, 36, 0.10); --sand-ink: #fcd9a0; --sand-line: rgba(251, 191, 36, 0.25);
         --terracotta: #f59e6b;
         --topbar-bg: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -86,25 +82,25 @@
 }
 
 :root[data-theme="dark"] {
-    --canvas: #04141a;
-    --card-border: #1a4250;
-    --hairline: #15394a;
-    --label-ink: #5ce6e6;
-    --rail: #071c24;
-    --rail-line: #153845;
-    --rail-ink: #cde7ec;
-    --rail-muted: #7ea6b0;
+    --canvas: #060e1c;
+    --card-border: #1d304f;
+    --hairline: #172a48;
+    --label-ink: #8fb0ff;
+    --rail: #081428;
+    --rail-line: #16284a;
+    --rail-ink: #d6e1f5;
+    --rail-muted: #8396ba;
     --rail-hover: rgba(255, 255, 255, 0.05);
-    --rail-active: rgba(0, 209, 209, 0.12);
-    --rail-marker: #00d1d1;
+    --rail-active: rgba(91, 140, 255, 0.16);
+    --rail-marker: #5b8cff;
     --cat-food: #fbbf24;
     --cat-medicine: #fb7185;
-    --cat-school_supplies: #a5b4fc;
-    --cat-household: #2fe0e0;
+    --cat-school_supplies: #8fb0ff;
+    --cat-household: #38c6e0;
     --cat-personal_care: #c4b5fd;
     --cat-other: #94a3b8;
     --money-ink: #86efac;
-    --mint: rgba(0, 209, 209, 0.10); --mint-ink: #9ff3ef; --mint-line: rgba(0, 209, 209, 0.25);
+    --mint: rgba(91, 140, 255, 0.12); --mint-ink: #b4caff; --mint-line: rgba(91, 140, 255, 0.28);
     --sand: rgba(251, 191, 36, 0.10); --sand-ink: #fcd9a0; --sand-line: rgba(251, 191, 36, 0.25);
     --terracotta: #f59e6b;
     --topbar-bg: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -132,7 +128,7 @@ body { background: var(--canvas); }
 .side-link-danger:hover { background: rgba(255, 120, 120, 0.12); color: #ffd0d0; }
 .dashboard-sidebar .side-foot { border-top-color: var(--rail-line); }
 .side-link:focus-visible { outline-color: var(--rail-marker); }
-.side-link .badge.badge-action { background: var(--rail-marker); color: #052b2d; }
+.side-link .badge.badge-action { background: var(--rail-marker); color: #061a36; }
 .sidebar-mobile-top { border-bottom-color: var(--rail-line); }
 .sidebar-mobile-title { color: #fff; }
 .dashboard-sidebar .sidebar-close { color: var(--rail-ink); }
@@ -157,11 +153,11 @@ body { background: var(--canvas); }
     border-radius: var(--card-radius);
     box-shadow: var(--card-shadow);
 }
-.card { background: var(--surface); padding: 20px 22px; }
+.card { background: var(--surface); padding: 16px 18px; }
 
 /* title row with a hairline under it, spanning the card */
 .card > .card-head {
-    margin: -20px -22px 18px; padding: 14px 22px;
+    margin: -16px -18px 14px; padding: 12px 18px;
     border-bottom: 1px solid var(--hairline);
 }
 .card-head :is(h2, h3) { font-size: 0.98rem; font-weight: 750; letter-spacing: -0.01em; }
@@ -194,7 +190,7 @@ body { background: var(--canvas); }
 .money-breakdown .row span { color: var(--ink-2); }
 
 /* ========================================================= REQUEST CARDS */
-.req-card { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px 0; background: var(--surface); --cat: var(--cat-other); }
+.req-card { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 0; background: var(--surface); --cat: var(--cat-other); }
 .req-card.cat-food            { --cat: var(--cat-food); }
 .req-card.cat-medicine        { --cat: var(--cat-medicine); }
 .req-card.cat-school_supplies { --cat: var(--cat-school_supplies); }
@@ -214,7 +210,7 @@ body { background: var(--canvas); }
 .rc-facts dd { margin: 1px 0 0; font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rc-foot {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    margin: 4px -20px 0; padding: 12px 20px; border-top: 1px solid var(--hairline);
+    margin: 2px -16px 0; padding: 10px 16px; border-top: 1px solid var(--hairline);
 }
 .rc-earn { display: grid; margin: 0; line-height: 1.15; }
 .rc-earn span { color: var(--muted); font-size: 0.72rem; font-weight: 700; }
@@ -292,3 +288,50 @@ body { background: var(--canvas); }
 
 /* eyebrows on dark hero panels keep their pill shape */
 :is(.hero-card, .auth-aside, .hero) .eyebrow { padding: 4px 10px; border-radius: 999px; }
+
+/* ================================================================ DENSITY
+ * Less empty space: wider content, tighter vertical rhythm, compact
+ * components. Touch targets stay at least 40-44px.
+ */
+.dashboard-main {
+    max-width: 1280px; gap: 20px;
+    padding: clamp(16px, 2vw, 24px) clamp(14px, 2.4vw, 28px) clamp(40px, 5vw, 56px);
+}
+.page-head { margin-bottom: 0; }
+.crumbs ol { margin-bottom: 6px; }
+.page-head h1 { font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); }
+.eyebrow { margin-bottom: 4px; }
+.section-label { margin-bottom: 10px; }
+.section-head { margin-bottom: 10px; }
+.section-head .section-label { margin-bottom: 0; }
+.hero-card { padding: clamp(18px, 2.4vw, 26px); }
+.hero-stats { margin-top: 14px; gap: 22px; }
+.bento { gap: 14px; }
+.bento-tile { min-height: 104px; padding: 14px 16px; }
+.empty-state { padding: 22px 16px; gap: 6px; }
+.empty-state > .i { width: 36px; height: 36px; padding: 8px; }
+.content-wrap { gap: 20px; }
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .active-grid, .profile-grid, .detail-grid, .request-card-grid) { gap: 14px; }
+.needs-you { padding: 12px 14px; }
+.needs-you ul { margin-top: 6px; }
+.needs-you a { padding: 6px 8px; }
+.money-breakdown .row { padding: 7px 0; }
+.card-head { margin-bottom: 14px; }
+.dl { gap: 10px 18px; }
+.pb-table th, .pb-table td { padding: 10px 12px; }
+.req-row { padding: 8px 12px; }
+.stat, .stat-link { padding: 14px 16px; }
+.mini-stat { padding: 10px 12px; }
+.form-section { padding: 18px; }
+@media (max-width: 760px) {
+    .card { padding: 14px; }
+    .card > .card-head { margin: -14px -14px 12px; padding: 10px 14px; }
+}
+/* "Needs you" rows must shrink on phones (grid items default to content width) */
+.needs-you ul { grid-template-columns: minmax(0, 1fr); }
+.needs-you a { min-width: 0; }
+@media (max-width: 480px) {
+    .needs-you a { flex-wrap: wrap; row-gap: 2px; }
+    .needs-you a strong { white-space: normal; }
+    .needs-you a span { flex-basis: calc(100% - 28px); order: 3; }
+}
