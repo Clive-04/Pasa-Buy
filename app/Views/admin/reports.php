@@ -67,6 +67,9 @@ $statusLabel = ['open' => 'New', 'reviewing' => 'Reviewing', 'resolved' => 'Reso
                         <?php if ($r['message_text'] !== null): ?>
                             <blockquote class="report-quote">
                                 <p><?= esc($r['message_text']) ?></p>
+                                <?php if (! empty($r['message_attachment'])): ?>
+                                    <p><a class="link" href="<?= base_url('messages/attachment/' . (int) $r['message_id']) ?>" target="_blank" rel="noopener" data-turbo="false"><?= icon('paperclip') ?> <?= esc($r['message_attachment']) ?></a></p>
+                                <?php endif; ?>
                                 <footer><?= (int) $r['message_sender'] === (int) $r['reported_user_id'] ? 'Sent by the reported user' : 'Sent by the reporter' ?> · <?= esc(time_ago($r['message_at'])) ?></footer>
                             </blockquote>
                         <?php endif; ?>

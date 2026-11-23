@@ -390,13 +390,32 @@ final class NativeChatTest extends FeatureTestCase
         $this->getAs($runner, 'messages?user_id=' . $requester)->assertSee('My old reply');
 
         // A new message brings the chat back with only the new message.
-        sleep(1); // created_at has one-second precision
         $this->send($runner, $requester, 'Are you still there?', $requestId);
         $list = $this->getAs($requester, 'messages');
         $list->assertSee('Are you still there?');
         $thread = $this->getAs($requester, 'messages?user_id=' . $runner);
         $thread->assertSee('Are you still there?');
         $thread->assertDontSee('Old message before delete');
+    }
+
+    public function testAReplyInTheSameSecondAsDeleteStillShows(): void
+    {
+        [$requester, $runner, $requestId] = $this->errand();
+        $this->send($runner, $requester, 'Before the delete', $requestId);
+
+        $this->postAs($requester, 'messages/delete', ['other_user_id' => $runner, 'request_id' => 0]);
+        // No sleep: the reply lands in the same second as the deletion.
+        $this->send($runner, $requester, 'Same-second reply', $requestId);
+
+        $thread = $this->getAs($requester, 'messages?user_id=' . $runner);
+        $thread->assertSee('Same-second reply');
+        $thread->assertDontSee('Before the delete');
+        $this->getAs($requester, 'messages')->assertSee('Same-second reply');
+        $this->assertCount(1, $this->poll($requester, $runner)['data']['messages']);
+
+        $row = $this->db->table('chat_deletions')->get()->getRowArray();
+        $this->assertNotNull($row['last_message_id'], 'The newest message id is recorded.');
+        $this->assertMatchesRegularExpression('/\.\d{3}$/', $row['deleted_at'], 'Deletion time keeps milliseconds for TalkJS.');
     }
 
     public function testDeleteNeedsARealOtherUser(): void

@@ -26,7 +26,6 @@ class AdminController extends BaseController
 {
     private const STATUSES         = ['pending', 'accepted', 'on_the_way', 'delivered', 'cancelled'];
     private const PAYMENT_STATUSES = ['unpaid', 'cod_pending', 'paid', 'paid_cod'];
-    private const CSV_LIMIT        = 5000;
 
     /** A checkout still pending after this long was most likely abandoned. */
     private const STALE_TOPUP_MINUTES = 30;
@@ -166,15 +165,19 @@ class AdminController extends BaseController
                 'href' => 'admin/users?check=ledger', 'action' => 'See which'];
         }
 
-        $openReports = $db->table('user_reports')->where('status', 'open')->countAllResults();
+        // Same rule as the rail badge: new and in-review reports both need an admin.
+        $openReports = $db->table('user_reports')->whereIn('status', ['open', 'reviewing'])->countAllResults();
 
         if ($openReports > 0) {
             $items[] = ['tone' => 'warn', 'icon' => 'shield', 'count' => $openReports,
-                'text' => $openReports === 1 ? 'new report is waiting for review.' : 'new reports are waiting for review.',
+                'text' => $openReports === 1 ? 'report needs review.' : 'reports need review.',
                 'href' => 'admin/reports', 'action' => 'Review'];
         }
 
-        $waiting = $db->table('requests')->where('status', 'pending')->where('created_at <', date('Y-m-d H:i:s', time() - 86400))->countAllResults();
+        // Requests of suspended members are hidden from runners on purpose, so they are not "stuck".
+        $waiting = $db->table('requests')->where('status', 'pending')->where('created_at <', date('Y-m-d H:i:s', time() - 86400))
+            ->where("user_id NOT IN (SELECT id FROM users WHERE status = 'suspended')", null, false)
+            ->countAllResults();
 
         if ($waiting > 0) {
             $items[] = ['tone' => 'warn', 'icon' => 'clock', 'count' => $waiting,
@@ -247,15 +250,14 @@ class AdminController extends BaseController
             ->join('accepted_requests ar', 'ar.request_id = requests.id', 'left')
             ->join('users ru', 'ru.id = ar.runner_id', 'left')
             ->orderBy('requests.id', 'DESC')
-            ->limit(self::CSV_LIMIT)
-            ->get()->getResultArray();
+            ->get(null, 0, false); // every matching row (no silent cap); rows are read one at a time below
 
         $out = fopen('php://temp', 'w+');
         fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel shows ₱ and ñ correctly
         fputcsv($out, ['ID', 'Posted', 'Item', 'Category', 'Store', 'Status', 'Payment method', 'Payment status',
             'Item price', 'Service fee', 'Platform fee', 'Total', 'Requester', 'Runner'], ',', '"', '');
 
-        foreach ($rows as $row) {
+        while (($row = $rows->getUnbufferedRow('array')) !== null) {
             fputcsv($out, array_map([$this, 'csvCell'], [
                 $row['id'], $row['created_at'], $row['item_name'], $row['category'], $row['store_name'],
                 status_label($row['status']), payment_method_label($row['payment_method']), payment_status_label($row['payment_status']),
@@ -492,7 +494,7 @@ class AdminController extends BaseController
         $builder = $db->table('user_reports r')
             ->select("r.*, rep.first_name AS reporter_first, rep.last_name AS reporter_last,
                       tgt.first_name AS reported_first, tgt.last_name AS reported_last, tgt.status AS reported_status,
-                      m.message AS message_text, m.created_at AS message_at, m.sender_id AS message_sender,
+                      m.message AS message_text, m.created_at AS message_at, m.sender_id AS message_sender, m.attachment_name AS message_attachment,
                       q.item_name AS request_item, q.status AS request_status")
             ->join('users rep', 'rep.id = r.reporter_id')
             ->join('users tgt', 'tgt.id = r.reported_user_id')

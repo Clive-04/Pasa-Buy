@@ -12,6 +12,7 @@ use App\Services\ServiceException;
 use App\Services\TalkAccess;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
+use DateTimeImmutable;
 use Throwable;
 
 /**
@@ -58,8 +59,7 @@ class Message extends BaseController
 
         if ($selectedUser !== null) {
             // "Deleted for me": only messages after the deletion are shown.
-            $since      = $this->deletedAt($meId, $otherId, 0);
-            $messages   = array_reverse($this->pairQuery($meId, $otherId, $since)->orderBy('id', 'DESC')->findAll(self::THREAD_LIMIT));
+            $messages   = array_reverse($this->pairQuery($meId, $otherId, $this->deletion($meId, $otherId, 0))->orderBy('id', 'DESC')->findAll(self::THREAD_LIMIT));
             $permission = $this->policy()->canSend($meId, $otherId, $requestId);
 
             // A request_id that doesn't qualify: fall back to the pair's chat.
@@ -218,7 +218,7 @@ class Message extends BaseController
             return $this->json(['error' => 'Unknown conversation.'], 404);
         }
 
-        $rows = $this->pairQuery($meId, $otherId, $this->deletedAt($meId, $otherId, 0))->where('id >', $after)->orderBy('id', 'ASC')->findAll(self::POLL_LIMIT);
+        $rows = $this->pairQuery($meId, $otherId, $this->deletion($meId, $otherId, 0))->where('id >', $after)->orderBy('id', 'ASC')->findAll(self::POLL_LIMIT);
 
         if ($rows !== []) {
             $this->markThreadRead($meId, $otherId);
@@ -241,9 +241,9 @@ class Message extends BaseController
         $message = (new MessageModel())->find((int) $messageId);
         $viewer  = $this->currentUserId();
 
-        if ($message === null
-            || ! in_array($viewer, [(int) $message['sender_id'], (int) $message['receiver_id']], true)
-            || empty($message['attachment_path'])) {
+        if ($message === null || empty($message['attachment_path'])
+            || (! in_array($viewer, [(int) $message['sender_id'], (int) $message['receiver_id']], true)
+                && ! $this->adminReviewingReport((int) $message['id'], $viewer))) {
             throw PageNotFoundException::forPageNotFound();
         }
 
@@ -270,9 +270,27 @@ class Message extends BaseController
 
     // ------------------------------------------------------------ helpers
 
-    /** Messages between exactly these two users (all errands). */
-    /** Messages between exactly these two users; optionally only those after $since (a "delete for me"). */
-    private function pairQuery(int $me, int $other, ?string $since = null): MessageModel
+    /**
+     * Admins may open an attachment only as report evidence: the message must
+     * be attached to a user report. The role is re-read from the database,
+     * like AdminFilter, so a stale session role is not enough.
+     */
+    private function adminReviewingReport(int $messageId, int $viewer): bool
+    {
+        $db = db_connect();
+
+        return $db->table('users')->where('id', $viewer)->where('role', 'admin')->countAllResults() > 0
+            && $db->table('user_reports')->where('message_id', $messageId)->countAllResults() > 0;
+    }
+
+    /**
+     * Messages between exactly these two users; with a "delete for me" row,
+     * only the messages after it: by message id when recorded (exact), else
+     * by time (rows from before the id was stored).
+     *
+     * @param array{deleted_at: string, last_message_id: int|string|null}|null $deletion
+     */
+    private function pairQuery(int $me, int $other, ?array $deletion = null): MessageModel
     {
         $query = (new MessageModel())
             ->groupStart()
@@ -280,18 +298,34 @@ class Message extends BaseController
                 ->orGroupStart()->where('sender_id', $other)->where('receiver_id', $me)->groupEnd()
             ->groupEnd();
 
-        return $since !== null ? $query->where('created_at >', $since) : $query;
+        if ($deletion === null) {
+            return $query;
+        }
+
+        return $deletion['last_message_id'] !== null
+            ? $query->where('id >', (int) $deletion['last_message_id'])
+            : $query->where('created_at >', $deletion['deleted_at']);
     }
 
-    /** When $me deleted their chat with $other (request 0 = whole built-in thread), or null. */
-    private function deletedAt(int $me, int $other, int $requestId): ?string
+    /** $me's "delete chat" row for $other (request 0 = whole built-in thread), or null. */
+    private function deletion(int $me, int $other, int $requestId): ?array
     {
-        $row = db_connect()->table('chat_deletions')
-            ->select('deleted_at')
+        return db_connect()->table('chat_deletions')
+            ->select('deleted_at, last_message_id')
             ->where(['user_id' => $me, 'other_user_id' => $other, 'request_id' => $requestId])
             ->get()->getRowArray();
+    }
 
-        return $row['deleted_at'] ?? null;
+    /** Milliseconds since the epoch for a DATETIME(3) value (TalkJS timestamps are in ms). */
+    private static function toMs(?string $datetime): ?int
+    {
+        if ($datetime === null) {
+            return null;
+        }
+
+        $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.v', $datetime) ?: new DateTimeImmutable($datetime);
+
+        return (int) $date->format('Uv');
     }
 
     /**
@@ -311,11 +345,16 @@ class Message extends BaseController
             return redirect()->to('messages')->with('error', 'That chat could not be found.');
         }
 
-        $now = date('Y-m-d H:i:s');
+        // Built-in thread: remember the newest message, so a reply arriving in
+        // the same second still shows. TalkJS chats compare milliseconds.
+        $now    = (new DateTimeImmutable())->format('Y-m-d H:i:s.v');
+        $lastId = $requestId === 0
+            ? $db->query('SELECT MAX(id) AS last_id FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)', [$me, $other, $other, $me])->getRow('last_id')
+            : null;
         $db->query(
-            'INSERT INTO ' . $db->protectIdentifiers('chat_deletions', true) . ' (user_id, other_user_id, request_id, deleted_at)
-             VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE deleted_at = VALUES(deleted_at)',
-            [$me, $other, $requestId, $now],
+            'INSERT INTO ' . $db->protectIdentifiers('chat_deletions', true) . ' (user_id, other_user_id, request_id, deleted_at, last_message_id)
+             VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE deleted_at = VALUES(deleted_at), last_message_id = VALUES(last_message_id)',
+            [$me, $other, $requestId, $now, $lastId !== null ? (int) $lastId : null],
         );
 
         // Its unread message notices go too, so badges don't point at a deleted chat.
@@ -388,7 +427,9 @@ class Message extends BaseController
                       OR (m1.receiver_id = ? AND m1.sender_id = latest.other_user_id))
             INNER JOIN users u ON u.id = latest.other_user_id
             LEFT JOIN chat_deletions cd ON cd.user_id = ? AND cd.other_user_id = u.id AND cd.request_id = 0
-            WHERE (cd.deleted_at IS NULL OR m1.created_at > cd.deleted_at) {$searchSql}
+            WHERE (cd.deleted_at IS NULL
+                   OR (cd.last_message_id IS NOT NULL AND m1.id > cd.last_message_id)
+                   OR (cd.last_message_id IS NULL AND m1.created_at > cd.deleted_at)) {$searchSql}
             ORDER BY m1.id DESC
             LIMIT 200
         ", $params)->getResultArray();
@@ -529,12 +570,12 @@ class Message extends BaseController
             'activeErrands'  => $selected !== null ? $this->policy()->activeErrands($meId, $otherId) : [],
             'errandChats'    => array_map(static function (array $e) use ($client, $meId): array {
                 $e['conversation_id'] = $client->conversationId($meId, (int) $e['other_id'], (int) $e['request_id']);
-                $e['deleted_ms']      = $e['deleted_at'] !== null ? strtotime($e['deleted_at']) * 1000 : null;
+                $e['deleted_ms']      = self::toMs($e['deleted_at']);
 
                 return $e;
             }, $this->errandChats($meId, true, 200)),
             // "Deleted for me": messages up to this moment are hidden in the open chat.
-            'deletedMs'      => $selected !== null && $requestId !== null && ($d = $this->deletedAt($meId, $otherId, $requestId)) !== null ? strtotime($d) * 1000 : null,
+            'deletedMs'      => $selected !== null && $requestId !== null ? self::toMs($this->deletion($meId, $otherId, $requestId)['deleted_at'] ?? null) : null,
             'talk'           => $talk,
             'maxLength'      => self::MAX_MESSAGE_LENGTH,
         ]);

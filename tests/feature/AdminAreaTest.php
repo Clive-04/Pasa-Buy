@@ -248,4 +248,95 @@ final class AdminAreaTest extends FeatureTestCase
             'admin/users',
         );
     }
+
+    // ------------------------------------------------- review findings 4-8
+
+    public function testNeedsAttentionMatchesTheRailAndSkipsSuspendedMembers(): void
+    {
+        $admin  = $this->createUser(['role' => 'admin']);
+        $member = $this->createUser();
+        $old    = $this->createRequest($member);
+        $this->db->table('requests')->where('id', $old)->update(['created_at' => date('Y-m-d H:i:s', time() - 3 * 86400)]);
+
+        $this->getAs($admin, 'admin/dashboard', 'admin')->assertSee('request has waited over a day');
+
+        // Hidden from runners on purpose once suspended: not "stuck".
+        $this->db->table('users')->where('id', $member)->update(['status' => 'suspended']);
+        $this->getAs($admin, 'admin/dashboard', 'admin')->assertDontSee('waited over a day');
+
+        // A report already in review still needs an admin, like the rail badge says.
+        $this->db->table('user_reports')->insert([
+            'reporter_id' => $this->createUser(), 'reported_user_id' => $member, 'reason' => 'spam',
+            'status' => 'reviewing', 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $this->getAs($admin, 'admin/dashboard', 'admin')->assertSee('report needs review');
+    }
+
+    public function testAdminsOpenAttachmentsOnlyAsReportEvidence(): void
+    {
+        $admin    = $this->createUser(['role' => 'admin']);
+        $sender   = $this->createUser();
+        $receiver = $this->createUser();
+        $name     = 'evidence_' . bin2hex(random_bytes(6)) . '.pdf';
+        $dir      = \App\Libraries\UploadStorage::directory(\App\Libraries\UploadStorage::MESSAGE_FILES);
+        is_dir($dir) || mkdir($dir, 0775, true);
+        file_put_contents($dir . $name, "%PDF-1.4\n%%EOF\n");
+
+        $this->db->table('messages')->insert([
+            'sender_id' => $sender, 'receiver_id' => $receiver, 'message' => 'See file',
+            'attachment_name' => 'receipt.pdf', 'attachment_path' => $name, 'attachment_type' => 'application/pdf',
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $messageId = (int) $this->db->insertID();
+
+        try {
+            $this->assertNotFound(fn () => $this->getAs($admin, 'messages/attachment/' . $messageId, 'admin'));
+
+            $this->db->table('user_reports')->insert([
+                'reporter_id' => $receiver, 'reported_user_id' => $sender, 'message_id' => $messageId,
+                'reason' => 'inappropriate', 'status' => 'open', 'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $this->getAs($admin, 'messages/attachment/' . $messageId, 'admin')->assertOK();
+            $this->getAs($admin, 'admin/reports', 'admin')->assertSee('messages/attachment/' . $messageId, null);
+
+            // A forged session role is not enough, and other members still can't open it.
+            $outsider = $this->createUser();
+            $this->assertNotFound(fn () => $this->getAs($outsider, 'messages/attachment/' . $messageId, 'admin'));
+        } finally {
+            @unlink($dir . $name);
+        }
+    }
+
+    public function testUsernamesMustBeUniqueAndEmptyMeansNone(): void
+    {
+        $taken = $this->createUser(['username' => 'ana.c']);
+        $me    = $this->createUser(['phone_number' => '09181112222']);
+        $form  = ['first_name' => 'Me', 'last_name' => 'Too', 'phone_number' => '09181112222', 'address' => 'Here'];
+
+        $this->postAs($me, 'profile/update', $form + ['username' => 'ANA.C']);
+        $this->assertArrayHasKey('username', $this->flash('errors'));
+        $this->assertNull($this->user($me)['username']);
+
+        $this->assertRedirectsTo($this->postAs($me, 'profile/update', $form + ['username' => '']), 'profile');
+        $this->assertNull($this->user($me)['username'], 'No username is stored as NULL, never an empty string.');
+
+        // Keeping your own username is not a clash.
+        $this->assertRedirectsTo($this->postAs($taken, 'profile/update', ['username' => 'ana.c', 'phone_number' => '09183334444'] + $form), 'profile');
+    }
+
+    public function testCsvExportHasNoRowCap(): void
+    {
+        $admin = $this->createUser(['role' => 'admin']);
+        $owner = $this->createUser();
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->createRequest($owner, ['item_name' => 'Item ' . $i]);
+        }
+
+        $csv  = (string) $this->getAs($admin, 'admin/requests/export', 'admin')->response()->getBody();
+        $rows = array_map(static fn (string $line): array => str_getcsv($line, ',', '"', ''), preg_split('/\r?\n/', trim(substr($csv, 3))));
+        $this->assertSame(['ID', 'Item'], [$rows[0][0], $rows[0][2]]);
+        $this->assertSame(['Item 2', 'Item 1', 'Item 0'], array_column(array_slice($rows, 1), 2), 'Every matching row, newest first.');
+    }
 }

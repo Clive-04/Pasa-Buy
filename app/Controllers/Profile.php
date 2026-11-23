@@ -62,12 +62,15 @@ class Profile extends BaseController
         $validation = service('validation')->setRules([
             'first_name'   => ['label' => 'First name', 'rules' => 'required|max_length[20]'],
             'last_name'    => ['label' => 'Last name', 'rules' => 'required|max_length[20]'],
-            'username'     => ['label' => 'Username', 'rules' => 'permit_empty|max_length[100]|regex_match[/^[A-Za-z0-9._-]+$/]'],
+            'username'     => ['label' => 'Username', 'rules' => 'permit_empty|max_length[100]|regex_match[/^[A-Za-z0-9._-]+$/]|is_unique[users.username,id,' . $userId . ']'],
             'phone_number' => ['label' => 'Mobile number', 'rules' => 'required|regex_match[/^(\+639|09)\d{9}$/]|is_unique[users.phone_number,id,' . $userId . ']'],
             'address'      => ['label' => 'Address', 'rules' => 'required|max_length[255]'],
             'about_me'     => ['label' => 'About me', 'rules' => 'permit_empty|max_length[1000]'],
         ], [
-            'username'     => ['regex_match' => 'Use letters, numbers, dots, dashes or underscores only.'],
+            'username'     => [
+                'regex_match' => 'Use letters, numbers, dots, dashes or underscores only.',
+                'is_unique'   => 'That username is taken. Try another one.',
+            ],
             'phone_number' => [
                 'regex_match' => 'Enter a Philippine mobile number like 09171234567.',
                 'is_unique'   => 'Another account already uses this mobile number.',
@@ -77,6 +80,9 @@ class Profile extends BaseController
         if (! $validation->run($input)) {
             return $this->backWithErrors($validation->getErrors())->with('open_modal', 'editProfileModal');
         }
+
+        // No username is stored as NULL, never '', so "no username" can't collide.
+        $input['username'] = $input['username'] !== '' ? $input['username'] : null;
 
         $userModel = new UserModel();
         $user      = $userModel->find($userId);
