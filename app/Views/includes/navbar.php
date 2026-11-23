@@ -14,7 +14,7 @@ $homeLink   = $isLoggedIn ? base_url($isAdmin ? 'admin/dashboard' : 'dashboard')
         <?= brand_mark($homeLink) ?>
     </div>
 
-    <?php if (! $isAdmin): ?>
+    <?php if (! $isAdmin && trim($current, '/') !== 'users/search'): /* the search page has its own box */ ?>
         <form action="<?= base_url('users/search') ?>" method="get" class="topbar-search" role="search">
             <label for="topbarSearch" class="visually-hidden">Search people by name or username</label>
             <?= icon('search') ?>

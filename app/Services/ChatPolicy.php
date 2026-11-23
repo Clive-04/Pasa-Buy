@@ -89,7 +89,7 @@ class ChatPolicy
 
         if ($this->isBlockedEitherWay($sender, $receiver)) {
             return $deny($this->hasBlocked($sender, $receiver)
-                ? 'You blocked this person, so you can’t send new messages. Unblock them from their profile to chat again.'
+                ? 'You blocked this person, so you can’t send new messages. Unblock them to chat again.'
                 : 'You can’t send new messages to this person. Your errands and earlier messages are not affected.');
         }
 

@@ -96,7 +96,7 @@ final class RatingTest extends FeatureTestCase
 
         $page = $this->getAs($viewer, 'users/' . $other);
 
-        $page->assertSee('Ratings come from completed errands');
+        $page->assertSee('Reviews come from completed errands');
         $page->assertDontSee('/rate"', null);
     }
 }
