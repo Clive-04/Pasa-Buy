@@ -8,7 +8,7 @@ $team = [
 ];
 ?>
 
-<main class="<?= session('isLoggedIn') ? 'dashboard-page' : 'site-main' ?>" id="main-content">
+<main class="site-main" id="main-content">
     <div class="content-wrap">
         <section class="hero-card" aria-labelledby="aboutTitle">
             <p class="eyebrow" style="background: rgba(255,255,255,.12); color: var(--mint); position:relative; z-index:1;">About us</p>

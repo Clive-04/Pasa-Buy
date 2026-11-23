@@ -114,7 +114,7 @@ $balanceCents = Money::toCents($walletBalance);
                 <?php endif; ?>
             </div>
 
-            <div class="pb-pager"><?= $pager->links() ?></div>
+            <?php if ($pager->getPageCount() > 1): ?><div class="pb-pager"><?= $pager->links() ?></div><?php endif; ?>
         </section>
     </div>
 </main>

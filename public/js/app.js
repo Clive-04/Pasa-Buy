@@ -305,7 +305,41 @@
         });
     }
 
+    // ------------------------------------------------------ scroll reveal
+    // Blocks that start below the fold rise in when scrolled into view.
+    // Only added when motion is allowed and the browser supports it, so
+    // content is never left hidden.
+    function initScrollReveal() {
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce || !('IntersectionObserver' in window)) {
+            return;
+        }
+        var fold = window.innerHeight;
+        var targets = document.querySelectorAll(
+            '.dashboard-main > *, .content-wrap > *, .site-main > :not(.content-wrap), ' +
+            '.dashboard-main .card, .dashboard-main .req-card, .team-card, .person-card'
+        );
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+
+        targets.forEach(function (el) {
+            if (el.closest('dialog') || el.closest('.reveal')) { return; }
+            if (el.getBoundingClientRect().top > fold) {
+                el.style.animation = 'none'; // the scroll reveal replaces the load animation
+                el.classList.add('reveal');
+                observer.observe(el);
+            }
+        });
+    }
+
     ready(function () {
+        initScrollReveal();
         initNotificationMenu();
         initThemeToggle();
         initFlash();

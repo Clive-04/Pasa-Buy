@@ -44,6 +44,7 @@ if (body) {
     let subscription = null;
     let loadedAll = false;
     let firstRender = true;
+    const shownIds = new Set();
 
     // ------------------------------------------------------------ status
     function showStatus(text, retry) {
@@ -92,6 +93,9 @@ if (body) {
         }
 
         el.className = 'bubble ' + (mine ? 'sent' : 'received');
+        // Only genuinely new messages animate in; the list is rebuilt on every update.
+        if (firstRender || shownIds.has(message.id)) { el.classList.add('is-settled'); }
+        shownIds.add(message.id);
         el.setAttribute('data-message-id', message.id);
 
         const who = document.createElement('span');

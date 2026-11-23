@@ -310,7 +310,12 @@ dialog.pb-dialog::backdrop { background: var(--overlay); backdrop-filter: blur(3
 }
 .pb-pager a:hover { border-color: var(--accent); color: var(--brand-ink); }
 .pb-pager .active a, .pb-pager [aria-current="page"] { background: var(--brand); border-color: transparent; color: var(--on-brand); }
+.pb-pager { margin-top: var(--sp-4); }
+.card > .pb-pager { padding-top: var(--sp-4); border-top: 1px solid var(--line); }
+.dashboard-main > .pb-pager { margin-top: 0; }
 .pb-pager:empty { display: none; }
+.pb-pager a { transition: border-color var(--dur-fast), background-color var(--dur-fast), color var(--dur-fast), transform var(--dur-press) ease; }
+.pb-pager a:active { transform: scale(0.96); }
 
 /* =========================================================== TABLES/TABS */
 .pb-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
@@ -374,11 +379,56 @@ a.row-item:hover { border-color: var(--accent); background: var(--surface-2); tr
 @keyframes pb-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes pb-pulse { 0%, 100% { box-shadow: 0 0 0 5px var(--focus); } 50% { box-shadow: 0 0 0 9px transparent; } }
 
-.dashboard-main > *, .site-main > * { animation: pb-rise var(--dur-slow) var(--ease-out) both; }
-.dashboard-main > *:nth-child(2), .site-main > *:nth-child(2) { animation-delay: 40ms; }
-.dashboard-main > *:nth-child(3), .site-main > *:nth-child(3) { animation-delay: 80ms; }
-.dashboard-main > *:nth-child(4), .site-main > *:nth-child(4) { animation-delay: 120ms; }
-.dashboard-main > *:nth-child(n+5), .site-main > *:nth-child(n+5) { animation-delay: 160ms; }
+/*
+ * Motion system (same on every page). Short and purposeful:
+ *  1. Page entrance: the page's blocks rise in, in reading order.
+ *  2. Lists and grids: their items cascade in after the block appears.
+ *  3. Scroll reveal: blocks below the fold rise in as they enter the view
+ *     (app.js adds .reveal only when motion is allowed, so nothing is
+ *     ever hidden without JavaScript).
+ *  4. Hover / press feedback on anything clickable.
+ * "Reduce motion" (OS setting) turns all of this off (rule further down).
+ */
+@keyframes pb-rise-sm { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pb-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* 1. page entrance */
+.dashboard-main > *, .site-main > *, .content-wrap > * { animation: pb-rise var(--dur-slow) var(--ease-out) both; }
+.dashboard-main > *:nth-child(2), .site-main > *:nth-child(2), .content-wrap > *:nth-child(2) { animation-delay: 50ms; }
+.dashboard-main > *:nth-child(3), .site-main > *:nth-child(3), .content-wrap > *:nth-child(3) { animation-delay: 100ms; }
+.dashboard-main > *:nth-child(4), .site-main > *:nth-child(4), .content-wrap > *:nth-child(4) { animation-delay: 150ms; }
+.dashboard-main > *:nth-child(5), .site-main > *:nth-child(5), .content-wrap > *:nth-child(5) { animation-delay: 200ms; }
+.dashboard-main > *:nth-child(n+6), .site-main > *:nth-child(n+6), .content-wrap > *:nth-child(n+6) { animation-delay: 250ms; }
+
+/* 2. list and grid items cascade */
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > * {
+    animation: pb-rise-sm var(--dur-slow) var(--ease-out) both;
+    animation-delay: 140ms;
+}
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(2) { animation-delay: 180ms; }
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(3) { animation-delay: 220ms; }
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(4) { animation-delay: 260ms; }
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(5) { animation-delay: 300ms; }
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(n+6) { animation-delay: 340ms; }
+.rating-bar span { transform-origin: left; animation: pb-grow 600ms var(--ease-out) 300ms both; }
+
+/* 3. scroll reveal (classes added by app.js) */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 480ms var(--ease-out), transform 480ms var(--ease-out); }
+.reveal.is-visible { opacity: 1; transform: none; }
+
+/* 4. hover / press feedback */
+:is(.req-card, .stat, .mini-stat, .team-card, .person-card, .profile-wallet, .together-list a, .needs-you a, .settings-link) {
+    transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), border-color var(--dur-fast), background-color var(--dur-fast);
+}
+:is(.req-card, .stat, .team-card) :is(a, button) { position: relative; }
+.req-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.mini-stat:hover, .stat:hover { transform: translateY(-2px); }
+.together-list a:hover, .needs-you a:hover { transform: translateX(2px); }
+.side-link.is-active::before { transform-origin: center; animation: pb-grow-y var(--dur) var(--ease-out) both; }
+.tab-btn { transition: background-color var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), transform var(--dur-press) ease; }
+.tab-btn:active { transform: scale(0.97); }
+.thread { transition: background-color var(--dur-fast), transform var(--dur-press) ease; }
+.thread:active { transform: scale(0.99); }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
