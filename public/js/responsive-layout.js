@@ -9,14 +9,15 @@ document.addEventListener('DOMContentLoaded', function () {
     var sidebarClose = document.querySelector('.sidebar-close');
     var sidebarOverlay = document.querySelector('.sidebar-overlay');
     var lastOpener = null;
+    var DRAWER_MAX = 900; // keep in sync with theme.css (max-width: 900px)
 
     function setExpanded(value) {
         openers.forEach(function (el) { el.setAttribute('aria-expanded', value ? 'true' : 'false'); });
     }
 
     function openSidebar(event) {
-        if (!sidebar || window.innerWidth > 1100) {
-            return; // desktop: sidebar is always visible; let links behave normally
+        if (!sidebar || window.innerWidth > DRAWER_MAX) {
+            return; // wider screens: the rail is always visible; let links behave normally
         }
         if (event) {
             event.preventDefault();
@@ -37,6 +38,27 @@ document.addEventListener('DOMContentLoaded', function () {
         setExpanded(false);
         body.classList.remove('sidebar-open');
         if (lastOpener) lastOpener.focus({ preventScroll: true });
+    }
+
+    // Keep keyboard focus inside the open drawer (it is modal on small screens).
+    if (sidebar) {
+        sidebar.addEventListener('keydown', function (event) {
+            if (event.key !== 'Tab' || !sidebar.classList.contains('open')) return;
+            var items = Array.prototype.filter.call(
+                sidebar.querySelectorAll('a[href], button:not([disabled])'),
+                function (el) { return el.offsetParent !== null; }
+            );
+            if (!items.length) return;
+            var first = items[0];
+            var last = items[items.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
     }
 
     openers.forEach(function (el) { el.addEventListener('click', openSidebar); });
@@ -70,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     window.addEventListener('resize', function () {
-        if (window.innerWidth > 1100) closeSidebar();
+        if (window.innerWidth > DRAWER_MAX) closeSidebar();
         if (window.innerWidth > 900) closeNavMenu();
     });
 

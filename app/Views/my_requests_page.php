@@ -17,6 +17,7 @@ $tabs = ['' => 'All', 'pending' => 'Waiting for runner', 'accepted' => 'Accepted
             ]) ?>
 
             <?= $this->include('includes/flash') ?>
+            <?= view('includes/needs_you', ['kind' => 'requests']) ?>
 
             <nav class="request-tabs" aria-label="Filter by status">
                 <?php foreach ($tabs as $value => $label): ?>

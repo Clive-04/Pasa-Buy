@@ -20,6 +20,7 @@ $balanceCents = Money::toCents($walletBalance);
             ]) ?>
 
             <?= $this->include('includes/flash') ?>
+            <?= view('includes/needs_you', ['kind' => 'deliveries']) ?>
 
             <nav class="request-tabs" aria-label="Filter by status">
                 <?php foreach ($tabs as $value => $label): ?>

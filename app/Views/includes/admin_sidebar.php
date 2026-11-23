@@ -1,31 +1,31 @@
-<?php $me = current_user(); ?>
+<?php
+/* Admin navigation rail: same component and active-state rules as the user rail. */
+$tab        = (string) service('request')->getGet('tab');
+$onOverview = trim(uri_string(), '/') === 'admin/dashboard';
+$openReports = (int) db_connect()->table('user_reports')->whereIn('status', ['open', 'reviewing'])->countAllResults();
+$current    = ' is-active" aria-current="page';
+?>
 <div class="sidebar-overlay"></div>
 
-<aside class="dashboard-sidebar app-sidebar" id="dashboardSidebar" aria-label="Admin menu">
+<aside class="dashboard-sidebar app-rail" id="dashboardSidebar" aria-label="Admin menu">
     <div class="sidebar-mobile-top">
         <span class="sidebar-mobile-title">Admin menu</span>
         <button class="sidebar-close icon-btn" type="button" aria-label="Close menu"><?= icon('x') ?></button>
     </div>
 
-    <div class="side-profile">
-        <?= avatar($me, 'md') ?>
-        <span>
-            <strong><?= esc(trim(($me['first_name'] ?? '') . ' ' . ($me['last_name'] ?? ''))) ?></strong>
-            <small><?= icon('shield') ?> Administrator</small>
-        </span>
-    </div>
-
     <nav class="side-nav" aria-label="Admin pages">
-        <a href="<?= base_url('admin/dashboard') ?>" class="side-link<?= nav_attrs('admin/dashboard') ?>"><?= icon('dashboard') ?><span>Overview<small>Requests and platform fees</small></span></a>
-        <a href="<?= base_url('admin/dashboard?tab=delivered') ?>" class="side-link"><?= icon('check-circle') ?><span>Delivered requests</span></a>
+        <p class="side-heading">Administrator</p>
+        <a href="<?= base_url('admin/dashboard') ?>" class="side-link<?= $onOverview && $tab !== 'delivered' ? $current : '' ?>"><?= icon('dashboard') ?><span class="side-label">Overview</span></a>
+        <a href="<?= base_url('admin/dashboard?tab=delivered') ?>" class="side-link<?= $onOverview && $tab === 'delivered' ? $current : '' ?>"><?= icon('check-circle') ?><span class="side-label">Delivered requests</span></a>
+        <a href="<?= base_url('admin/reports') ?>" class="side-link<?= nav_attrs('admin/reports') ?>"><?= icon('shield') ?><span class="side-label">Reports</span><?= count_badge($openReports, $openReports === 1 ? 'report to review' : 'reports to review') ?></a>
+    </nav>
 
-        <p class="side-heading">Help</p>
-        <a href="<?= base_url('about') ?>" class="side-link"><?= icon('info') ?><span>About Pasa-Buy</span></a>
-
+    <div class="side-foot">
+        <a href="<?= base_url('about') ?>" class="side-link<?= nav_attrs('about') ?>"><?= icon('help') ?><span class="side-label">About Pasa-Buy</span></a>
         <form action="<?= base_url('logout') ?>" method="post" class="side-logout">
             <?= csrf_field() ?>
-            <button type="submit" class="side-link side-link-danger" data-open-dialog="logoutDialog"><?= icon('logout') ?><span>Log out</span></button>
+            <button type="submit" class="side-link side-link-danger" data-open-dialog="logoutDialog"><?= icon('logout') ?><span class="side-label">Log out</span></button>
         </form>
-    </nav>
+    </div>
 </aside>
 <?= $this->include('includes/logout_dialog') ?>

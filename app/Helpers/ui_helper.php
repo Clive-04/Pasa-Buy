@@ -275,6 +275,102 @@ if (! function_exists('unread_counts')) {
     }
 }
 
+if (! function_exists('action_items')) {
+    /**
+     * Errands waiting for the signed-in user, each listed once with the one
+     * thing to do next. Feeds the nav badges and the "Needs you" lists on
+     * My requests / My deliveries, so the counts always match.
+     *
+     *  - requests (as requester): pay the runner (wallet, not yet paid,
+     *    accepted / on the way) or rate a delivery from the last 30 days.
+     *  - deliveries (as runner): mark On the way (accepted), mark Delivered
+     *    (on the way and paid, or cash on delivery), or rate the requester
+     *    for a delivery from the last 30 days.
+     *
+     * Older unrated deliveries can still be rated on their request page;
+     * they just don't keep a badge lit forever.
+     *
+     * @return array{requests: list<array{id: int, item_name: string, action: string}>, deliveries: list<array{id: int, item_name: string, action: string}>}
+     */
+    function action_items(): array
+    {
+        static $cache = [];
+        $id = (int) session('user_id');
+
+        if ($id === 0 || session('role') === 'admin') {
+            return ['requests' => [], 'deliveries' => []];
+        }
+
+        $key = $id . ':' . spl_object_id(service('request'));
+
+        if (isset($cache[$key])) {
+            return $cache[$key];
+        }
+
+        $db     = db_connect();
+        $recent = date('Y-m-d H:i:s', time() - 30 * 86400);
+
+        $requests = $db->query(
+            "SELECT r.id, r.item_name,
+                    CASE WHEN r.status = 'delivered' THEN 'rate' ELSE 'pay' END AS action
+             FROM requests r
+             JOIN accepted_requests ar ON ar.request_id = r.id
+             WHERE r.user_id = ?
+               AND ((r.status IN ('accepted', 'on_the_way') AND r.payment_method <> 'cod' AND r.payment_status = 'unpaid')
+                 OR (r.status = 'delivered' AND r.updated_at >= ?
+                     AND NOT EXISTS (SELECT 1 FROM user_ratings ur WHERE ur.rater_id = ? AND ur.request_id = r.id)))
+             ORDER BY r.updated_at DESC, r.id DESC",
+            [$id, $recent, $id],
+        )->getResultArray();
+
+        $deliveries = $db->query(
+            "SELECT r.id, r.item_name,
+                    CASE r.status WHEN 'accepted' THEN 'start' WHEN 'on_the_way' THEN 'deliver' ELSE 'rate' END AS action
+             FROM accepted_requests ar
+             JOIN requests r ON r.id = ar.request_id
+             WHERE ar.runner_id = ?
+               AND (r.status = 'accepted'
+                 OR (r.status = 'on_the_way' AND (r.payment_method = 'cod' OR r.payment_status = 'paid'))
+                 OR (r.status = 'delivered' AND r.updated_at >= ?
+                     AND NOT EXISTS (SELECT 1 FROM user_ratings ur WHERE ur.rater_id = ? AND ur.request_id = r.id)))
+             ORDER BY r.updated_at DESC, r.id DESC",
+            [$id, $recent, $id],
+        )->getResultArray();
+
+        $cast = static fn (array $rows): array => array_map(static fn (array $r): array => [
+            'id' => (int) $r['id'], 'item_name' => (string) $r['item_name'], 'action' => (string) $r['action'],
+        ], $rows);
+
+        return $cache[$key] = ['requests' => $cast($requests), 'deliveries' => $cast($deliveries)];
+    }
+}
+
+if (! function_exists('action_label')) {
+    function action_label(string $action): string
+    {
+        return match ($action) {
+            'pay'     => 'Pay your runner',
+            'rate'    => 'Rate this delivery',
+            'start'   => 'Mark as On the way',
+            'deliver' => 'Mark as Delivered',
+            default   => 'Open the request',
+        };
+    }
+}
+
+if (! function_exists('count_badge')) {
+    /** Small number badge with an accessible explanation; '' when zero. */
+    function count_badge(int $count, string $meaning): string
+    {
+        if ($count <= 0) {
+            return '';
+        }
+
+        return '<span class="badge badge-action">' . ($count > 9 ? '9+' : $count)
+            . '<span class="visually-hidden"> ' . esc($meaning) . '</span></span>';
+    }
+}
+
 if (! function_exists('unread_badge')) {
     /** Badge that app.js keeps up to date; hidden when zero. */
     function unread_badge(string $kind, string $class = 'badge'): string
