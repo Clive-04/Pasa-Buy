@@ -13,7 +13,7 @@ $categoryLabels = [
     'household' => 'Household', 'personal_care' => 'Personal care', 'other' => 'Other',
 ];
 ?>
-<article class="req-card">
+<article class="req-card cat-<?= esc((string) ($request['category'] ?? 'other'), 'attr') ?>">
     <div class="req-card-head">
         <span class="req-card-tags">
             <span class="request-tag <?= esc($request['urgency'], 'attr') ?>"><?= esc(ucfirst($request['urgency'])) ?></span>

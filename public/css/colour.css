@@ -1,0 +1,195 @@
+/*
+ * Pasa-Buy colour layer — loaded after theme.css, components.css, pages.css.
+ *
+ * Puts the Ocean tide colours into the whole page instead of only the hero
+ * cards, so light mode no longer reads as flat white:
+ *  - a layered aqua / indigo / teal glow behind everything;
+ *  - a tinted navigation rail with a filled active item;
+ *  - an accent bar under every page title;
+ *  - cards with a soft tinted top fade and coloured icon tiles;
+ *  - stats, tables, money boxes and request cards with their own accents.
+ *
+ * Every colour is a token, redefined for dark mode below, so both themes
+ * stay readable (text/background pairs keep WCAG AA contrast).
+ */
+
+/* ================================================================ TOKENS */
+:root {
+    --tint-indigo: #e1e6ff;  --tint-indigo-ink: #2f3db8;
+    --tint-teal:   #d3f1f1;  --tint-teal-ink:   #00605f;
+    --tint-aqua:   #cdf6f6;  --tint-aqua-ink:   #00625f;
+    --tint-amber:  #ffe8c2;  --tint-amber-ink:  #7a4205;
+    --tint-rose:   #ffdbe3;  --tint-rose-ink:   #951d39;
+    --tint-violet: #e8dcff;  --tint-violet-ink: #532ea8;
+    --tint-green:  #cdf0dc;  --tint-green-ink:  #125a34;
+    --rail-bg: linear-gradient(180deg, #e6eaff 0%, #def3f6 55%, #d9f0ec 100%);
+    --card-border: #d6e2ee;
+    --card-fade: color-mix(in srgb, var(--aqua) 11%, var(--surface));
+    --canvas:
+        radial-gradient(900px 520px at -5% -10%, rgba(0, 209, 209, 0.26), transparent 62%),
+        radial-gradient(800px 560px at 105% -5%, rgba(65, 82, 215, 0.20), transparent 60%),
+        radial-gradient(1100px 700px at 50% 115%, rgba(1, 172, 174, 0.17), transparent 60%),
+        #e9f1f7;
+    --accent-bar: linear-gradient(90deg, var(--aqua), var(--indigo));
+    --card-shadow: 0 1px 2px rgba(11, 37, 48, 0.04), 0 6px 18px rgba(65, 82, 215, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --tint-indigo: rgba(129, 140, 248, 0.14); --tint-indigo-ink: #c7d2fe;
+        --tint-teal:   rgba(1, 172, 174, 0.16);   --tint-teal-ink:   #7ff0f0;
+        --tint-aqua:   rgba(0, 209, 209, 0.14);   --tint-aqua-ink:   #8ff5f5;
+        --tint-amber:  rgba(251, 191, 36, 0.14);  --tint-amber-ink:  #fcd34d;
+        --tint-rose:   rgba(251, 113, 133, 0.14); --tint-rose-ink:   #fda4af;
+        --tint-violet: rgba(167, 139, 250, 0.15); --tint-violet-ink: #d8c8ff;
+        --tint-green:  rgba(74, 222, 128, 0.13);  --tint-green-ink:  #86efac;
+        --rail-bg: linear-gradient(180deg, #0b2431 0%, #08202a 60%, #072027 100%);
+        --card-border: #1a4250;
+        --card-fade: color-mix(in srgb, var(--aqua) 5%, var(--surface));
+        --canvas:
+            radial-gradient(900px 520px at -5% -10%, rgba(0, 209, 209, 0.10), transparent 62%),
+            radial-gradient(800px 560px at 105% -5%, rgba(65, 82, 215, 0.14), transparent 60%),
+            #04141a;
+        --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+}
+
+:root[data-theme="dark"] {
+    --tint-indigo: rgba(129, 140, 248, 0.14); --tint-indigo-ink: #c7d2fe;
+    --tint-teal:   rgba(1, 172, 174, 0.16);   --tint-teal-ink:   #7ff0f0;
+    --tint-aqua:   rgba(0, 209, 209, 0.14);   --tint-aqua-ink:   #8ff5f5;
+    --tint-amber:  rgba(251, 191, 36, 0.14);  --tint-amber-ink:  #fcd34d;
+    --tint-rose:   rgba(251, 113, 133, 0.14); --tint-rose-ink:   #fda4af;
+    --tint-violet: rgba(167, 139, 250, 0.15); --tint-violet-ink: #d8c8ff;
+    --tint-green:  rgba(74, 222, 128, 0.13);  --tint-green-ink:  #86efac;
+    --rail-bg: linear-gradient(180deg, #0b2431 0%, #08202a 60%, #072027 100%);
+    --card-border: #1a4250;
+    --card-fade: color-mix(in srgb, var(--aqua) 5%, var(--surface));
+    --canvas:
+        radial-gradient(900px 520px at -5% -10%, rgba(0, 209, 209, 0.10), transparent 62%),
+        radial-gradient(800px 560px at 105% -5%, rgba(65, 82, 215, 0.14), transparent 60%),
+        #04141a;
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ================================================================ CANVAS */
+body { background: var(--canvas); background-attachment: fixed; }
+
+/* top bar and guest header: a thin aqua → indigo line instead of grey */
+.app-topbar, .site-header { border-bottom-color: transparent; }
+.app-topbar::after, .site-header::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--accent-bar); opacity: .55; pointer-events: none;
+}
+
+/* ================================================================== RAIL */
+.dashboard-container {
+    background:
+        linear-gradient(to right, transparent calc(var(--rail-col) - 1px), var(--card-border) calc(var(--rail-col) - 1px) var(--rail-col), transparent var(--rail-col)),
+        var(--rail-bg);
+    background-size: 100% 100%, var(--rail-col) 100%;
+    background-repeat: no-repeat;
+}
+.side-heading { color: var(--tint-teal-ink); }
+.side-link .i {
+    box-sizing: content-box; padding: 6px; margin: -6px 0; border-radius: 10px;
+    transition: background-color var(--dur-fast), color var(--dur-fast);
+}
+.side-link:hover { background: color-mix(in srgb, var(--surface) 72%, transparent); }
+.side-link:hover .i { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
+.side-link.is-active { background: var(--surface); color: var(--ink); box-shadow: 0 2px 12px rgba(65, 82, 215, 0.12); }
+.side-link.is-active .i { background: var(--accent-bar); color: #fff; }
+.side-link.is-active::before { background: var(--accent-bar); }
+.side-link.is-active .side-meta { color: var(--tint-indigo-ink); }
+.dashboard-sidebar .side-foot { border-top-color: var(--card-border); }
+@media (max-width: 900px) {
+    .dashboard-container { background: none; }
+    .dashboard-sidebar { background: var(--rail-bg); }
+}
+@media (min-width: 901px) and (max-width: 1279px) {
+    .side-link .i { margin: -6px; }
+}
+
+/* ======================================================== PAGE HEADINGS */
+.page-head h1::after {
+    content: ""; display: block; width: 48px; height: 4px; margin-top: 10px; border-radius: 4px;
+    background: var(--accent-bar);
+    transform-origin: left; animation: pb-grow 600ms var(--ease-out) 200ms both;
+}
+.eyebrow { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
+
+/* ================================================================= CARDS */
+.card, .req-card, .needs-you, .chat, .person-card, .team-card, .req-row, .stat, .stat-link {
+    border-color: var(--card-border);
+    box-shadow: var(--card-shadow);
+}
+.card { background: linear-gradient(180deg, var(--card-fade) 0, var(--surface) 96px); }
+
+/* icon tiles in card and section headings, rotating colours */
+.card-head :is(h2, h3) > .i, .section-label > .i {
+    box-sizing: content-box; width: 18px; height: 18px; padding: 7px; border-radius: 10px;
+    background: var(--tint-indigo); color: var(--tint-indigo-ink);
+}
+.card:nth-of-type(3n+2) > .card-head :is(h2, h3) > .i { background: var(--tint-teal); color: var(--tint-teal-ink); }
+.card:nth-of-type(3n+3) > .card-head :is(h2, h3) > .i { background: var(--tint-amber); color: var(--tint-amber-ink); }
+
+/* small stats: each tile its own colour */
+.mini-stat { border-color: transparent; }
+.mini-stat:nth-child(4n+1) { background: var(--tint-indigo); }
+.mini-stat:nth-child(4n+1) strong { color: var(--tint-indigo-ink); }
+.mini-stat:nth-child(4n+2) { background: var(--tint-teal); }
+.mini-stat:nth-child(4n+2) strong { color: var(--tint-teal-ink); }
+.mini-stat:nth-child(4n+3) { background: var(--tint-amber); }
+.mini-stat:nth-child(4n+3) strong { color: var(--tint-amber-ink); }
+.mini-stat:nth-child(4n+4) { background: var(--tint-green); }
+.mini-stat:nth-child(4n+4) strong { color: var(--tint-green-ink); }
+
+/* large stats (admin, links): a coloured edge each */
+.stat-grid > .stat, .stat-links > .stat-link { position: relative; overflow: hidden; }
+.stat-grid > .stat::before, .stat-links > .stat-link::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--indigo);
+}
+.stat-grid > .stat:nth-child(4n+2)::before, .stat-links > .stat-link:nth-child(4n+2)::before { background: var(--teal); }
+.stat-grid > .stat:nth-child(4n+3)::before, .stat-links > .stat-link:nth-child(4n+3)::before { background: #e0a31a; }
+.stat-grid > .stat:nth-child(4n+4)::before, .stat-links > .stat-link:nth-child(4n+4)::before { background: #22a55b; }
+
+/* ===================================================== TABLES AND MONEY */
+.pb-table th { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
+.money-breakdown { background: linear-gradient(135deg, var(--tint-aqua), var(--tint-indigo)); border-color: transparent; }
+.money-breakdown .row.total { color: var(--tint-indigo-ink); }
+.money-breakdown .row span { color: var(--ink-2); }
+
+/* ========================================================= REQUEST CARDS */
+/* category colour on the left edge and on the category tag */
+.req-card { position: relative; overflow: hidden; }
+.req-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--cat, var(--teal)); }
+.req-card.cat-food            { --cat: #e0a31a;      --cat-bg: var(--tint-amber);  --cat-ink: var(--tint-amber-ink); }
+.req-card.cat-medicine        { --cat: #e0516f;      --cat-bg: var(--tint-rose);   --cat-ink: var(--tint-rose-ink); }
+.req-card.cat-school_supplies { --cat: var(--indigo); --cat-bg: var(--tint-indigo); --cat-ink: var(--tint-indigo-ink); }
+.req-card.cat-household       { --cat: var(--teal);   --cat-bg: var(--tint-teal);   --cat-ink: var(--tint-teal-ink); }
+.req-card.cat-personal_care   { --cat: #8b5cf6;      --cat-bg: var(--tint-violet); --cat-ink: var(--tint-violet-ink); }
+.req-card.cat-other           { --cat: #7b8fa1; }
+.req-card .cat-tag { background: var(--cat-bg, var(--soft)); color: var(--cat-ink, var(--ink-2)); }
+
+/* ============================================== ROWS, EMPTY STATES, FOOTER */
+.req-row:hover { background: var(--tint-indigo); border-color: transparent; }
+.empty-state > .i { background: linear-gradient(135deg, var(--tint-aqua), var(--tint-indigo)); color: var(--tint-indigo-ink); }
+.thread.is-active { background: linear-gradient(90deg, var(--tint-indigo), var(--tint-aqua)); }
+.site-footer {
+    position: relative; border-top-color: transparent;
+    background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--indigo) 5%, var(--surface)));
+}
+.site-footer::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--accent-bar); opacity: .45; }
+
+/* section headings: solid gradient icon tiles as the colour anchor of each section */
+.section-label > .i { background: var(--accent-bar); color: #fff; box-shadow: 0 4px 10px rgba(65, 82, 215, 0.22); }
+
+/* category chips (dashboard): same colours as the request cards */
+.chip-cat { border-color: transparent; transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast); }
+.chip-cat.cat-food            { background: var(--tint-amber);  color: var(--tint-amber-ink); }
+.chip-cat.cat-medicine        { background: var(--tint-rose);   color: var(--tint-rose-ink); }
+.chip-cat.cat-school_supplies { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
+.chip-cat.cat-household       { background: var(--tint-teal);   color: var(--tint-teal-ink); }
+.chip-cat.cat-personal_care   { background: var(--tint-violet); color: var(--tint-violet-ink); }
+.chip-cat.cat-other           { background: var(--soft);        color: var(--ink-2); }
+.chip-cat:hover { transform: translateY(-1px); box-shadow: var(--card-shadow); }

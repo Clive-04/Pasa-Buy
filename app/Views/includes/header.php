@@ -27,6 +27,7 @@
     <link rel="stylesheet" href="<?= asset('css/theme.css') ?>">
     <link rel="stylesheet" href="<?= asset('css/components.css') ?>">
     <link rel="stylesheet" href="<?= asset('css/pages.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/colour.css') ?>">
 
     <script src="<?= asset('js/responsive-layout.js') ?>" defer></script>
     <script src="<?= asset('js/app.js') ?>" defer></script>

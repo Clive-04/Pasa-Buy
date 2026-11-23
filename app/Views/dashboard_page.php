@@ -85,7 +85,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good
                 </div>
                 <nav class="market-cats" aria-label="Browse by category">
                     <?php foreach (['food' => 'Food', 'medicine' => 'Medicine', 'school_supplies' => 'School supplies', 'household' => 'Household', 'personal_care' => 'Personal care', 'other' => 'Other'] as $value => $label): ?>
-                        <a class="chip" href="<?= base_url('browse-requests?category=' . $value) ?>"><?= esc($label) ?></a>
+                        <a class="chip chip-cat cat-<?= esc($value, 'attr') ?>" href="<?= base_url('browse-requests?category=' . $value) ?>"><?= esc($label) ?></a>
                     <?php endforeach; ?>
                 </nav>
                 <?php if (! empty($availableRequests)): ?>
