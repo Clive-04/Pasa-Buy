@@ -23,14 +23,30 @@ $otherName = ! empty($selectedUser) ? trim(($selectedUser['first_name'] ?? '') .
 
             <div class="chat<?= ! empty($selectedUser) ? ' has-thread' : '' ?>">
                 <aside class="chat-list" aria-label="Errand chats">
+                    <?php if ($errandChats !== []): ?>
+                        <div class="chat-list-head">
+                            <div class="chat-filter" role="search">
+                                <?= icon('search') ?>
+                                <label for="chatFilter" class="visually-hidden">Search chats by name, errand or message</label>
+                                <input type="search" id="chatFilter" placeholder="Search chats…" maxlength="100" autocomplete="off" data-chat-filter>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                     <div class="chat-threads">
                         <?php if ($errandChats !== []): ?>
                             <p class="chat-group-label">Errand chats</p>
+                            <p class="chat-filter-empty" data-chat-filter-empty hidden>No chats match your search.</p>
                             <?php foreach ($errandChats as $e): ?>
-                                <?php $active = ! empty($selectedUser) && (int) $selectedUser['id'] === (int) $e['other_id'] && (int) $requestId === (int) $e['request_id']; ?>
+                                <?php
+                                $active  = ! empty($selectedUser) && (int) $selectedUser['id'] === (int) $e['other_id'] && (int) $requestId === (int) $e['request_id'];
+                                // Deleted for me: hidden unless it's the open chat; a newer message brings it back (talk-session.js).
+                                $deleted = $e['deleted_ms'] !== null && ! $active;
+                                ?>
                                 <a href="<?= base_url('messages?user_id=' . (int) $e['other_id'] . '&request_id=' . (int) $e['request_id']) ?>"
                                    class="thread<?= $active ? ' is-active' : '' ?>"<?= $active ? ' aria-current="page"' : '' ?>
-                                   data-conversation-id="<?= esc($e['conversation_id'], 'attr') ?>">
+                                   data-conversation-id="<?= esc($e['conversation_id'], 'attr') ?>"
+                                   <?= $e['deleted_ms'] !== null ? 'data-deleted-ms="' . (int) $e['deleted_ms'] . '"' : '' ?>
+                                   <?= $deleted ? 'data-chat-deleted hidden' : '' ?>>
                                     <?= avatar(['first_name' => $e['first_name'], 'last_name' => $e['last_name'], 'profile_photo' => $e['profile_photo']], 'md') ?>
                                     <span class="thread-main">
                                         <span class="thread-top">
@@ -70,16 +86,24 @@ $otherName = ! empty($selectedUser) ? trim(($selectedUser['first_name'] ?? '') .
                                     <span class="live-dot" data-talk-status hidden></span>
                                 </p>
                             </div>
-                            <?= view('includes/user_safety_actions', [
-                                'other'     => $selectedUser,
-                                'iBlocked'  => $iBlocked,
-                                'returnTo'  => 'messages?user_id=' . (int) $selectedUser['id'],
-                                'requestId' => $requestId,
-                            ]) ?>
+                            <div class="chat-head-tools">
+                                <?php if ($conversationId !== null): ?>
+                                    <?= view('includes/chat_tools', ['other' => $selectedUser, 'requestId' => (int) $requestId]) ?>
+                                <?php endif; ?>
+                                <?= view('includes/user_safety_actions', [
+                                    'other'     => $selectedUser,
+                                    'iBlocked'  => $iBlocked,
+                                    'returnTo'  => 'messages?user_id=' . (int) $selectedUser['id'],
+                                    'requestId' => $requestId,
+                                ]) ?>
+                            </div>
                         </header>
+
+                        <?= view('includes/chat_search_bar') ?>
 
                         <div class="chat-body" id="chatBody" role="log" aria-live="polite" aria-relevant="additions"
                              aria-label="Messages with <?= esc($otherName, 'attr') ?>"
+                             <?php if ($deletedMs !== null): ?>data-deleted-ms="<?= (int) $deletedMs ?>"<?php endif; ?>
                              <?php if ($conversationId !== null): ?>data-talk-conversation="<?= esc($conversationId, 'attr') ?>"<?php endif; ?>
                              data-other-name="<?= esc($selectedUser['first_name'] ?? 'They', 'attr') ?>">
                             <?php if ($chatError !== null): ?>
@@ -151,4 +175,5 @@ $otherName = ! empty($selectedUser) ? trim(($selectedUser['first_name'] ?? '') .
 <?php if ($conversationId !== null && $talk !== null): ?>
     <script type="module" src="<?= asset('js/talk-chat.js') ?>"></script>
 <?php endif; ?>
+<script src="<?= asset('js/chat-tools.js') ?>" defer></script>
 <?= $this->include('includes/footer') ?>

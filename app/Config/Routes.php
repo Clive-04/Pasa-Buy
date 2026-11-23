@@ -49,6 +49,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
     $routes->get('messages', 'Message::index');
     $routes->post('messages/send', 'Message::send');
     $routes->get('messages/poll', 'Message::poll');
+    $routes->post('messages/delete', 'Message::delete');
     $routes->get('messages/attachment/(:num)', 'Message::attachment/$1');
 
     $routes->get('wallet', 'Wallet::index');

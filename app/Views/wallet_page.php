@@ -80,7 +80,7 @@
                                             </td>
                                             <td data-label="Request">
                                                 <?php if (! empty($transaction['request_id'])): ?>
-                                                    <a href="<?= base_url('request-details/' . (int) $transaction['request_id']) ?>">#<?= (int) $transaction['request_id'] ?></a>
+                                                    <a class="link" href="<?= base_url('request-details/' . (int) $transaction['request_id']) ?>">#<?= (int) $transaction['request_id'] ?></a>
                                                 <?php else: ?>
                                                     —
                                                 <?php endif; ?>

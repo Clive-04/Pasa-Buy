@@ -65,8 +65,15 @@ button[aria-busy="true"] .i { display: none; }
 .icon-btn:active { transform: scale(0.94); }
 .icon-btn.is-active { background: var(--brand-soft); color: var(--brand-ink); }
 
-.link { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--brand-ink); font-weight: 700; text-decoration: none; }
-.link:hover { text-decoration: underline; }
+/* Text button: no underline. A soft tinted pill appears on hover/focus and the arrow nudges. */
+.link {
+    display: inline-flex; align-items: center; gap: 0.25rem; padding: 2px 8px; margin: -2px -8px;
+    border-radius: 8px; color: var(--brand-ink); font-weight: 700; text-decoration: none;
+    transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.link:hover { background: var(--brand-soft); color: var(--brand-soft-ink); }
+.link:active { background: color-mix(in srgb, var(--brand) 18%, transparent); }
+.link:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 .link .i { transition: transform var(--dur-fast) var(--ease-out); }
 .link:hover .i { transform: translateX(2px); }
 
@@ -131,7 +138,8 @@ button[aria-busy="true"] .i { display: none; }
 .crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin: 0 0 10px; padding: 0; list-style: none; font-size: 0.85rem; color: var(--muted); }
 .crumbs li + li::before { content: "/"; margin: 0 8px; color: var(--line-strong); }
 .crumbs a { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; color: var(--brand-ink); font-weight: 700; text-decoration: none; }
-.crumbs a:hover { text-decoration: underline; }
+.crumbs a { padding: 0 6px; margin: 0 -6px; border-radius: 8px; transition: background-color var(--dur-fast); }
+.crumbs a:hover { background: var(--brand-soft); }
 .crumbs .crumb-back { width: 16px; height: 16px; transition: transform var(--dur-fast) var(--ease-out); }
 .crumbs a:hover .crumb-back { transform: translateX(-2px); }
 .crumbs [aria-current="page"] { color: var(--ink-2); font-weight: 600; }

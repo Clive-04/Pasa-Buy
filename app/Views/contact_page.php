@@ -15,7 +15,7 @@ $members = [
             <h1 id="contactTitle" style="font-size: clamp(1.8rem, 1.3rem + 2vw, 2.6rem); position:relative; z-index:1;">Contact us</h1>
             <p style="margin-top:12px; max-width:60ch; position:relative; z-index:1;">Have questions or need assistance? Reach out and we'll get back to you as soon as possible.</p>
             <ul class="contact-list">
-                <li><?= icon('mail') ?> <a href="mailto:support@pasabuy.com">support@pasabuy.com</a></li>
+                <li><?= icon('mail') ?> <a class="link" href="mailto:support@pasabuy.com">support@pasabuy.com</a></li>
                 <li><?= icon('phone') ?> 0951 914 9351</li>
                 <li><?= icon('map-pin') ?> Lucban, Quezon, Philippines</li>
             </ul>

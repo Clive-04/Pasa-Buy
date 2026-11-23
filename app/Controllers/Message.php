@@ -57,7 +57,9 @@ class Message extends BaseController
         }
 
         if ($selectedUser !== null) {
-            $messages   = array_reverse($this->pairQuery($meId, $otherId)->orderBy('id', 'DESC')->findAll(self::THREAD_LIMIT));
+            // "Deleted for me": only messages after the deletion are shown.
+            $since      = $this->deletedAt($meId, $otherId, 0);
+            $messages   = array_reverse($this->pairQuery($meId, $otherId, $since)->orderBy('id', 'DESC')->findAll(self::THREAD_LIMIT));
             $permission = $this->policy()->canSend($meId, $otherId, $requestId);
 
             // A request_id that doesn't qualify: fall back to the pair's chat.
@@ -216,7 +218,7 @@ class Message extends BaseController
             return $this->json(['error' => 'Unknown conversation.'], 404);
         }
 
-        $rows = $this->pairQuery($meId, $otherId)->where('id >', $after)->orderBy('id', 'ASC')->findAll(self::POLL_LIMIT);
+        $rows = $this->pairQuery($meId, $otherId, $this->deletedAt($meId, $otherId, 0))->where('id >', $after)->orderBy('id', 'ASC')->findAll(self::POLL_LIMIT);
 
         if ($rows !== []) {
             $this->markThreadRead($meId, $otherId);
@@ -269,13 +271,57 @@ class Message extends BaseController
     // ------------------------------------------------------------ helpers
 
     /** Messages between exactly these two users (all errands). */
-    private function pairQuery(int $me, int $other): MessageModel
+    /** Messages between exactly these two users; optionally only those after $since (a "delete for me"). */
+    private function pairQuery(int $me, int $other, ?string $since = null): MessageModel
     {
-        return (new MessageModel())
+        $query = (new MessageModel())
             ->groupStart()
                 ->groupStart()->where('sender_id', $me)->where('receiver_id', $other)->groupEnd()
                 ->orGroupStart()->where('sender_id', $other)->where('receiver_id', $me)->groupEnd()
             ->groupEnd();
+
+        return $since !== null ? $query->where('created_at >', $since) : $query;
+    }
+
+    /** When $me deleted their chat with $other (request 0 = whole built-in thread), or null. */
+    private function deletedAt(int $me, int $other, int $requestId): ?string
+    {
+        $row = db_connect()->table('chat_deletions')
+            ->select('deleted_at')
+            ->where(['user_id' => $me, 'other_user_id' => $other, 'request_id' => $requestId])
+            ->get()->getRowArray();
+
+        return $row['deleted_at'] ?? null;
+    }
+
+    /**
+     * "Delete chat" = delete for me. Hides the chat and its messages so far
+     * from the current user only. The other person keeps their copy and
+     * nothing is erased, so reports keep their evidence. A newer message
+     * brings the chat back with just the new messages.
+     */
+    public function delete()
+    {
+        $me        = $this->currentUserId();
+        $other     = (int) $this->request->getPost('other_user_id');
+        $requestId = max(0, (int) $this->request->getPost('request_id'));
+        $db        = db_connect();
+
+        if ($other <= 0 || $other === $me || $db->table('users')->where('id', $other)->countAllResults() === 0) {
+            return redirect()->to('messages')->with('error', 'That chat could not be found.');
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $db->query(
+            'INSERT INTO ' . $db->protectIdentifiers('chat_deletions', true) . ' (user_id, other_user_id, request_id, deleted_at)
+             VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE deleted_at = VALUES(deleted_at)',
+            [$me, $other, $requestId, $now],
+        );
+
+        // Its unread message notices go too, so badges don't point at a deleted chat.
+        $this->markThreadRead($me, $other);
+
+        return redirect()->to('messages')->with('success', 'Chat deleted. It’s gone from your list; the other person still has their copy.');
     }
 
     private function markThreadRead(int $me, int $other): void
@@ -317,7 +363,7 @@ class Message extends BaseController
     {
         $db        = db_connect();
         $searchSql = '';
-        $params    = array_fill(0, 6, $me);
+        $params    = array_fill(0, 7, $me);
 
         if ($search !== '') {
             $searchSql = " AND (u.first_name LIKE ? ESCAPE '!' OR u.last_name LIKE ? ESCAPE '!' OR m1.message LIKE ? ESCAPE '!')";
@@ -341,31 +387,39 @@ class Message extends BaseController
                     AND ((m1.sender_id = ? AND m1.receiver_id = latest.other_user_id)
                       OR (m1.receiver_id = ? AND m1.sender_id = latest.other_user_id))
             INNER JOIN users u ON u.id = latest.other_user_id
-            WHERE 1 = 1 {$searchSql}
+            LEFT JOIN chat_deletions cd ON cd.user_id = ? AND cd.other_user_id = u.id AND cd.request_id = 0
+            WHERE (cd.deleted_at IS NULL OR m1.created_at > cd.deleted_at) {$searchSql}
             ORDER BY m1.id DESC
-            LIMIT 100
+            LIMIT 200
         ", $params)->getResultArray();
     }
 
     /**
-     * People the user can chat with because of an accepted, on-the-way or
-     * delivered errand, so a chat can start before any message exists.
+     * The user's errand chats (one per accepted errand, including finished
+     * and cancelled ones so their history stays reachable), with the time
+     * the user deleted each one, if they did.
+     *
+     * @param bool $withClosed include cancelled errands (TalkJS list); the
+     *                         built-in list only offers chat-eligible ones
      *
      * @return list<array<string, mixed>>
      */
-    private function errandChats(int $userId): array
+    private function errandChats(int $userId, bool $withClosed = false, int $limit = 8): array
     {
+        $statuses = $withClosed ? "'accepted', 'on_the_way', 'delivered', 'cancelled'" : "'accepted', 'on_the_way', 'delivered'";
+
         return db_connect()->query(
-            'SELECT r.id AS request_id, r.item_name, r.status, u.id AS other_id, u.first_name, u.last_name, u.profile_photo,
-                    IF(r.user_id = ?, \'runner\', \'requester\') AS other_role
+            "SELECT r.id AS request_id, r.item_name, r.status, r.updated_at, u.id AS other_id, u.first_name, u.last_name, u.profile_photo,
+                    IF(r.user_id = ?, 'runner', 'requester') AS other_role, cd.deleted_at
              FROM accepted_requests ar
              JOIN requests r ON r.id = ar.request_id
              JOIN users u ON u.id = IF(r.user_id = ?, ar.runner_id, r.user_id)
+             LEFT JOIN chat_deletions cd ON cd.user_id = ? AND cd.other_user_id = u.id AND cd.request_id = r.id
              WHERE (r.user_id = ? OR ar.runner_id = ?)
-               AND r.status IN (\'accepted\', \'on_the_way\', \'delivered\')
-             ORDER BY FIELD(r.status, \'on_the_way\', \'accepted\', \'delivered\'), r.updated_at DESC
-             LIMIT 8',
-            [$userId, $userId, $userId, $userId],
+               AND r.status IN ({$statuses})
+             ORDER BY FIELD(r.status, 'on_the_way', 'accepted', 'delivered', 'cancelled'), r.updated_at DESC
+             LIMIT " . max(1, $limit),
+            [$userId, $userId, $userId, $userId, $userId],
         )->getResultArray();
     }
 
@@ -475,9 +529,12 @@ class Message extends BaseController
             'activeErrands'  => $selected !== null ? $this->policy()->activeErrands($meId, $otherId) : [],
             'errandChats'    => array_map(static function (array $e) use ($client, $meId): array {
                 $e['conversation_id'] = $client->conversationId($meId, (int) $e['other_id'], (int) $e['request_id']);
+                $e['deleted_ms']      = $e['deleted_at'] !== null ? strtotime($e['deleted_at']) * 1000 : null;
 
                 return $e;
-            }, $this->errandChats($meId)),
+            }, $this->errandChats($meId, true, 200)),
+            // "Deleted for me": messages up to this moment are hidden in the open chat.
+            'deletedMs'      => $selected !== null && $requestId !== null && ($d = $this->deletedAt($meId, $otherId, $requestId)) !== null ? strtotime($d) * 1000 : null,
             'talk'           => $talk,
             'maxLength'      => self::MAX_MESSAGE_LENGTH,
         ]);

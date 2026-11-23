@@ -96,7 +96,7 @@ $field = static function (?string $value, string $empty = 'Not added yet'): stri
                             <a href="<?= base_url('accepted-requests') ?>" class="mini-stat"><strong><?= (int) $acceptedRequests ?></strong><span>Errands accepted</span></a>
                             <a href="<?= base_url('accepted-requests?status=delivered') ?>" class="mini-stat"><strong><?= (int) $deliveredRequests ?></strong><span>Delivered</span></a>
                         </div>
-                        <a href="<?= base_url('wallet') ?>" class="side-balance" style="margin:12px 0 0;">
+                        <a href="<?= base_url('wallet') ?>" class="profile-wallet">
                             <span><?= icon('wallet') ?> <?= is_demo_mode() ? 'Demo wallet balance' : 'Wallet balance' ?></span>
                             <strong><?= money($user['wallet_balance']) ?></strong>
                         </a>

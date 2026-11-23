@@ -346,6 +346,69 @@ final class NativeChatTest extends FeatureTestCase
         }
     }
 
+    // ------------------------------------------------- search and delete
+
+    public function testChatListSearchMatchesNamesAndMessageText(): void
+    {
+        $requester   = $this->createUser(['first_name' => 'Rhea']);
+        $runner      = $this->createUser(['first_name' => 'Rolly']);
+        $otherRunner = $this->createUser(['first_name' => 'Zoltan']);
+        $requestId   = $this->createRequest($requester);
+        $otherRequest = $this->createRequest($requester);
+        $this->lifecycle->accept($requestId, $runner);
+        $this->lifecycle->accept($otherRequest, $otherRunner);
+
+        $this->send($runner, $requester, 'The pharmacy has generic paracetamol', $requestId);
+        $this->send($otherRunner, $requester, 'Bread is sold out', $otherRequest);
+
+        $byText = $this->getAs($requester, 'messages?search=paracetamol');
+        $byText->assertSee('The pharmacy has generic paracetamol');
+        $byText->assertDontSee('Bread is sold out');
+
+        $byName = $this->getAs($requester, 'messages?search=zolt');
+        $byName->assertSee('Bread is sold out');
+        $byName->assertDontSee('generic paracetamol');
+    }
+
+    public function testDeleteChatHidesItForMeOnlyUntilANewMessage(): void
+    {
+        [$requester, $runner, $requestId] = $this->errand();
+        $this->send($runner, $requester, 'Old message before delete', $requestId);
+        $this->send($requester, $runner, 'My old reply', $requestId);
+
+        $this->assertRedirectsTo($this->postAs($requester, 'messages/delete', ['other_user_id' => $runner, 'request_id' => 0]), 'messages');
+        $this->postAs($requester, 'messages/delete', ['other_user_id' => $runner, 'request_id' => 0]); // repeat is harmless
+        $this->assertSame(1, $this->countRows('chat_deletions'));
+        $this->assertSame(2, $this->countRows('messages'), 'Nothing is erased: reports keep their evidence.');
+
+        // Gone for the requester: list, thread and polling.
+        $this->getAs($requester, 'messages')->assertDontSee('Old message before delete');
+        $this->getAs($requester, 'messages?user_id=' . $runner)->assertDontSee('Old message before delete');
+        $this->assertSame([], $this->poll($requester, $runner)['data']['messages']);
+
+        // The runner still has the full chat.
+        $this->getAs($runner, 'messages?user_id=' . $requester)->assertSee('My old reply');
+
+        // A new message brings the chat back with only the new message.
+        sleep(1); // created_at has one-second precision
+        $this->send($runner, $requester, 'Are you still there?', $requestId);
+        $list = $this->getAs($requester, 'messages');
+        $list->assertSee('Are you still there?');
+        $thread = $this->getAs($requester, 'messages?user_id=' . $runner);
+        $thread->assertSee('Are you still there?');
+        $thread->assertDontSee('Old message before delete');
+    }
+
+    public function testDeleteNeedsARealOtherUser(): void
+    {
+        $me = $this->createUser();
+
+        $this->postAs($me, 'messages/delete', ['other_user_id' => $me]);
+        $this->postAs($me, 'messages/delete', ['other_user_id' => 99999]);
+        $this->assertSame(0, $this->countRows('chat_deletions'));
+        $this->assertNotFound(fn () => $this->getAs($me, 'messages/delete'));
+    }
+
     public function testReturnLinksOnlyGoToKnownPages(): void
     {
         $me    = $this->createUser();

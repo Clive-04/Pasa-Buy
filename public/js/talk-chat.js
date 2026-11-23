@@ -25,6 +25,7 @@ function whenTalkReady() {
 if (body) {
     const conversationId = body.getAttribute('data-talk-conversation');
     const otherName = body.getAttribute('data-other-name') || 'They';
+    const deletedMs = Number(body.getAttribute('data-deleted-ms') || 0);
     const live = document.querySelector('[data-talk-status]');
     const composer = document.querySelector('[data-talk-composer]');
     const input = composer?.querySelector('[data-chat-input]');
@@ -140,7 +141,8 @@ if (body) {
         const nearBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 120;
         const oldHeight = body.scrollHeight;
         const oldTop = body.scrollTop;
-        const list = (snapshot || []).slice().reverse(); // oldest first
+        // Deleted for me: only messages after the deletion are shown.
+        const list = (snapshot || []).filter((m) => !deletedMs || m.createdAt > deletedMs).slice().reverse(); // oldest first
         const frag = document.createDocumentFragment();
 
         if (!loadedAll && list.length > 0) {
@@ -175,7 +177,8 @@ if (body) {
             const h = document.createElement('h3');
             h.textContent = composer ? 'Say hello' : 'No messages';
             const p = document.createElement('p');
-            p.textContent = composer ? 'Ask about the items, the store or the delivery time.' : 'There are no messages in this chat.';
+            p.textContent = deletedMs ? 'You deleted the earlier messages. New messages will appear here.'
+                : (composer ? 'Ask about the items, the store or the delivery time.' : 'There are no messages in this chat.');
             empty.append(h, p);
             frag.appendChild(empty);
         }

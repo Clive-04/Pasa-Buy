@@ -167,7 +167,8 @@ main { flex: 1 0 auto; }
 
 h1, h2, h3, h4 { margin: 0; line-height: 1.2; letter-spacing: -0.015em; color: var(--ink); }
 p { margin: 0; }
-a { color: var(--brand-ink); }
+a { color: var(--brand-ink); text-decoration: none; }
+a:not([class]):hover { color: var(--brand-hover); }
 img { max-width: 100%; display: block; }
 button, input, select, textarea { font: inherit; color: inherit; }
 small { font-size: 0.8em; }
@@ -307,13 +308,26 @@ strong { font-weight: 700; }
 }
 .dashboard-main > * { margin: 0; }
 
+/*
+ * The rail's column is painted on the container itself (surface colour plus
+ * a 1px divider), so it always runs from the top bar to the footer. The
+ * sticky menu inside it never looks like a floating card while scrolling.
+ */
+.dashboard-container {
+    --rail-col: var(--rail-w);
+    background: linear-gradient(to right,
+        var(--surface) calc(var(--rail-col) - 1px),
+        var(--line) calc(var(--rail-col) - 1px) var(--rail-col),
+        transparent var(--rail-col));
+}
+
 /* rail */
 .dashboard-sidebar {
     position: sticky; top: var(--topbar-h); z-index: 20;
     display: flex; flex-direction: column; gap: var(--sp-3);
     height: calc(100vh - var(--topbar-h)); height: calc(100dvh - var(--topbar-h));
     padding: 14px 12px; overflow-y: auto; overscroll-behavior: contain;
-    background: var(--surface); border-right: 1px solid var(--line);
+    background: transparent;
     scrollbar-width: thin;
 }
 .sidebar-mobile-top, .sidebar-overlay { display: none; }
@@ -351,7 +365,7 @@ body:has(> .demo-banner) .dashboard-sidebar { height: calc(100dvh - var(--topbar
 
 /* intermediate widths: icon rail with tooltips */
 @media (min-width: 901px) and (max-width: 1279px) {
-    .dashboard-container { grid-template-columns: var(--rail-w-collapsed) minmax(0, 1fr); }
+    .dashboard-container { grid-template-columns: var(--rail-w-collapsed) minmax(0, 1fr); --rail-col: var(--rail-w-collapsed); }
     .dashboard-sidebar { padding: 12px 10px; overflow-x: visible; }
     .side-heading { height: 1px; margin: 8px 6px; overflow: hidden; color: transparent; background: var(--line); }
     .side-nav > .side-heading:first-child { display: none; }
@@ -388,17 +402,17 @@ body:has(> .demo-banner) .dashboard-sidebar { height: calc(100dvh - var(--topbar
 .site-footer p { color: var(--muted); font-size: 0.86rem; max-width: 52ch; }
 .site-footer nav { display: flex; flex-wrap: wrap; gap: var(--sp-4); }
 .site-footer nav a { color: var(--ink-2); font-size: 0.86rem; font-weight: 600; text-decoration: none; }
-.site-footer nav a:hover { color: var(--brand-ink); text-decoration: underline; }
+.site-footer nav a:hover { color: var(--brand-ink); }
 .site-footer .copyright { width: 100%; max-width: none; padding-top: var(--sp-3); border-top: 1px solid var(--line); font-size: 0.8rem; }
 
 /* ============================================================ RESPONSIVE */
 @media (max-width: 900px) {
-    .dashboard-container { grid-template-columns: 1fr; }
+    .dashboard-container { grid-template-columns: 1fr; background: none; }
     .icon-btn.topbar-menu { display: inline-flex; }
 
     .dashboard-sidebar {
         position: fixed; z-index: 1300; top: 0; left: 0; bottom: 0; height: auto;
-        width: min(86vw, 320px); border-right: none; border-radius: 0 var(--r-lg) var(--r-lg) 0;
+        width: min(86vw, 320px); border-right: none; background: var(--surface); border-radius: 0 var(--r-lg) var(--r-lg) 0;
         overflow-y: auto; transform: translateX(-105%); visibility: hidden;
         transition: transform var(--dur-slow) var(--ease-out), visibility 0s var(--dur-slow);
         box-shadow: var(--shadow-lg);

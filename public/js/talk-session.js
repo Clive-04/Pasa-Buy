@@ -72,8 +72,16 @@ if (boot) {
                     badge.hidden = !(c.unreadMessageCount > 0) || c.id === open;
                     badge.firstChild.nodeValue = c.unreadMessageCount > 9 ? '9+' : String(c.unreadMessageCount || 0);
                 }
+                // A chat deleted for me comes back only when a newer message arrives.
+                const deletedMs = Number(row.getAttribute('data-deleted-ms') || 0);
+                const newer = last && (!deletedMs || last.createdAt > deletedMs);
+                if (newer && row.hasAttribute('data-chat-deleted')) {
+                    row.removeAttribute('data-chat-deleted');
+                    row.hidden = false;
+                    document.dispatchEvent(new CustomEvent('pasabuy:chat-list-changed'));
+                }
                 const preview = row.querySelector('[data-thread-preview]');
-                if (preview && last) {
+                if (preview && newer) {
                     const mine = last.sender && last.sender.id === boot.userId;
                     preview.textContent = (mine ? 'You: ' : '') + (last.plaintext || 'Attachment');
                 }

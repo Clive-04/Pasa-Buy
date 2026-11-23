@@ -194,6 +194,35 @@ final class TalkJsMessagingTest extends FeatureTestCase
         $this->getAs($user, 'dashboard')->assertDontSee('talkBoot', null);
     }
 
+    public function testDeletedErrandChatIsHiddenAndItsOldMessagesFiltered(): void
+    {
+        $requester = $this->createUser();
+        $runner    = $this->createUser();
+        $requestId = $this->createRequest($requester, ['item_name' => 'Cooking oil']);
+        (new RequestLifecycle())->accept($requestId, $runner);
+        $conversationId = $this->fake->conversationId($requester, $runner, $requestId);
+
+        $page = $this->getAs($requester, 'messages');
+        $page->assertSee('data-chat-filter', null); // search box for the chat list
+        $page->assertDontSee('data-chat-deleted', null);
+
+        $this->postAs($requester, 'messages/delete', ['other_user_id' => $runner, 'request_id' => $requestId]);
+        $this->assertSame(1, $this->countRows('chat_deletions', ['request_id' => $requestId]));
+
+        // Hidden in the list (comes back in the browser when a newer message arrives) ...
+        $list = $this->getAs($requester, 'messages');
+        $list->assertSee('data-conversation-id="' . $conversationId . '"', null);
+        $list->assertSee('data-chat-deleted hidden', null);
+
+        // ... and opening it passes the deletion time so older messages are filtered.
+        $thread = $this->getAs($requester, 'messages?user_id=' . $runner . '&request_id=' . $requestId);
+        $thread->assertSee('data-deleted-ms="', null);
+        $thread->assertSee('data-chat-search-toggle', null);
+
+        // The runner's view is unaffected.
+        $this->getAs($runner, 'messages')->assertDontSee('data-chat-deleted', null);
+    }
+
     public function testKeysAloneDoNotSwitchTalkJsOn(): void
     {
         config('PasaBuy')->talkjsEnabled = false;

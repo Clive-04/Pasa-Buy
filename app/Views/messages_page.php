@@ -20,9 +20,11 @@ $lastId    = $messages !== [] ? end($messages)['id'] : 0;
             <div class="chat<?= ! empty($selectedUser) ? ' has-thread' : '' ?>">
                 <aside class="chat-list" aria-label="Conversations">
                     <div class="chat-list-head">
-                        <form method="get" action="<?= base_url('messages') ?>" class="filter-bar" role="search">
+                        <?php /* Searches names and the text of every message (server side). */ ?>
+                        <form method="get" action="<?= base_url('messages') ?>" class="chat-filter" role="search">
+                            <?= icon('search') ?>
                             <label for="conversationSearch" class="visually-hidden">Search chats by name or message</label>
-                            <input type="search" id="conversationSearch" name="search" maxlength="100" placeholder="Search chats…" value="<?= esc($search) ?>">
+                            <input type="search" id="conversationSearch" name="search" maxlength="100" placeholder="Search names and messages…" value="<?= esc($search) ?>">
                         </form>
                     </div>
 
@@ -101,13 +103,20 @@ $lastId    = $messages !== [] ? end($messages)['id'] : 0;
                                     <?php endif; ?>
                                 </p>
                             </div>
-                            <?= view('includes/user_safety_actions', [
-                                'other'     => $selectedUser,
-                                'iBlocked'  => $iBlocked,
-                                'returnTo'  => 'messages?user_id=' . (int) $selectedUser['id'],
-                                'requestId' => $requestId,
-                            ]) ?>
+                            <div class="chat-head-tools">
+                                <?php if ($messages !== []): ?>
+                                    <?= view('includes/chat_tools', ['other' => $selectedUser, 'requestId' => 0]) ?>
+                                <?php endif; ?>
+                                <?= view('includes/user_safety_actions', [
+                                    'other'     => $selectedUser,
+                                    'iBlocked'  => $iBlocked,
+                                    'returnTo'  => 'messages?user_id=' . (int) $selectedUser['id'],
+                                    'requestId' => $requestId,
+                                ]) ?>
+                            </div>
                         </header>
+
+                        <?= view('includes/chat_search_bar') ?>
 
                         <div class="chat-body" id="chatBody" role="log" aria-live="polite" aria-relevant="additions" aria-label="Messages with <?= esc($otherName, 'attr') ?>"
                              data-chat
@@ -191,4 +200,5 @@ $lastId    = $messages !== [] ? end($messages)['id'] : 0;
 </main>
 
 <script src="<?= asset('js/chat.js') ?>" defer></script>
+<script src="<?= asset('js/chat-tools.js') ?>" defer></script>
 <?= $this->include('includes/footer') ?>
