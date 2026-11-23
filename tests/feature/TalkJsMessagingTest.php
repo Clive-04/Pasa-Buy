@@ -21,6 +21,7 @@ final class TalkJsMessagingTest extends FeatureTestCase
 
         config('TalkJS')->appId     = 'tTestApp';
         config('TalkJS')->secretKey = 'sk_test_talkjs_secret';
+        config('PasaBuy')->talkjsEnabled = true; // TalkJS must be switched on explicitly
 
         $this->fake = new class (config('TalkJS')) extends TalkJsClient {
             public array $users = [];
@@ -44,6 +45,7 @@ final class TalkJsMessagingTest extends FeatureTestCase
     {
         config('TalkJS')->appId     = '';
         config('TalkJS')->secretKey = '';
+        config('PasaBuy')->talkjsEnabled = false;
         Services::resetSingle('talkjs');
 
         parent::tearDown();
@@ -140,6 +142,30 @@ final class TalkJsMessagingTest extends FeatureTestCase
         $user = $this->createUser();
 
         $this->getAs($user, 'dashboard')->assertDontSee('cdn.talkjs.com', null);
+    }
+
+    public function testKeysAloneDoNotSwitchTalkJsOn(): void
+    {
+        config('PasaBuy')->talkjsEnabled = false;
+        $user = $this->createUser();
+
+        $this->assertTrue(config('TalkJS')->hasKeys());
+        $this->assertFalse(config('TalkJS')->isConfigured());
+        $this->getAs($user, 'dashboard')->assertDontSee('cdn.talkjs.com', null);
+        $page = $this->getAs($user, 'messages');
+        $page->assertSee('Choose a chat');
+        $page->assertDontSee('talkjs-container', null);
+    }
+
+    public function testDirectMessagesWithoutASharedErrandAreRefused(): void
+    {
+        $me       = $this->createUser();
+        $stranger = $this->createUser();
+
+        $this->getAs($me, 'messages?user_id=' . $stranger);
+
+        $this->assertSame([], $this->fake->conversations, 'No dm_ conversation is created for strangers.');
+        $this->assertStringContainsString('once one of you accepts', (string) $this->flash('error'));
     }
 
     public function testMessagesPageListsErrandChatsOnly(): void

@@ -48,6 +48,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 
     $routes->get('messages', 'Message::index');
     $routes->post('messages/send', 'Message::send');
+    $routes->get('messages/poll', 'Message::poll');
     $routes->get('messages/attachment/(:num)', 'Message::attachment/$1');
 
     $routes->get('wallet', 'Wallet::index');
@@ -65,6 +66,9 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 
     $routes->get('users/search', 'UserSearch::index');
     $routes->get('users/(:num)', 'UserSearch::view/$1');
+    $routes->post('users/(:num)/block', 'Moderation::block/$1');
+    $routes->post('users/(:num)/unblock', 'Moderation::unblock/$1');
+    $routes->post('users/(:num)/report', 'Moderation::report/$1');
 
     $routes->get('notifications', 'RequestNotification::index');
     $routes->get('notifications/unread-count', 'RequestNotification::unreadCount');
@@ -77,4 +81,6 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
 $routes->group('admin', ['filter' => 'admin'], static function (RouteCollection $routes): void {
     $routes->get('dashboard', 'AdminController::dashboard');
     $routes->post('request/cancel/(:num)', 'AdminController::cancelRequest/$1');
+    $routes->get('reports', 'AdminController::reports');
+    $routes->post('reports/(:num)', 'AdminController::updateReport/$1');
 });

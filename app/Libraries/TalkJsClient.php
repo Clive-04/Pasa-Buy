@@ -105,9 +105,49 @@ class TalkJsClient
         return $header . '.' . $payload . '.' . $b64(hash_hmac('sha256', $header . '.' . $payload, $this->config->secretKey, true));
     }
 
-    private function request(string $method, string $path, array $json): void
+    /**
+     * Read-only summary of the conversations stored in TalkJS, for planning
+     * chat-history retention. Returns ids, participant ids, subject and
+     * message counts only — never message text.
+     *
+     * @return list<array{id: string, participants: list<string>, subject: string, messages: int, createdAt: int|null}>
+     */
+    public function inventory(int $maxConversations = 500): array
     {
-        if (! $this->config->isConfigured()) {
+        $out   = [];
+        $after = null;
+
+        do {
+            $page = $this->request('GET', '/conversations?limit=30' . ($after !== null ? '&startingAfter=' . rawurlencode($after) : ''));
+            $rows = is_array($page['data'] ?? null) ? $page['data'] : [];
+
+            foreach ($rows as $row) {
+                $id = (string) ($row['id'] ?? '');
+
+                if ($id === '') {
+                    continue;
+                }
+
+                $messages = $this->request('GET', '/conversations/' . rawurlencode($id) . '/messages?limit=100');
+
+                $out[] = [
+                    'id'           => $id,
+                    'participants' => array_map('strval', array_keys(is_array($row['participants'] ?? null) ? $row['participants'] : [])),
+                    'subject'      => (string) ($row['subject'] ?? ''),
+                    'messages'     => is_array($messages['data'] ?? null) ? count($messages['data']) : 0,
+                    'createdAt'    => isset($row['createdAt']) ? (int) $row['createdAt'] : null,
+                ];
+                $after = $id;
+            }
+        } while (count($rows) === 30 && count($out) < $maxConversations);
+
+        return $out;
+    }
+
+    /** @return array<string, mixed> decoded JSON body ([] when empty) */
+    private function request(string $method, string $path, ?array $json = null): array
+    {
+        if (! $this->config->hasKeys()) {
             throw new ServiceException('Chat is not configured.');
         }
 
@@ -116,8 +156,7 @@ class TalkJsClient
         try {
             $response = $http->request($method, rtrim($this->config->apiBase, '/') . '/v1/' . rawurlencode($this->config->appId) . $path, [
                 'headers' => ['Authorization' => 'Bearer ' . $this->adminToken(), 'Accept' => 'application/json'],
-                'json'    => $json,
-            ]);
+            ] + ($json !== null ? ['json' => $json] : []));
         } catch (Throwable $e) {
             log_message('error', 'TalkJS request failed: {m}', ['m' => $e->getMessage()]);
 
@@ -131,5 +170,9 @@ class TalkJsClient
 
             throw new ServiceException('Chat is temporarily unavailable. Please try again.');
         }
+
+        $data = json_decode((string) $response->getBody(), true);
+
+        return is_array($data) ? $data : [];
     }
 }

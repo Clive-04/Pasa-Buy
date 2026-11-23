@@ -15,7 +15,10 @@ use CodeIgniter\Config\BaseConfig;
  *   - turn OFF browser synchronization of users and conversations,
  * so only this server can create users, conversations and participants.
  *
- * When either value is empty, Pasa-Buy uses its built-in database chat.
+ * Pasa-Buy's built-in database chat is the default (decision of 2026-11-23).
+ * TalkJS is an optional integration: it is used only when both keys are set
+ * AND `pasabuy.talkjsEnabled = true`, so keys alone never switch it on.
+ * Before enabling it, confirm the two dashboard settings above.
  */
 class TalkJS extends BaseConfig
 {
@@ -26,8 +29,15 @@ class TalkJS extends BaseConfig
     /** Lifetime of browser user tokens (seconds). TalkJS advises ≥ 10 minutes. */
     public int $userTokenTtl = 86400;
 
-    public function isConfigured(): bool
+    /** Keys are present (enough for read-only admin tools such as chat:talkjs-inventory). */
+    public function hasKeys(): bool
     {
         return $this->appId !== '' && $this->secretKey !== '';
+    }
+
+    /** TalkJS is the active chat: keys present and explicitly enabled. */
+    public function isConfigured(): bool
+    {
+        return $this->hasKeys() && config('PasaBuy')->talkjsEnabled;
     }
 }

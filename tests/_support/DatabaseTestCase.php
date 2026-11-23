@@ -21,7 +21,7 @@ use RuntimeException;
 abstract class DatabaseTestCase extends CIUnitTestCase
 {
     protected const TABLES = [
-        'wallet_topups', 'request_notifications', 'notifications', 'messages', 'payments', 'accepted_requests',
+        'user_reports', 'user_blocks', 'wallet_topups', 'request_notifications', 'notifications', 'messages', 'payments', 'accepted_requests',
         'user_ratings', 'website_ratings', 'referrals', 'requests', 'users',
     ];
 

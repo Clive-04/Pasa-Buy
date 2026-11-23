@@ -76,6 +76,69 @@ class AdminController extends BaseController
     }
 
     /**
+     * Moderation queue: reports from users, open ones first. Shows the
+     * reported message only when the report points at one (evidence).
+     */
+    public function reports()
+    {
+        $status = (string) $this->request->getGet('status');
+        $status = in_array($status, ['open', 'reviewing', 'resolved', 'dismissed', 'all'], true) ? $status : 'active';
+        $db     = db_connect();
+
+        $builder = $db->table('user_reports r')
+            ->select("r.*, rep.first_name AS reporter_first, rep.last_name AS reporter_last,
+                      tgt.first_name AS reported_first, tgt.last_name AS reported_last,
+                      m.message AS message_text, m.created_at AS message_at, m.sender_id AS message_sender,
+                      q.item_name AS request_item, q.status AS request_status")
+            ->join('users rep', 'rep.id = r.reporter_id')
+            ->join('users tgt', 'tgt.id = r.reported_user_id')
+            ->join('messages m', 'm.id = r.message_id', 'left')
+            ->join('requests q', 'q.id = r.request_id', 'left');
+
+        if ($status === 'active') {
+            $builder->whereIn('r.status', ['open', 'reviewing']);
+        } elseif ($status !== 'all') {
+            $builder->where('r.status', $status);
+        }
+
+        $counts = array_fill_keys(['open', 'reviewing', 'resolved', 'dismissed'], 0);
+
+        foreach ($db->table('user_reports')->select('status, COUNT(*) AS n')->groupBy('status')->get()->getResultArray() as $row) {
+            $counts[$row['status']] = (int) $row['n'];
+        }
+
+        return view('admin/reports', [
+            'title'   => 'Reports | Pasa-Buy Admin',
+            'status'  => $status,
+            'counts'  => $counts,
+            'reports' => $builder->orderBy("FIELD(r.status, 'open', 'reviewing', 'resolved', 'dismissed')", '', false)
+                ->orderBy('r.created_at', 'DESC')->limit(100)->get()->getResultArray(),
+            'reasons' => Moderation::REASONS,
+        ]);
+    }
+
+    public function updateReport($id)
+    {
+        $status = (string) $this->request->getPost('status');
+        $note   = trim((string) $this->request->getPost('admin_note'));
+
+        if (! in_array($status, ['reviewing', 'resolved', 'dismissed', 'open'], true) || mb_strlen($note) > 1000) {
+            return redirect()->to('/admin/reports')->with('error', 'Choose a valid status (note: up to 1,000 characters).');
+        }
+
+        $updated = db_connect()->table('user_reports')->where('id', (int) $id)->update([
+            'status'     => $status,
+            'admin_note' => $note !== '' ? $note : null,
+            'handled_by' => $this->currentUserId(),
+            'handled_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $updated && db_connect()->affectedRows() > 0
+            ? redirect()->to('/admin/reports')->with('success', 'Report #' . (int) $id . ' marked ' . $status . '.')
+            : redirect()->to('/admin/reports')->with('error', 'That report could not be found.');
+    }
+
+    /**
      * Replaces the former hard delete: financial and delivery history are
      * kept, and only unsettled requests can be cancelled.
      */

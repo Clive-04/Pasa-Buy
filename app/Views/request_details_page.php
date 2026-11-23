@@ -87,9 +87,10 @@ $alreadyRated = $status === 'delivered' && ! empty($myRating);
                                 <a href="<?= base_url('accepted-requests?status=' . $status) ?>" class="btn btn-primary"><?= icon('truck') ?> Update delivery status</a>
                             <?php endif; ?>
 
-                            <?php if ($messageTo && ! $isAdminViewer && $status !== 'cancelled'): ?>
+                            <?php // Chat opens once the request is accepted, for its requester and runner only (ChatPolicy). ?>
+                            <?php if ($messageTo && ($isRequester || $isRunner) && in_array($status, ['accepted', 'on_the_way', 'delivered'], true)): ?>
                                 <a href="<?= base_url('messages?user_id=' . (int) $messageTo . '&request_id=' . $requestId) ?>" class="btn btn-secondary">
-                                    <?= icon('message') ?> <?= $isRequester ? 'Message runner' : ($canAccept ? 'Ask the requester' : 'Message requester') ?>
+                                    <?= icon('message') ?> <?= $isRequester ? 'Message runner' : 'Message requester' ?>
                                 </a>
                             <?php endif; ?>
 

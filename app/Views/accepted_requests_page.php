@@ -64,7 +64,9 @@ $balanceCents = Money::toCents($walletBalance);
                             </p>
 
                             <div class="req-actions">
-                                <a href="<?= base_url('messages?user_id=' . (int) $request['user_id'] . '&request_id=' . $requestId) ?>" class="btn btn-secondary btn-sm"><?= icon('message') ?> Message requester</a>
+                                <?php if ($request['accepted_status'] !== 'cancelled'): ?>
+                                    <a href="<?= base_url('messages?user_id=' . (int) $request['user_id'] . '&request_id=' . $requestId) ?>" class="btn btn-secondary btn-sm"><?= icon('message') ?> Message requester</a>
+                                <?php endif; ?>
 
                                 <?php if ($request['accepted_status'] === 'accepted'): ?>
                                     <form action="<?= base_url('request/status/' . $requestId) ?>" method="post" class="inline-form" data-submit-once>
