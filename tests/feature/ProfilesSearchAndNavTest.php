@@ -209,6 +209,28 @@ final class ProfilesSearchAndNavTest extends FeatureTestCase
         $this->getAs($requester, 'dashboard')->assertDontSee('badge-action', null);
     }
 
+    public function testAboutAndContactPagesRenderForGuestsAndMembers(): void
+    {
+        foreach ([null, $this->createUser()] as $viewer) {
+            $about = $this->getAs($viewer, 'about');
+            $about->assertOK();
+            $about->assertSee('How it works');
+            $about->assertSee('runs it');
+            $about->assertSee('Bea Nicole Reniedo');
+
+            $contact = $this->getAs($viewer, 'contact');
+            $contact->assertOK();
+            $contact->assertSee('mailto:support@pasabuy.com', null);
+            $contact->assertSee('tel:+639519149351', null);
+            $contact->assertSee('data-copy=', null);
+            $contact->assertSee('Is the wallet real money?');
+        }
+
+        // Guests are invited to sign up; members to post a request.
+        $this->getAs(null, 'about')->assertSee('Create an account');
+        $this->getAs($this->createUser(), 'about')->assertSee('href="' . base_url('post-request') . '"', null);
+    }
+
     public function testDemoNoticeOnlyAppearsAtTopUp(): void
     {
         $me = $this->createUser();

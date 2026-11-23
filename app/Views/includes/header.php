@@ -28,9 +28,12 @@
     <link rel="stylesheet" href="<?= asset('css/components.css') ?>">
     <link rel="stylesheet" href="<?= asset('css/pages.css') ?>">
     <link rel="stylesheet" href="<?= asset('css/colour.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/brand-pages.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/motion.css') ?>">
 
     <script src="<?= asset('js/responsive-layout.js') ?>" defer></script>
     <script src="<?= asset('js/app.js') ?>" defer></script>
+    <script src="<?= asset('js/motion.js') ?>" defer></script>
 </head>
 <body<?php if (session('isLoggedIn')): ?> data-poll-url="<?= esc(base_url('notifications/unread-count'), 'attr') ?>" data-poll-seconds="<?= (int) config('PasaBuy')->notificationPollSeconds ?>"<?php endif; ?>>
     <a class="skip-link" href="#main-content">Skip to main content</a>

@@ -328,9 +328,17 @@
             });
         }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
 
+        // Browsers with CSS scroll-driven animations get the native version
+        // (motion.css .sd-reveal), tied to the scroll position itself.
+        var native = window.CSS && CSS.supports && CSS.supports('animation-timeline: view()') && CSS.supports('animation-range: entry 0% entry 100%');
+
         targets.forEach(function (el) {
-            if (el.closest('dialog') || el.closest('.reveal')) { return; }
+            if (el.closest('dialog') || el.closest('.reveal') || el.closest('.sd-reveal')) { return; }
             if (el.getBoundingClientRect().top > fold) {
+                if (native) {
+                    el.classList.add('sd-reveal');
+                    return;
+                }
                 el.style.animation = 'none'; // the scroll reveal replaces the load animation
                 el.classList.add('reveal');
                 observer.observe(el);

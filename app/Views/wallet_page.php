@@ -18,7 +18,7 @@
             <section class="hero-card wallet-hero" aria-label="Balance">
                 <div style="position:relative; z-index:1;">
                     <span class="label"><?= icon('wallet') ?> <?= is_demo_mode() ? 'Demo credits available' : 'Available balance' ?></span>
-                    <div class="balance"><?= money($user['wallet_balance'] ?? '0') ?></div>
+                    <div class="balance" data-count><?= money($user['wallet_balance'] ?? '0') ?></div>
                     <?php if (is_demo_mode()): ?>
                         <p style="font-size:.86rem;"><?= $gateway ? "Top up with GCash or Maya through " . esc($gatewayLabel) . " test mode. No real money moves, and credits can't be withdrawn." : "Simulated credits for trying Pasa-Buy. They can't be withdrawn, and no GCash, Maya or bank payment is involved." ?></p>
                     <?php endif; ?>

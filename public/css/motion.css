@@ -1,0 +1,59 @@
+/*
+ * Pasa-Buy motion layer (loaded last). Progressive enhancement throughout:
+ * browsers without a feature simply skip it, and "reduce motion" turns
+ * every effect here off.
+ *
+ *  1. Page-to-page transitions (cross-document View Transitions): the page
+ *     cross-fades while the top bar and the rail stay put, and the active
+ *     rail item glides to the new page's item.
+ *  2. Headings rise in word by word (words wrapped by motion.js).
+ *  3. Scroll-driven reveals (CSS animation-timeline: view()) where supported;
+ *     app.js keeps its IntersectionObserver fallback elsewhere.
+ *  4. Numbers count up (motion.js) — they never change their final value.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+    /* ----------------------------------------------- 1. page transitions */
+    @view-transition { navigation: auto; }
+
+    .app-topbar, .site-header { view-transition-name: topbar; }
+    .dashboard-sidebar { view-transition-name: rail; }
+    .side-link.is-active { view-transition-name: rail-active; }
+
+    ::view-transition-group(topbar),
+    ::view-transition-group(rail) { animation: none; }
+    ::view-transition-old(rail), ::view-transition-new(rail),
+    ::view-transition-old(topbar), ::view-transition-new(topbar) { animation: none; mix-blend-mode: normal; }
+    ::view-transition-group(rail-active) { animation-duration: 380ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+    ::view-transition-old(root) { animation: pb-vt-out 160ms ease-in both; }
+    ::view-transition-new(root) { animation: pb-vt-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+    @keyframes pb-vt-out { to { opacity: 0; } }
+    @keyframes pb-vt-in { from { opacity: 0; } }
+
+    /* ------------------------------------------- 2. word-by-word headings */
+    .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+    .wi { display: inline-block; animation: pb-word-up 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(80ms + var(--i, 0) * 55ms); }
+    @keyframes pb-word-up { from { transform: translateY(105%); } to { transform: none; } }
+    /* the heading block itself shouldn't also fade in */
+    :is(.page-head, .story-hero, .contact-hero, .welcome-text) h1:has(.w) { animation: none; }
+
+    /* ------------------------------------------ 3. scroll-driven reveals */
+    @supports ((animation-timeline: view()) and (animation-range: entry 0% entry 100%)) {
+        .sd-reveal {
+            animation: pb-sd-rise linear both;
+            animation-timeline: view();
+            animation-range: entry 5% entry 70%;
+        }
+        @keyframes pb-sd-rise { from { opacity: 0; transform: translateY(28px) scale(0.985); } to { opacity: 1; transform: none; } }
+    }
+
+    /* ----------------------------------------------- 4. count-up numbers */
+    [data-counting] { font-variant-numeric: tabular-nums; }
+
+    /* small finishing touches */
+    .btn-primary, .btn-accent { transition-property: transform, box-shadow, background-color, border-color, color; }
+    .btn-primary:hover, .btn-accent:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0) scale(0.97); }
+}
