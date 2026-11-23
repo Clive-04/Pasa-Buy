@@ -72,6 +72,10 @@ class Request extends BaseController
             return $this->backWithErrors($validation->getErrors());
         }
 
+        if (($limited = $this->rateLimited('post-request', 'new requests', '/post-request')) !== null) {
+            return $limited;
+        }
+
         if (Money::toCents($input['estimated_price']) > $config->maxItemPriceCents) {
             return $this->backWithErrors(['estimated_price' => 'Estimated price must not exceed ' . Money::format($config->maxItemPriceCents) . '.']);
         }
@@ -256,6 +260,10 @@ class Request extends BaseController
     public function rate($id = null)
     {
         $requestId = (int) $id;
+
+        if (($limited = $this->rateLimited('rating', 'ratings', '/request-details/' . $requestId)) !== null) {
+            return $limited;
+        }
 
         return $this->attempt(
             fn () => (new RatingService())->rateDelivery(

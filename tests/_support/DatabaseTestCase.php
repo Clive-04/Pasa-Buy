@@ -67,6 +67,9 @@ abstract class DatabaseTestCase extends CIUnitTestCase
 
         // Login/registration throttling uses the cache; start each test clean.
         cache()->clean();
+        // The shared throttler keeps the cache it was built with; CIUnitTestCase
+        // injects a fresh MockCache per test, so rebuild it to use that one.
+        \Config\Services::resetSingle('throttler');
     }
 
     private function rebuildSchema(): void

@@ -151,7 +151,7 @@ class XenditClient implements PaymentGateway
         $data   = json_decode((string) $response->getBody(), true);
 
         if ($status < 200 || $status >= 300 || ! is_array($data)) {
-            log_message('error', 'Xendit {m} {p} returned {s}: {b}', ['m' => $method, 'p' => $path, 's' => $status, 'b' => substr((string) $response->getBody(), 0, 500)]);
+            log_message('error', 'Xendit {m} {p} returned {s}: {b}', ['m' => $method, 'p' => $path, 's' => $status, 'b' => ProviderLog::summarize((string) $response->getBody())]);
 
             throw new ServiceException('The payment service rejected the request. Please try again.');
         }

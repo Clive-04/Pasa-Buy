@@ -45,6 +45,10 @@ class Wallet extends BaseController
     {
         $amount = trim((string) $this->request->getPost('amount'));
 
+        if (($limited = $this->rateLimited('topup-start', 'top-up attempts', '/wallet')) !== null) {
+            return $limited;
+        }
+
         // GCash / Maya through Xendit or PayMongo (test mode) when configured.
         if (TopUpService::activeProvider() !== null) {
             try {
@@ -103,6 +107,12 @@ class Wallet extends BaseController
 
     private function reconcileAndRedirect(int $topUpId, int $attempts = 1)
     {
+        // Each check calls the provider's API. A refused check changes
+        // nothing: the webhook can still credit the payment meanwhile.
+        if (($limited = $this->rateLimited('payment-check', 'payment checks', '/wallet', false)) !== null) {
+            return $limited;
+        }
+
         try {
             $service = new TopUpService();
 

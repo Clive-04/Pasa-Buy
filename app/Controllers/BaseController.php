@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\RateLimiter;
 use App\Services\ServiceException;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -40,6 +41,25 @@ abstract class BaseController extends Controller
     protected function isAdmin(): bool
     {
         return session('role') === 'admin';
+    }
+
+    /**
+     * Applies the rate limit for $action (Config\PasaBuy::$rateLimits).
+     * Returns a redirect with a "please wait" message (and the form input
+     * kept, so nothing typed is lost) when the limit is reached, else null.
+     */
+    protected function rateLimited(string $action, string $what, string $redirectTo, bool $keepInput = true): ?RedirectResponse
+    {
+        $retryAfter = RateLimiter::hit($action, $this->currentUserId() ?: null);
+
+        if ($retryAfter === null) {
+            return null;
+        }
+
+        $redirect = redirect()->to($redirectTo)->with('error', RateLimiter::message($retryAfter, $what));
+        $redirect->setHeader('Retry-After', (string) $retryAfter);
+
+        return $keepInput ? $redirect->withInput() : $redirect;
     }
 
     /**

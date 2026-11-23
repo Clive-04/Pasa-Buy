@@ -39,4 +39,33 @@ class PasaBuy extends BaseConfig
 
     /** Seconds between background notification-count refreshes (0 = off). */
     public int $notificationPollSeconds = 30;
+
+    /** Seconds between new-message checks on an open chat (visible tab only). */
+    public int $chatPollSeconds = 5;
+
+    /**
+     * Native chat is the default. TalkJS is used only when this is true AND
+     * its keys are set, so keys left in .env cannot silently switch it back on.
+     * (.env: pasabuy.talkjsEnabled = true)
+     */
+    public bool $talkjsEnabled = false;
+
+    /**
+     * Rate limits per signed-in user (per IP for guests): action => [max, seconds].
+     * Token bucket: up to `max` actions at once, refilling evenly over `seconds`.
+     * Demo-scale defaults; tune for a real deployment.
+     *
+     * @var array<string, array{0: int, 1: int}>
+     */
+    public array $rateLimits = [
+        'post-request'  => [10, 3600],  // posting requests
+        'message-send'  => [30, 60],    // chat messages
+        'chat-poll'     => [40, 60],    // chat refreshes (every ~5 s while visible)
+        'rating'        => [10, 3600],  // delivery ratings
+        'search'        => [30, 60],    // people search
+        'topup-start'   => [5, 600],    // opening a checkout (calls the provider)
+        'payment-check' => [5, 60],     // "Check payment" (calls the provider)
+        'report'        => [5, 3600],   // abuse reports
+        'block'         => [20, 3600],  // block / unblock
+    ];
 }

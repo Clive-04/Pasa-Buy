@@ -127,7 +127,7 @@ class TalkJsClient
         $status = $response->getStatusCode();
 
         if ($status < 200 || $status >= 300) {
-            log_message('error', 'TalkJS {m} {p} returned {s}: {b}', ['m' => $method, 'p' => $path, 's' => $status, 'b' => substr((string) $response->getBody(), 0, 300)]);
+            log_message('error', 'TalkJS {m} {p} returned {s}: {b}', ['m' => $method, 'p' => $path, 's' => $status, 'b' => ProviderLog::summarize((string) $response->getBody())]);
 
             throw new ServiceException('Chat is temporarily unavailable. Please try again.');
         }
