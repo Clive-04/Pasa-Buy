@@ -347,7 +347,7 @@
     }
 
     ready(function () {
-        initScrollReveal();
+        // Scroll reveals now live in motion.js (one system for every page).
         initNotificationMenu();
         initThemeToggle();
         initFlash();

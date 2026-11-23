@@ -369,7 +369,7 @@ a.row-item:hover { border-color: var(--accent); background: var(--surface-2); tr
 .dl dd.is-private { color: var(--muted); font-weight: 500; font-style: italic; }
 
 /* ========================================================== MOTION */
-@keyframes pb-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pb-rise { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: none; } }
 @keyframes pb-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pb-fade-out { to { opacity: 0; transform: translateY(-6px); height: 0; margin: 0; padding-block: 0; } }
 @keyframes pb-slide-down { from { opacity: 0; transform: translateY(-10px) scale(0.98); } to { opacity: 1; transform: none; } }
@@ -389,7 +389,7 @@ a.row-item:hover { border-color: var(--accent); background: var(--surface-2); tr
  *  4. Hover / press feedback on anything clickable.
  * "Reduce motion" (OS setting) turns all of this off (rule further down).
  */
-@keyframes pb-rise-sm { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pb-rise-sm { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: none; } }
 @keyframes pb-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 
 /* 1. page entrance */
@@ -401,15 +401,15 @@ a.row-item:hover { border-color: var(--accent); background: var(--surface-2); tr
 .dashboard-main > *:nth-child(n+6), .site-main > *:nth-child(n+6), .content-wrap > *:nth-child(n+6) { animation-delay: 250ms; }
 
 /* 2. list and grid items cascade */
-:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > * {
+:where(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > * {
     animation: pb-rise-sm var(--dur-slow) var(--ease-out) both;
     animation-delay: 140ms;
 }
-:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(2) { animation-delay: 180ms; }
-:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(3) { animation-delay: 220ms; }
-:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(4) { animation-delay: 260ms; }
-:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(5) { animation-delay: 300ms; }
-:is(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(n+6) { animation-delay: 340ms; }
+:where(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(2) { animation-delay: 180ms; }
+:where(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(3) { animation-delay: 220ms; }
+:where(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(4) { animation-delay: 260ms; }
+:where(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(5) { animation-delay: 300ms; }
+:where(.req-list, .people-grid, .team-grid, .stat-grid, .review-list, .together-list, .rating-bars, .mini-stats, .report-list, .needs-you ul, .chat-threads, .errand-chats, .info-list, .row-list) > :nth-child(n+6) { animation-delay: 340ms; }
 .rating-bar span { transform-origin: left; animation: pb-grow 600ms var(--ease-out) 300ms both; }
 
 /* 3. scroll reveal (classes added by app.js) */
