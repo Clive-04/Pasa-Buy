@@ -160,9 +160,14 @@ if ($adminEmail !== null && $adminPassword !== null) {
     check(str_ends_with(rtrim($r['location'], '/'), '/admin/dashboard'), 'Admin login redirects to /admin/dashboard', $r['location']);
 
     $dash = http('GET', $base . 'admin/dashboard');
-    check($dash['status'] === 200 && str_contains($dash['body'], 'Platform Fees Collected'), 'Admin dashboard renders');
+    check($dash['status'] === 200 && stripos($dash['body'], 'Platform fees collected') !== false, 'Admin dashboard renders');
     check(str_contains($dash['body'], 'Balanced'), 'Platform fees reconcile with settled requests');
-    check(str_contains($dash['body'], 'all balances match their ledgers'), 'Every wallet matches its ledger');
+    $walletsBalanced = str_contains($dash['body'], 'all balances match their ledgers');
+    if (! $walletsBalanced && str_contains($dash['body'], 'Admin overview')) {
+        $ledgerCheck = http('GET', $base . 'admin/users?check=ledger');
+        $walletsBalanced = $ledgerCheck['status'] === 200 && str_contains($ledgerCheck['body'], 'No accounts match');
+    }
+    check($walletsBalanced, 'Every wallet matches its ledger');
 }
 
 @unlink($jar);

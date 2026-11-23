@@ -119,6 +119,10 @@ php scripts/smoke-test.php https://example.com/ <user-email> <password> <admin-e
 
   Note: the 2026-11-22 hardening migration's `down()` restores the old structure but cannot recover the legacy `''` payment types or old `tax` values. To return to the pre-hardening state, use a backup.
 
+  The November 23 migrations are also **not lossless**: wallet top-ups and moderation records are dropped, chat deletion preferences disappear, suspension state is removed, and per-delivery ratings collapse to one rating per pair. Use a pre-release backup and its matching release for operational rollback, not `migrate:rollback`.
+
+  Stop writes and workers before backup/switch/restore so the SQL snapshot and private files describe the same point in time. Keep a separate backup of the failed release before rollback; restoring the pre-release snapshot loses later writes. Obtain an explicit data-recovery decision before doing this on a live service.
+
 ## 7. Backups and restore
 
 ```bash
@@ -133,6 +137,8 @@ env $(cat /root/pasabuy-migrator.env | xargs) php spark backup:restore /var/back
 ```
 
 Restore verifies the checksums first, refuses to run unless `--confirm` names the target database, moves the current uploads aside (it never deletes them), and checks the row counts against the manifest. **Rehearse a restore at least once per quarter on staging.**
+
+For a cross-schema rollback, restore into an empty, explicitly verified target database and switch to the matching archived code/configuration. A SQL dump does not remove tables introduced after that dump; importing over a newer schema can leave incompatible tables behind. Preserve the old database first, retain/reapply the intended grants, and keep the site offline until verification passes. Use the backup/restore tool from the corresponding release for older manifests: their verification lists did not include newer tables. New backups verify all 15 current tables, including the migration ledger, top-ups, blocks, reports and chat deletions. Compare actual records and private-file hashes as well as counts during a rehearsal.
 
 ## 8. Security configuration checklist
 
