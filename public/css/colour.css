@@ -15,11 +15,27 @@
 
 /* ================================================================ TOKENS */
 :root {
-    --canvas: #e8eef3;
-    --card-border: #d5dee7;
+    /*
+     * Light mode: warm cream canvas against the cool deep-teal rail, warm
+     * hairlines, and shadows tinted toward the brand teal (tinted neutrals
+     * read as deliberate; flat grey-white reads as unfinished).
+     */
+    --canvas: #f4efe6;
+    --surface-2: #faf6ef;
+    --soft: #f1ebe0;
+    --line: #e6dfd2;
+    --line-strong: #d6ccbb;
+    --card-border: #e4dccf;
     --card-radius: 14px;
-    --hairline: #e3e9ef;
+    --hairline: #eee7dc;
     --label-ink: #00696b;
+    --card-shadow: 0 1px 2px rgba(7, 56, 59, 0.05), 0 10px 24px -14px rgba(7, 56, 59, 0.22);
+
+    /* feature cards (the few blocks that matter most) */
+    --mint: #dff2ec;      --mint-ink: #064e4a;   --mint-line: #c3e6dc;
+    --sand: #f8e6cf;      --sand-ink: #7a3412;   --sand-line: #efd3ae;
+    --terracotta: #c2562b;
+    --topbar-bg: rgba(244, 239, 230, 0.88);
 
     /* navigation rail (deep teal in light mode) */
     --rail: #07383b;
@@ -61,6 +77,11 @@
         --cat-personal_care: #c4b5fd;
         --cat-other: #94a3b8;
         --money-ink: #86efac;
+        --mint: rgba(0, 209, 209, 0.10); --mint-ink: #9ff3ef; --mint-line: rgba(0, 209, 209, 0.25);
+        --sand: rgba(251, 191, 36, 0.10); --sand-ink: #fcd9a0; --sand-line: rgba(251, 191, 36, 0.25);
+        --terracotta: #f59e6b;
+        --topbar-bg: color-mix(in srgb, var(--surface) 86%, transparent);
+        --card-shadow: none;
     }
 }
 
@@ -83,6 +104,11 @@
     --cat-personal_care: #c4b5fd;
     --cat-other: #94a3b8;
     --money-ink: #86efac;
+    --mint: rgba(0, 209, 209, 0.10); --mint-ink: #9ff3ef; --mint-line: rgba(0, 209, 209, 0.25);
+    --sand: rgba(251, 191, 36, 0.10); --sand-ink: #fcd9a0; --sand-line: rgba(251, 191, 36, 0.25);
+    --terracotta: #f59e6b;
+    --topbar-bg: color-mix(in srgb, var(--surface) 86%, transparent);
+    --card-shadow: none;
 }
 
 /* ================================================================ CANVAS */
@@ -129,7 +155,7 @@ body { background: var(--canvas); }
 .card, .needs-you, .chat, .person-card, .team-card, .stat, .stat-link, .req-card, .req-row {
     border: 1px solid var(--card-border);
     border-radius: var(--card-radius);
-    box-shadow: none;
+    box-shadow: var(--card-shadow);
 }
 .card { background: var(--surface); padding: 20px 22px; }
 
@@ -207,3 +233,62 @@ body { background: var(--canvas); }
 /* ============================================================ SMALL THINGS */
 .req-row:hover { background: var(--surface-2); }
 .thread.is-active { background: var(--brand-soft); }
+
+/* ====================================================== LIGHT-MODE WARMTH */
+/* top bar and footer sit on the same warm canvas */
+.app-topbar, .site-header { background: var(--topbar-bg); }
+.site-footer { background: var(--soft); }
+.pb-table th { background: var(--surface-2); }
+
+/* feature cards: mint for the blocks that matter most */
+.needs-you {
+    background: var(--mint); border-color: var(--mint-line); border-left: 1px solid var(--mint-line);
+}
+.needs-you h2, .needs-you h2 .i { color: var(--mint-ink); }
+.needs-you a:hover { background: color-mix(in srgb, var(--surface) 60%, transparent); }
+.needs-you a strong { color: var(--mint-ink); }
+
+/* ============================================================ BENTO TOP */
+.bento {
+    display: grid; gap: 16px;
+    grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+    grid-template-areas: "hero wallet" "hero todo";
+}
+.bento-hero { grid-area: hero; }
+.bento-tile {
+    display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+    min-height: 120px; padding: 18px 20px; border-radius: var(--card-radius);
+    text-decoration: none; box-shadow: var(--card-shadow);
+    transition: border-color var(--dur-fast), transform var(--dur) var(--ease-out);
+}
+.bento-tile:hover { transform: translateY(-1px); }
+.bento-tile:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.tile-label { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; }
+.tile-label .i { width: 18px; height: 18px; }
+.tile-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82rem; font-weight: 700; }
+.tile-link .i { width: 16px; height: 16px; transition: transform var(--dur-fast) var(--ease-out); }
+.bento-tile:hover .tile-link .i { transform: translateX(3px); }
+
+.tile-wallet { grid-area: wallet; background: var(--mint); border: 1px solid var(--mint-line); color: var(--mint-ink); }
+.tile-wallet .tile-label, .tile-wallet .tile-link { color: var(--mint-ink); }
+.tile-todo { grid-area: todo; background: var(--sand); border: 1px solid var(--sand-line); color: var(--sand-ink); }
+.tile-todo .tile-label .i { color: var(--terracotta); }
+.tile-todo.is-clear { background: var(--surface); border-color: var(--card-border); color: var(--ink); }
+.tile-todo.is-clear .tile-label .i { color: var(--teal); }
+.tile-todo.is-clear .tile-link { color: var(--brand-ink); }
+
+@media (max-width: 760px) {
+    .bento { grid-template-columns: 1fr 1fr; grid-template-areas: "hero hero" "wallet todo"; gap: 12px; }
+    .bento-tile { min-height: 0; padding: 14px 16px; }
+    .tile-value { font-size: 1.25rem; }
+}
+@media (max-width: 420px) {
+    .bento { grid-template-columns: 1fr; grid-template-areas: "hero" "wallet" "todo"; }
+}
+.bento > * { animation: pb-rise-sm var(--dur-slow) var(--ease-out) both; }
+.bento > :nth-child(2) { animation-delay: 80ms; }
+.bento > :nth-child(3) { animation-delay: 140ms; }
+
+/* eyebrows on dark hero panels keep their pill shape */
+:is(.hero-card, .auth-aside, .hero) .eyebrow { padding: 4px 10px; border-radius: 999px; }

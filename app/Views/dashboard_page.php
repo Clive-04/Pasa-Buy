@@ -12,7 +12,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good
         <section class="dashboard-main">
             <?= $this->include('includes/flash') ?>
 
-            <section class="hero-card welcome" aria-label="Overview">
+            <?php
+            $todo    = action_items();
+            $nTodo   = count($todo['requests']) + count($todo['deliveries']);
+            $todoUrl = count($todo['requests']) > 0 ? 'my-requests' : 'accepted-requests';
+            ?>
+            <div class="bento">
+            <section class="hero-card welcome bento-hero" aria-label="Overview">
                 <div class="welcome-text">
                     <h1><?= $greeting ?>, <?= esc($me['first_name'] ?? 'there') ?></h1>
                     <p><?= esc(date('l, F j')) ?></p>
@@ -27,6 +33,19 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good
                     <a href="<?= base_url('browse-requests') ?>" class="btn btn-light-on-hero btn-lg"><?= icon('search') ?> Find requests <span class="count-pill"><?= (int) $openRequests ?></span></a>
                 </div>
             </section>
+
+            <a class="bento-tile tile-wallet" href="<?= base_url('wallet') ?>">
+                <span class="tile-label"><?= icon('wallet') ?> <?= is_demo_mode() ? 'Wallet · demo credits' : 'Wallet' ?></span>
+                <strong class="tile-value"><?= money($me['wallet_balance'] ?? '0') ?></strong>
+                <span class="tile-link">Top up or see history <?= icon('arrow-right') ?></span>
+            </a>
+
+            <a class="bento-tile tile-todo<?= $nTodo === 0 ? ' is-clear' : '' ?>" href="<?= base_url($nTodo > 0 ? $todoUrl : 'browse-requests') ?>">
+                <span class="tile-label"><?= icon($nTodo > 0 ? 'bell' : 'check-circle') ?> Needs you</span>
+                <strong class="tile-value"><?= $nTodo > 0 ? $nTodo . ' errand' . ($nTodo === 1 ? '' : 's') : 'All caught up' ?></strong>
+                <span class="tile-link"><?= $nTodo > 0 ? 'Pay, rate or update ' . icon('arrow-right') : 'Find an errand to run ' . icon('arrow-right') ?></span>
+            </a>
+            </div>
 
             <?php if (! empty($attention)): ?>
                 <section aria-labelledby="attentionHeading">
