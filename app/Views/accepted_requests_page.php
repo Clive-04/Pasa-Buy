@@ -143,6 +143,7 @@ $balanceCents = Money::toCents($walletBalance);
 </dialog>
 
 <script>
+if (!window.__pbCodDialog) { window.__pbCodDialog = true; // bind once (Turbo re-runs page scripts)
 document.addEventListener('click', function (event) {
     var opener = event.target.closest('[data-open-dialog="codDialog"]');
     if (!opener) { return; }
@@ -151,6 +152,7 @@ document.addEventListener('click', function (event) {
     dialog.querySelector('[data-cod-fee-text]').textContent = opener.getAttribute('data-cod-fee');
     dialog.querySelector('input[name="cod_confirmed"]').checked = false;
 });
+}
 </script>
 
 <?= $this->include('includes/footer') ?>

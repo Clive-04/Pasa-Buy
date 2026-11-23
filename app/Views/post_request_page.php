@@ -215,7 +215,7 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
 </main>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function () { // runs at once: the form is above (also on Turbo visits)
     var form = document.getElementById('postRequestForm');
     var DRAFT_KEY = 'pasabuy:post-request-draft:v1';
     var FEE_BASIS_POINTS = <?= (int) \App\Libraries\FeePolicy::PLATFORM_FEE_BASIS_POINTS ?>;
@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     restoreDraft();
     update();
-});
+})();
 </script>
 
 <?= $this->include('includes/footer') ?>

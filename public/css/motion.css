@@ -145,3 +145,6 @@
 
 /* the chat toasts sit above the back-to-top button */
 .chat-toast-stack { bottom: 84px; }
+
+/* Turbo Drive's loading bar (shown only when a page takes over 500 ms) */
+.turbo-progress-bar { height: 3px; background: linear-gradient(90deg, var(--brand), var(--aqua)); }

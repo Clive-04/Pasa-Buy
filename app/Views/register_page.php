@@ -22,7 +22,7 @@
 
             <?= $this->include('includes/flash') ?>
 
-            <form action="<?= base_url('register/process') ?>" method="post" data-submit-once novalidate style="margin-top: var(--sp-4);">
+            <form action="<?= base_url('register/process') ?>" method="post" data-submit-once novalidate data-turbo="false" style="margin-top: var(--sp-4);">
                 <?= csrf_field() ?>
 
                 <div class="form-grid">

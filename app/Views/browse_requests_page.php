@@ -79,7 +79,7 @@ $filtered = $filters['search'] !== '' || $filters['category'] !== '' || $filters
 
 <script>
 document.querySelectorAll('[data-autosubmit]').forEach(function (select) {
-    select.addEventListener('change', function () { select.form.submit(); });
+    select.addEventListener('change', function () { select.form.requestSubmit ? select.form.requestSubmit() : select.form.submit(); });
 });
 </script>
 

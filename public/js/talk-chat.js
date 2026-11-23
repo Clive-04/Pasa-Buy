@@ -329,6 +329,12 @@ if (body) {
 
         document.addEventListener('visibilitychange', markRead);
         window.addEventListener('pagehide', () => subscription && subscription.unsubscribe());
+        // Leaving through a Turbo link keeps this module in memory: stop the
+        // live subscription and the read receipts for a chat no longer shown.
+        document.addEventListener('turbo:before-render', () => {
+            if (subscription) { subscription.unsubscribe(); }
+            document.removeEventListener('visibilitychange', markRead);
+        }, { once: true });
     }).catch(() => {
         window.clearTimeout(slow);
         showProblem('Chat could not be loaded', 'Please reload the page.');

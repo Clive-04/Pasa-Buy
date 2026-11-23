@@ -22,7 +22,7 @@ $current    = ' is-active" aria-current="page';
 
     <div class="side-foot">
         <a href="<?= base_url('about') ?>" class="side-link<?= nav_attrs('about') ?>"><?= icon('help') ?><span class="side-label">About Pasa-Buy</span></a>
-        <form action="<?= base_url('logout') ?>" method="post" class="side-logout">
+        <form action="<?= base_url('logout') ?>" method="post" class="side-logout" data-turbo="false">
             <?= csrf_field() ?>
             <button type="submit" class="side-link side-link-danger" data-open-dialog="logoutDialog"><?= icon('logout') ?><span class="side-label">Log out</span></button>
         </form>

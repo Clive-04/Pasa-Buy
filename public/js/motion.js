@@ -94,6 +94,7 @@
         var start = null;
         var finished = false;
         el.setAttribute('data-counting', '');
+        el.setAttribute('data-original', original);
         el.setAttribute('aria-label', original.trim());
 
         function finish() {
@@ -225,19 +226,29 @@
         });
         document.body.appendChild(top);
 
-        // Cheap enough to run on every scroll event (no frame scheduling, so it
-        // can never get stuck when the browser pauses animation frames).
-        function update() {
-            var max = document.documentElement.scrollHeight - window.innerHeight;
-            var p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
-            bar.hidden = max < window.innerHeight * 0.35; // short pages: no bar
-            bar.style.setProperty('--progress', p.toFixed(4));
-            top.style.setProperty('--progress', p.toFixed(4));
-            top.classList.toggle('is-shown', window.scrollY > window.innerHeight * 0.8);
+        scrollUI = { bar: bar, top: top };
+        if (!scrollBound) {
+            // Bound once; always updates the current page's bar and button.
+            window.addEventListener('scroll', updateScrollUI, { passive: true });
+            window.addEventListener('resize', updateScrollUI, { passive: true });
+            scrollBound = true;
         }
-        window.addEventListener('scroll', update, { passive: true });
-        window.addEventListener('resize', update, { passive: true });
-        update();
+        updateScrollUI();
+    }
+
+    var scrollUI = null;
+    var scrollBound = false;
+
+    // Cheap enough to run on every scroll event (no frame scheduling, so it
+    // can never get stuck when the browser pauses animation frames).
+    function updateScrollUI() {
+        if (!scrollUI || !scrollUI.bar.isConnected) { return; }
+        var max = document.documentElement.scrollHeight - window.innerHeight;
+        var p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+        scrollUI.bar.hidden = max < window.innerHeight * 0.35; // short pages: no bar
+        scrollUI.bar.style.setProperty('--progress', p.toFixed(4));
+        scrollUI.top.style.setProperty('--progress', p.toFixed(4));
+        scrollUI.top.classList.toggle('is-shown', window.scrollY > window.innerHeight * 0.8);
     }
 
     // ------------------------------------- pointer tilt + magnetic buttons
@@ -297,9 +308,21 @@
         });
     }
 
-    ready(function () {
-        initCopy();
+    // Bound once: copy buttons (document click) and Turbo snapshot cleanup.
+    ready(initCopy);
+    document.addEventListener('turbo:before-cache', function () {
+        // The back-button snapshot must show final, complete content.
+        document.querySelectorAll('.scroll-progress, .to-top').forEach(function (el) { el.remove(); });
+        document.querySelectorAll('[data-counting][data-original]').forEach(function (el) {
+            el.textContent = el.getAttribute('data-original');
+            el.removeAttribute('data-counting');
+        });
+        document.querySelectorAll('.reveal-wait').forEach(function (el) { el.classList.remove('reveal-wait'); });
+    });
 
+    // Every page (Turbo swaps the body on each visit; turbo:load also fires
+    // on the first load). Without Turbo, the normal load path runs.
+    function setupPage() {
         var drawLines = Array.prototype.slice.call(document.querySelectorAll('[data-draw-line]'));
 
         if (reduce) {
@@ -321,5 +344,8 @@
             '[data-count], .hero-stats dd a, .tile-value, .mini-stat strong, .balance-amount, .profile-stats dd'
         )).filter(function (el) { return el.children.length === 0; });
         whenVisible(counters, countUp, { threshold: 0.1 });
-    });
+    }
+
+    document.addEventListener('turbo:load', setupPage);
+    ready(function () { if (!window.Turbo) { setupPage(); } });
 })();

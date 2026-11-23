@@ -231,6 +231,26 @@ final class ProfilesSearchAndNavTest extends FeatureTestCase
         $this->getAs($this->createUser(), 'about')->assertSee('href="' . base_url('post-request') . '"', null);
     }
 
+    public function testTurboDriveIsWiredWithSafeExclusions(): void
+    {
+        $me = $this->createUser();
+
+        $page = $this->getAs($me, 'dashboard');
+        $page->assertSee('@hotwired/turbo@8.0.12', null);
+        $page->assertSee('<meta name="turbo-prefetch" content="false">', null);
+        $page->assertDontSee('turbo-visit-control', null);
+        // Logout always reloads fully (clears Turbo's page cache for the old account).
+        $page->assertSee('class="side-logout" data-turbo="false"', null);
+
+        // Chat pages always load in full.
+        $this->getAs($me, 'messages')->assertSee('<meta name="turbo-visit-control" content="reload">', null);
+
+        // Login, sign-up and the external payment hand-off skip Turbo.
+        $this->getAs(null, 'login')->assertSee('data-submit-once data-turbo="false"', null);
+        $this->getAs(null, 'register')->assertSee('data-turbo="false"', null);
+        $this->getAs($me, 'wallet')->assertSee('action="' . base_url('wallet/top-up') . '" method="post" data-submit-once data-turbo="false"', null);
+    }
+
     public function testDemoNoticeOnlyAppearsAtTopUp(): void
     {
         $me = $this->createUser();

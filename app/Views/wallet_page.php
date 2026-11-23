@@ -124,7 +124,7 @@
         <button type="button" class="pb-dialog-close" data-close-dialog aria-label="Close">&times;</button>
     </div>
 
-    <form action="<?= base_url('wallet/top-up') ?>" method="post" data-submit-once>
+    <form action="<?= base_url('wallet/top-up') ?>" method="post" data-submit-once data-turbo="false">
         <?= csrf_field() ?>
         <input type="hidden" name="idempotency_key" value="<?= esc($idempotencyKey, 'attr') ?>">
 

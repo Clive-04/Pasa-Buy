@@ -95,12 +95,7 @@
                 event.target.close();
             }
         });
-
-        document.querySelectorAll('dialog[data-autopen]').forEach(function (dialog) {
-            if (typeof dialog.showModal === 'function') {
-                dialog.showModal();
-            }
-        });
+        // dialog[data-autopen] is handled per page (everyPage).
     }
 
     // ------------------------------------------------------- submit once
@@ -154,9 +149,13 @@
                 dismiss(button.closest('.flash'));
             }
         });
+    }
 
-        // Success messages leave on their own; hovering or focusing pauses.
-        document.querySelectorAll('.flash[data-autodismiss]').forEach(function (flash) {
+    // Success messages leave on their own; hovering or focusing pauses.
+    // Runs on every page (each Turbo visit brings new flashes).
+    function autoDismissFlashes() {
+        document.querySelectorAll('.flash[data-autodismiss]:not([data-timed])').forEach(function (flash) {
+            flash.setAttribute('data-timed', '');
             var delay = parseInt(flash.getAttribute('data-autodismiss'), 10) || 6000;
             var timer = null;
             var start = function () { timer = window.setTimeout(function () { dismiss(flash); }, delay); };
@@ -170,26 +169,31 @@
     }
 
     // ------------------------------------------------------------- theme
+    var themeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+    function effectiveTheme() {
+        var chosen = document.documentElement.getAttribute('data-theme');
+        if (chosen === 'light' || chosen === 'dark') {
+            return chosen;
+        }
+        return themeMedia && themeMedia.matches ? 'dark' : 'light';
+    }
+
+    // Updates the toggle buttons of the page currently shown.
+    function syncThemeButtons() {
+        var dark = effectiveTheme() === 'dark';
+        document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+            button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+            button.setAttribute('title', dark ? 'Switch to light mode' : 'Switch to dark mode');
+        });
+    }
+
     function initThemeToggle() {
         var root = document.documentElement;
-        var media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
-
-        function effective() {
-            var chosen = root.getAttribute('data-theme');
-            if (chosen === 'light' || chosen === 'dark') {
-                return chosen;
-            }
-            return media && media.matches ? 'dark' : 'light';
-        }
-
-        function sync() {
-            var dark = effective() === 'dark';
-            document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
-                button.setAttribute('aria-pressed', dark ? 'true' : 'false');
-                button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
-                button.setAttribute('title', dark ? 'Switch to light mode' : 'Switch to dark mode');
-            });
-        }
+        var media = themeMedia;
+        var effective = effectiveTheme;
+        var sync = syncThemeButtons;
 
         document.addEventListener('click', function (event) {
             if (!event.target.closest('[data-theme-toggle]')) {
@@ -297,62 +301,66 @@
                     .then(function () { button.disabled = false; });
             });
         }
+        // Page-wide listeners are bound once (see below); they act on the
+        // menu of the page currently shown.
+        notifMenu = { el: menu, close: close };
+    }
+
+    var notifMenu = null;
+
+    // -------------------------------------------------- page lifecycle
+    // With Turbo Drive the body is swapped on every visit, so element-bound
+    // setup runs on each 'turbo:load' (which also fires on the first load);
+    // page-wide listeners are bound only once. Without Turbo (CDN blocked,
+    // JavaScript module support missing) the normal DOMContentLoaded path runs.
+    function onEveryPage(fn) {
+        document.addEventListener('turbo:load', fn);
+        ready(function () { if (!window.Turbo) { fn(); } });
+    }
+
+    function bindOnce() {
+        initThemeToggle();   // document click + colour-scheme listener
+        initFlash();         // document click for dismiss buttons
+        initDialogs();       // document click for openers/closers
+        initSubmitOnce();    // document submit
+        startUnreadPolling();
+
         document.addEventListener('click', function (event) {
-            if (!menu.contains(event.target)) { close(false); }
+            if (notifMenu && notifMenu.el.isConnected && !notifMenu.el.contains(event.target)) { notifMenu.close(false); }
         });
         document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') { close(true); }
+            if (event.key === 'Escape' && notifMenu && notifMenu.el.isConnected) { notifMenu.close(true); }
         });
-    }
 
-    // ------------------------------------------------------ scroll reveal
-    // Blocks that start below the fold rise in when scrolled into view.
-    // Only added when motion is allowed and the browser supports it, so
-    // content is never left hidden.
-    function initScrollReveal() {
-        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (reduce || !('IntersectionObserver' in window)) {
-            return;
-        }
-        var fold = window.innerHeight;
-        var targets = document.querySelectorAll(
-            '.dashboard-main > *, .content-wrap > *, .site-main > :not(.content-wrap), ' +
-            '.dashboard-main .card, .dashboard-main .req-card, .team-card, .person-card'
-        );
-        var observer = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('is-visible');
-                    observer.unobserve(entry.target);
-                }
+        // A Turbo form submission that fails (offline, server error) must
+        // not leave its "submit once" button disabled.
+        document.addEventListener('turbo:submit-end', function (event) {
+            if (event.detail && event.detail.success) { return; }
+            var form = event.target;
+            form.removeAttribute('data-submitting');
+            form.querySelectorAll('[aria-busy="true"]').forEach(function (button) {
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
             });
-        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+        });
 
-        // Browsers with CSS scroll-driven animations get the native version
-        // (motion.css .sd-reveal), tied to the scroll position itself.
-        var native = window.CSS && CSS.supports && CSS.supports('animation-timeline: view()') && CSS.supports('animation-range: entry 0% entry 100%');
-
-        targets.forEach(function (el) {
-            if (el.closest('dialog') || el.closest('.reveal') || el.closest('.sd-reveal')) { return; }
-            if (el.getBoundingClientRect().top > fold) {
-                if (native) {
-                    el.classList.add('sd-reveal');
-                    return;
-                }
-                el.style.animation = 'none'; // the scroll reveal replaces the load animation
-                el.classList.add('reveal');
-                observer.observe(el);
-            }
+        // Before Turbo snapshots a page for the back button: close overlays.
+        document.addEventListener('turbo:before-cache', function () {
+            document.querySelectorAll('dialog[open]').forEach(function (d) { d.close(); });
+            if (notifMenu && notifMenu.el.isConnected) { notifMenu.close(false); }
         });
     }
 
-    ready(function () {
-        // Scroll reveals now live in motion.js (one system for every page).
+    function everyPage() {
+        notifMenu = null;
         initNotificationMenu();
-        initThemeToggle();
-        initFlash();
-        initDialogs();
-        initSubmitOnce();
-        startUnreadPolling();
-    });
+        syncThemeButtons();
+        autoDismissFlashes();
+        document.querySelectorAll('dialog[data-autopen]').forEach(function (dialog) {
+            if (typeof dialog.showModal === 'function' && !dialog.open) { dialog.showModal(); }
+        });
+    }
+
+    ready(bindOnce);
+    onEveryPage(everyPage);
 })();

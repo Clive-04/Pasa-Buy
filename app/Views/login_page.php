@@ -22,7 +22,7 @@
 
             <?= $this->include('includes/flash') ?>
 
-            <form action="<?= base_url('login/process') ?>" method="post" data-submit-once style="margin-top: var(--sp-4);">
+            <form action="<?= base_url('login/process') ?>" method="post" data-submit-once data-turbo="false" style="margin-top: var(--sp-4);">
                 <?= csrf_field() ?>
 
                 <div class="form-group">

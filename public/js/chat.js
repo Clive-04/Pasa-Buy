@@ -149,12 +149,23 @@
     }
 
     // ------------------------------------------------------------- poll
+    var stopped = false;
+
     function schedule(ms) {
         window.clearTimeout(timer);
+        if (stopped) { return; }
         timer = window.setTimeout(poll, ms);
     }
 
+    // Leaving through a Turbo link keeps this script in memory: stop polling
+    // so a chat that's no longer on screen is never marked read.
+    document.addEventListener('turbo:before-render', function () {
+        stopped = true;
+        window.clearTimeout(timer);
+    }, { once: true });
+
     function poll() {
+        if (stopped || !body.isConnected) { return; }
         if (document.visibilityState !== 'visible') {
             return; // resumes on visibilitychange
         }
