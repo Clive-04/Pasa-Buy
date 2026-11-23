@@ -153,6 +153,64 @@ final class BackupTools
         return $previous;
     }
 
+    /**
+     * Table names a backup's SQL dump creates (from its CREATE TABLE lines).
+     *
+     * @return list<string> sorted
+     */
+    public static function dumpTables(string $source): array
+    {
+        $gz = gzopen($source, 'rb');
+
+        if ($gz === false) {
+            throw new RuntimeException('Cannot read ' . basename($source) . '.');
+        }
+
+        $tables = [];
+
+        while (($line = gzgets($gz, 1 << 20)) !== false) {
+            if (preg_match('/^CREATE TABLE (?:IF NOT EXISTS )?`([^`]+)`/', $line, $m) === 1) {
+                $tables[$m[1]] = true;
+            }
+        }
+
+        gzclose($gz);
+        $tables = array_keys($tables);
+        sort($tables);
+
+        return $tables;
+    }
+
+    /**
+     * Base tables currently in the configured database (fresh query, not the
+     * connection's cached table list, so it is accurate right after a restore).
+     *
+     * @return list<string> sorted
+     */
+    public static function databaseTables(): array
+    {
+        $rows   = db_connect()->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'")->getResultArray();
+        $tables = array_map(static fn (array $row): string => (string) reset($row), $rows);
+        sort($tables);
+
+        return $tables;
+    }
+
+    /**
+     * Tables in the target that the backup would not replace. A SQL dump only
+     * drops and recreates its own tables, so restoring it over a newer schema
+     * leaves these behind while row counts of the backed-up tables still match.
+     *
+     * @param list<string> $targetTables
+     * @param list<string> $dumpTables
+     *
+     * @return list<string>
+     */
+    public static function tablesOutsideBackup(array $targetTables, array $dumpTables): array
+    {
+        return array_values(array_diff($targetTables, $dumpTables));
+    }
+
     /** @return array<string, int> */
     public static function rowCounts(): array
     {

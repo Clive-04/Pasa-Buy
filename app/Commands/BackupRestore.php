@@ -16,6 +16,10 @@ use Throwable;
  * Safety:
  *  - checksums are verified before anything is touched;
  *  - --confirm must repeat the target database name exactly;
+ *  - the target must not contain tables the backup lacks (e.g. a newer
+ *    schema): restore into an empty database for a cross-version rollback;
+ *  - afterwards the table list must equal the backup's and row counts must
+ *    match the manifest;
  *  - current uploads are moved aside (writable/uploads.before-restore-<ts>),
  *    not deleted.
  *
@@ -50,10 +54,31 @@ class BackupRestore extends BaseCommand
             CLI::write('Verifying checksums…');
             BackupTools::verifyChecksums($directory);
 
-            $manifest = json_decode((string) file_get_contents($directory . DIRECTORY_SEPARATOR . 'manifest.json'), true);
+            $manifest   = json_decode((string) file_get_contents($directory . DIRECTORY_SEPARATOR . 'manifest.json'), true);
+            $dump       = $directory . DIRECTORY_SEPARATOR . 'database.sql.gz';
+            $dumpTables = BackupTools::dumpTables($dump);
+            $leftovers  = BackupTools::tablesOutsideBackup(BackupTools::databaseTables(), $dumpTables);
+
+            // A dump only replaces its own tables. Restoring over a newer
+            // schema would leave the extra tables behind while the row-count
+            // check below still passes, so refuse instead.
+            if ($leftovers !== []) {
+                CLI::error('Refusing to restore: ' . $db['database'] . ' has tables this backup does not contain ('
+                    . implode(', ', $leftovers) . '). Restore into an empty database instead (DEPLOYMENT.md, section 7).');
+
+                return EXIT_USER_INPUT;
+            }
 
             CLI::write('Restoring database into ' . $db['database'] . '…');
-            BackupTools::restoreDatabase($db, $directory . DIRECTORY_SEPARATOR . 'database.sql.gz');
+            BackupTools::restoreDatabase($db, $dump);
+
+            $restoredTables = BackupTools::databaseTables();
+
+            if ($restoredTables !== $dumpTables) {
+                CLI::error('Restored tables differ from the backup: ' . json_encode(['backup' => $dumpTables, 'database' => $restoredTables]));
+
+                return EXIT_ERROR;
+            }
 
             CLI::write('Restoring uploads…');
             $previous = BackupTools::restoreUploads($directory . DIRECTORY_SEPARATOR . 'uploads.tar.gz');
@@ -71,7 +96,7 @@ class BackupRestore extends BaseCommand
                 return EXIT_ERROR;
             }
 
-            CLI::write('Restore verified: row counts match the manifest ' . json_encode($counts), 'green');
+            CLI::write('Restore verified: ' . count($restoredTables) . ' tables match the backup and row counts match the manifest ' . json_encode($counts), 'green');
 
             return EXIT_SUCCESS;
         } catch (Throwable $e) {
