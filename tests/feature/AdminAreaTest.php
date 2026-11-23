@@ -117,6 +117,8 @@ final class AdminAreaTest extends FeatureTestCase
 
         $this->assertRedirectsTo($this->getAs($member, 'dashboard'), 'login');
         $this->assertStringContainsString('suspended', $this->flash('error'));
+        $this->assertArrayNotHasKey('user_id', $_SESSION);
+        $this->assertArrayNotHasKey('isLoggedIn', $_SESSION);
     }
 
     public function testNobodyCanMessageASuspendedAccountAndRunnersDoNotSeeTheirRequests(): void

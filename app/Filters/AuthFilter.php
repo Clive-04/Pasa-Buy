@@ -30,7 +30,10 @@ class AuthFilter implements FilterInterface
         $user = db_connect()->table('users')->select('status')->where('id', (int) $session->get('user_id'))->get()->getRowArray();
 
         if ($user === null || $user['status'] === 'suspended') {
-            $session->destroy();
+            // Clear authenticated state, then rotate to an anonymous session.
+            // Keep it active so the redirect flash survives the next request.
+            $_SESSION = [];
+            $session->regenerate(true);
 
             if (str_contains($request->getHeaderLine('Accept'), 'application/json')) {
                 return service('response')->setStatusCode(401)->setJSON(['error' => 'This account is not available.']);

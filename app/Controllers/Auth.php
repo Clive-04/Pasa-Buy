@@ -167,7 +167,10 @@ class Auth extends BaseController
 
     public function logout()
     {
-        session()->destroy();
+        // Clear authenticated state, then rotate to an anonymous session.
+        // Keep it active so the redirect flash survives the next request.
+        $_SESSION = [];
+        session()->regenerate(true);
 
         return redirect()->to('/login')->with('success', 'Logged out successfully.');
     }

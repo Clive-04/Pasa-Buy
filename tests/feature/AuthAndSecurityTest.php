@@ -110,6 +110,9 @@ final class AuthAndSecurityTest extends FeatureTestCase
 
         $response = $this->postAs($userId, 'logout');
         $this->assertRedirectsTo($response, 'login');
+        $this->assertArrayNotHasKey('user_id', $_SESSION);
+        $this->assertArrayNotHasKey('isLoggedIn', $_SESSION);
+        $this->assertSame('Logged out successfully.', $this->flash('success'));
     }
 
     // --------------------------------------------------------------- CSRF

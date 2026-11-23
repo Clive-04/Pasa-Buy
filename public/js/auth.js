@@ -182,8 +182,9 @@
     }
 
     document.querySelectorAll('form[data-auth-form]').forEach(function (form) {
-        if (form.getAttribute('data-auth-ready') === '1') { return; }
-        form.setAttribute('data-auth-ready', '1');
+        // DOM properties are not copied into Turbo's cloned snapshots.
+        if (form.pasabuyAuthReady) { return; }
+        form.pasabuyAuthReady = true;
         initPasswordToggles(form);
         initCapsLock(form);
         initChecks(form);

@@ -107,36 +107,50 @@
     }
 
     // ------------------------------------------------------- submit once
+    function resetSubmitting(form) {
+        form.removeAttribute('data-submitting');
+        form.querySelectorAll('[data-submit-once-busy]').forEach(function (button) {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+            button.removeAttribute('data-submit-once-busy');
+            var label = button.getAttribute('data-submit-once-label');
+            if (label !== null) {
+                if (button.tagName === 'INPUT') { button.value = label; }
+                else { button.innerHTML = label; }
+                button.removeAttribute('data-submit-once-label');
+            }
+        });
+    }
+
+    function resetSubmittingForms() {
+        document.querySelectorAll('form[data-submitting="1"]').forEach(resetSubmitting);
+    }
+
     function initSubmitOnce() {
         document.addEventListener('submit', function (event) {
             var form = event.target;
-            if (!form.matches('form[data-submit-once]')) {
-                return;
-            }
+            if (event.defaultPrevented || !form.matches('form[data-submit-once]')) { return; }
             if (form.getAttribute('data-submitting') === '1') {
                 event.preventDefault();
                 return;
             }
             form.setAttribute('data-submitting', '1');
             form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (button) {
+                if (button.disabled) { return; }
+                button.setAttribute('data-submit-once-busy', '1');
                 button.disabled = true;
                 button.setAttribute('aria-busy', 'true');
                 if (button.getAttribute('data-busy-label')) {
-                    button.textContent = button.getAttribute('data-busy-label');
+                    button.setAttribute('data-submit-once-label', button.tagName === 'INPUT' ? button.value : button.innerHTML);
+                    if (button.tagName === 'INPUT') { button.value = button.getAttribute('data-busy-label'); }
+                    else { button.textContent = button.getAttribute('data-busy-label'); }
                 }
             });
         });
 
-        // Re-enable forms restored from the back/forward cache.
-        window.addEventListener('pageshow', function () {
-            document.querySelectorAll('form[data-submitting="1"]').forEach(function (form) {
-                form.removeAttribute('data-submitting');
-                form.querySelectorAll('[aria-busy="true"]').forEach(function (button) {
-                    button.disabled = false;
-                    button.removeAttribute('aria-busy');
-                });
-            });
-        });
+        window.addEventListener('pageshow', resetSubmittingForms);
+        document.addEventListener('turbo:before-cache', resetSubmittingForms);
+        document.addEventListener('turbo:load', resetSubmittingForms);
     }
 
     // ------------------------------------------------------------- flash
@@ -345,11 +359,7 @@
         document.addEventListener('turbo:submit-end', function (event) {
             if (event.detail && event.detail.success) { return; }
             var form = event.target;
-            form.removeAttribute('data-submitting');
-            form.querySelectorAll('[aria-busy="true"]').forEach(function (button) {
-                button.disabled = false;
-                button.removeAttribute('aria-busy');
-            });
+            resetSubmitting(form);
         });
 
         // Before Turbo snapshots a page for the back button: close overlays.
