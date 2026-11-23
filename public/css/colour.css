@@ -335,3 +335,11 @@ body { background: var(--canvas); }
     .needs-you a strong { white-space: normal; }
     .needs-you a span { flex-basis: calc(100% - 28px); order: 3; }
 }
+
+/* demo notice inside the top-up dialog (replaces the old site-wide banner) */
+.demo-notice {
+    display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; padding: 10px 12px;
+    border: 1px solid var(--warn-line); border-radius: 10px; background: var(--warn-bg); color: var(--warn-ink);
+    font-size: 0.86rem; line-height: 1.45;
+}
+.demo-notice > .i { flex: none; width: 18px; height: 18px; margin-top: 1px; }

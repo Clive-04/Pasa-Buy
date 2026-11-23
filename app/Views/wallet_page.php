@@ -128,6 +128,11 @@
         <?= csrf_field() ?>
         <input type="hidden" name="idempotency_key" value="<?= esc($idempotencyKey, 'attr') ?>">
 
+        <div class="demo-notice" role="note">
+            <?= icon('alert') ?>
+            <p><strong>Demo version:</strong> wallet balances are simulated credits, not real money. Please don't enter real personal details<?= $gateway ? ' or real GCash/Maya account details' : '' ?>.</p>
+        </div>
+
         <div class="form-group">
             <label for="amount">Amount (₱)</label>
             <input type="number" step="0.01" min="0.01" max="5000" name="amount" id="amount" inputmode="decimal"

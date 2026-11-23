@@ -199,16 +199,6 @@ strong { font-weight: 700; }
 .text-success { color: var(--success-ink); font-weight: 600; }
 .is-empty-text { color: var(--muted); font-weight: 500; font-style: italic; }
 
-/* ============================================================ DEMO BANNER */
-.demo-banner {
-    padding: 6px 16px;
-    background: var(--warn-bg);
-    color: var(--warn-ink);
-    border-bottom: 1px solid var(--warn-line);
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-align: center;
-}
 
 /* ========================================================== THEME TOGGLE */
 .theme-toggle .i-sun, .theme-toggle .i-moon { display: none; }
@@ -333,8 +323,6 @@ strong { font-weight: 700; }
     scrollbar-width: thin;
 }
 .sidebar-mobile-top, .sidebar-overlay { display: none; }
-/* The demo banner sits above the sticky top bar: keep the rail's foot on screen at page top. */
-body:has(> .demo-banner) .dashboard-sidebar { height: calc(100dvh - var(--topbar-h) - 34px); }
 
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
 .side-heading { margin: 14px 10px 4px; color: var(--muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; }

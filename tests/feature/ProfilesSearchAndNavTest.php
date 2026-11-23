@@ -209,6 +209,19 @@ final class ProfilesSearchAndNavTest extends FeatureTestCase
         $this->getAs($requester, 'dashboard')->assertDontSee('badge-action', null);
     }
 
+    public function testDemoNoticeOnlyAppearsAtTopUp(): void
+    {
+        $me = $this->createUser();
+
+        $this->getAs($me, 'dashboard')->assertDontSee('demo-banner', null);
+        $this->getAs($me, 'dashboard')->assertDontSee('Demo version:');
+        $this->getAs(null, 'login')->assertDontSee('Demo version:');
+
+        $wallet = $this->getAs($me, 'wallet');
+        $wallet->assertSee('class="demo-notice"', null);
+        $wallet->assertSee('wallet balances are simulated credits, not real money');
+    }
+
     public function testAdminRailHighlightsTheCurrentPage(): void
     {
         $admin = $this->createUser(['role' => 'admin']);

@@ -34,8 +34,4 @@
 </head>
 <body<?php if (session('isLoggedIn')): ?> data-poll-url="<?= esc(base_url('notifications/unread-count'), 'attr') ?>" data-poll-seconds="<?= (int) config('PasaBuy')->notificationPollSeconds ?>"<?php endif; ?>>
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <?php if (is_demo_mode()): ?>
-        <div class="demo-banner" role="note">
-            Demo version: wallet balances are simulated credits, not real money. Please don't enter real personal details.
-        </div>
-    <?php endif; ?>
+    <?php /* The demo notice now appears where it matters: in the wallet top-up dialog. */ ?>
