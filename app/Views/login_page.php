@@ -5,14 +5,15 @@
     <div class="auth">
         <section class="hero-card auth-aside" aria-labelledby="loginHeroTitle">
             <div>
-                <p class="eyebrow" style="background: rgba(255,255,255,.12); color: var(--mint);">Welcome back</p>
+                <p class="eyebrow">Welcome back</p>
                 <h1 id="loginHeroTitle">Errands done by <em>your neighbours</em>.</h1>
                 <p class="lead">Post what you need from a nearby store, or earn by delivering for people in your community.</p>
             </div>
-            <ul class="feature-list">
-                <li><span class="feature-icon"><?= icon('package') ?></span><div><strong>Post a request</strong><span>Item, store and where to bring it — that's it.</span></div></li>
-                <li><span class="feature-icon"><?= icon('truck') ?></span><div><strong>Track every step</strong><span>Accepted, on the way, delivered — with updates.</span></div></li>
-                <li><span class="feature-icon"><?= icon('wallet') ?></span><div><strong><?= is_demo_mode() ? 'Demo wallet' : 'Wallet' ?></strong><span><?= is_demo_mode() ? 'Try payments with simulated credits. No real money.' : 'Pay runners from your wallet balance.' ?></span></div></li>
+            <?= $this->include('includes/auth_scene') ?>
+            <ul class="auth-points">
+                <li><?= icon('check') ?> Post an errand in a minute</li>
+                <li><?= icon('check') ?> Follow it from store to door</li>
+                <li><?= icon('check') ?> <?= is_demo_mode() ? 'Demo wallet: simulated credits, no real money' : 'Pay from your wallet' ?></li>
             </ul>
         </section>
 
@@ -22,24 +23,32 @@
 
             <?= $this->include('includes/flash') ?>
 
-            <form action="<?= base_url('login/process') ?>" method="post" data-submit-once data-turbo="false" style="margin-top: var(--sp-4);">
+            <form action="<?= base_url('login/process') ?>" method="post" data-submit-once data-turbo="false" data-auth-form class="auth-form">
                 <?= csrf_field() ?>
 
                 <div class="form-group">
                     <label for="email">Email address</label>
                     <input type="email" id="email" name="email" placeholder="you@example.com"
                            value="<?= esc(form_value('email')) ?>" autocomplete="email" maxlength="50" required
+                           aria-describedby="emailHint" data-check="email"
                            <?= form_value('email') === '' ? 'autofocus' : '' ?>>
+                    <p class="field-hint-live" id="emailHint" aria-live="polite"></p>
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Your password"
-                           autocomplete="current-password" required
-                           <?= form_value('email') !== '' ? 'autofocus' : '' ?>>
+                    <div class="pw-field">
+                        <input type="password" id="password" name="password" placeholder="Your password"
+                               autocomplete="current-password" required aria-describedby="capsHint"
+                               <?= form_value('email') !== '' ? 'autofocus' : '' ?>>
+                        <button type="button" class="pw-toggle" data-pw-toggle aria-controls="password" aria-pressed="false" aria-label="Show password" title="Show password">
+                            <?= icon('eye', 'pw-show') ?><?= icon('eye-off', 'pw-hide') ?>
+                        </button>
+                    </div>
+                    <p class="caps-hint" id="capsHint" aria-live="polite" hidden><?= icon('alert') ?> Caps Lock is on</p>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-lg btn-block" data-busy-label="Logging in…"><?= icon('arrow-right') ?> Log in</button>
+                <button type="submit" class="btn btn-primary btn-lg btn-block" data-busy-label="Logging in…">Log in <?= icon('arrow-right') ?></button>
             </form>
 
             <p class="auth-switch">New to Pasa-Buy? <a class="link" href="<?= base_url('register') ?>">Create an account</a></p>
@@ -47,4 +56,5 @@
     </div>
 </main>
 
+<script src="<?= asset('js/auth.js') ?>"></script>
 <?= $this->include('includes/footer') ?>
