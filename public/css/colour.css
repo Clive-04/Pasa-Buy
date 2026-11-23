@@ -1,195 +1,209 @@
 /*
- * Pasa-Buy colour layer — loaded after theme.css, components.css, pages.css.
+ * Pasa-Buy colour and card layer — loaded after theme.css, components.css
+ * and pages.css.
  *
- * Puts the Ocean tide colours into the whole page instead of only the hero
- * cards, so light mode no longer reads as flat white:
- *  - a layered aqua / indigo / teal glow behind everything;
- *  - a tinted navigation rail with a filled active item;
- *  - an accent bar under every page title;
- *  - cards with a soft tinted top fade and coloured icon tiles;
- *  - stats, tables, money boxes and request cards with their own accents.
+ * Direction: crisp and purposeful rather than decorative.
+ *  - Colour where it carries meaning: the deep-teal navigation rail, status
+ *    and category markers, money amounts, the current page.
+ *  - Cards are solid surfaces with a 1px border, a hairline under their
+ *    title row and a modest radius. No glows, gradient tiles or fades.
+ *  - A tinted (not white) page background so cards stand out.
  *
- * Every colour is a token, redefined for dark mode below, so both themes
- * stay readable (text/background pairs keep WCAG AA contrast).
+ * Every colour is a token with a dark-mode value below, and text/background
+ * pairs keep WCAG AA contrast in both themes.
  */
 
 /* ================================================================ TOKENS */
 :root {
-    --tint-indigo: #e1e6ff;  --tint-indigo-ink: #2f3db8;
-    --tint-teal:   #d3f1f1;  --tint-teal-ink:   #00605f;
-    --tint-aqua:   #cdf6f6;  --tint-aqua-ink:   #00625f;
-    --tint-amber:  #ffe8c2;  --tint-amber-ink:  #7a4205;
-    --tint-rose:   #ffdbe3;  --tint-rose-ink:   #951d39;
-    --tint-violet: #e8dcff;  --tint-violet-ink: #532ea8;
-    --tint-green:  #cdf0dc;  --tint-green-ink:  #125a34;
-    --rail-bg: linear-gradient(180deg, #e6eaff 0%, #def3f6 55%, #d9f0ec 100%);
-    --card-border: #d6e2ee;
-    --card-fade: color-mix(in srgb, var(--aqua) 11%, var(--surface));
-    --canvas:
-        radial-gradient(900px 520px at -5% -10%, rgba(0, 209, 209, 0.26), transparent 62%),
-        radial-gradient(800px 560px at 105% -5%, rgba(65, 82, 215, 0.20), transparent 60%),
-        radial-gradient(1100px 700px at 50% 115%, rgba(1, 172, 174, 0.17), transparent 60%),
-        #e9f1f7;
-    --accent-bar: linear-gradient(90deg, var(--aqua), var(--indigo));
-    --card-shadow: 0 1px 2px rgba(11, 37, 48, 0.04), 0 6px 18px rgba(65, 82, 215, 0.06);
+    --canvas: #e8eef3;
+    --card-border: #d5dee7;
+    --card-radius: 14px;
+    --hairline: #e3e9ef;
+    --label-ink: #00696b;
+
+    /* navigation rail (deep teal in light mode) */
+    --rail: #07383b;
+    --rail-line: #0f4c50;
+    --rail-ink: #d4ecec;
+    --rail-muted: #84b4b5;
+    --rail-hover: rgba(255, 255, 255, 0.07);
+    --rail-active: rgba(255, 255, 255, 0.13);
+    --rail-marker: #3fe0e0;
+
+    /* category markers */
+    --cat-food: #d48a00;
+    --cat-medicine: #d6455f;
+    --cat-school_supplies: #4152d7;
+    --cat-household: #01979a;
+    --cat-personal_care: #8455e8;
+    --cat-other: #7b8fa1;
+
+    --money-ink: #127a45;
 }
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        --tint-indigo: rgba(129, 140, 248, 0.14); --tint-indigo-ink: #c7d2fe;
-        --tint-teal:   rgba(1, 172, 174, 0.16);   --tint-teal-ink:   #7ff0f0;
-        --tint-aqua:   rgba(0, 209, 209, 0.14);   --tint-aqua-ink:   #8ff5f5;
-        --tint-amber:  rgba(251, 191, 36, 0.14);  --tint-amber-ink:  #fcd34d;
-        --tint-rose:   rgba(251, 113, 133, 0.14); --tint-rose-ink:   #fda4af;
-        --tint-violet: rgba(167, 139, 250, 0.15); --tint-violet-ink: #d8c8ff;
-        --tint-green:  rgba(74, 222, 128, 0.13);  --tint-green-ink:  #86efac;
-        --rail-bg: linear-gradient(180deg, #0b2431 0%, #08202a 60%, #072027 100%);
+        --canvas: #04141a;
         --card-border: #1a4250;
-        --card-fade: color-mix(in srgb, var(--aqua) 5%, var(--surface));
-        --canvas:
-            radial-gradient(900px 520px at -5% -10%, rgba(0, 209, 209, 0.10), transparent 62%),
-            radial-gradient(800px 560px at 105% -5%, rgba(65, 82, 215, 0.14), transparent 60%),
-            #04141a;
-        --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --hairline: #15394a;
+        --label-ink: #5ce6e6;
+        --rail: #071c24;
+        --rail-line: #153845;
+        --rail-ink: #cde7ec;
+        --rail-muted: #7ea6b0;
+        --rail-hover: rgba(255, 255, 255, 0.05);
+        --rail-active: rgba(0, 209, 209, 0.12);
+        --rail-marker: #00d1d1;
+        --cat-food: #fbbf24;
+        --cat-medicine: #fb7185;
+        --cat-school_supplies: #a5b4fc;
+        --cat-household: #2fe0e0;
+        --cat-personal_care: #c4b5fd;
+        --cat-other: #94a3b8;
+        --money-ink: #86efac;
     }
 }
 
 :root[data-theme="dark"] {
-    --tint-indigo: rgba(129, 140, 248, 0.14); --tint-indigo-ink: #c7d2fe;
-    --tint-teal:   rgba(1, 172, 174, 0.16);   --tint-teal-ink:   #7ff0f0;
-    --tint-aqua:   rgba(0, 209, 209, 0.14);   --tint-aqua-ink:   #8ff5f5;
-    --tint-amber:  rgba(251, 191, 36, 0.14);  --tint-amber-ink:  #fcd34d;
-    --tint-rose:   rgba(251, 113, 133, 0.14); --tint-rose-ink:   #fda4af;
-    --tint-violet: rgba(167, 139, 250, 0.15); --tint-violet-ink: #d8c8ff;
-    --tint-green:  rgba(74, 222, 128, 0.13);  --tint-green-ink:  #86efac;
-    --rail-bg: linear-gradient(180deg, #0b2431 0%, #08202a 60%, #072027 100%);
+    --canvas: #04141a;
     --card-border: #1a4250;
-    --card-fade: color-mix(in srgb, var(--aqua) 5%, var(--surface));
-    --canvas:
-        radial-gradient(900px 520px at -5% -10%, rgba(0, 209, 209, 0.10), transparent 62%),
-        radial-gradient(800px 560px at 105% -5%, rgba(65, 82, 215, 0.14), transparent 60%),
-        #04141a;
-    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --hairline: #15394a;
+    --label-ink: #5ce6e6;
+    --rail: #071c24;
+    --rail-line: #153845;
+    --rail-ink: #cde7ec;
+    --rail-muted: #7ea6b0;
+    --rail-hover: rgba(255, 255, 255, 0.05);
+    --rail-active: rgba(0, 209, 209, 0.12);
+    --rail-marker: #00d1d1;
+    --cat-food: #fbbf24;
+    --cat-medicine: #fb7185;
+    --cat-school_supplies: #a5b4fc;
+    --cat-household: #2fe0e0;
+    --cat-personal_care: #c4b5fd;
+    --cat-other: #94a3b8;
+    --money-ink: #86efac;
 }
 
 /* ================================================================ CANVAS */
-body { background: var(--canvas); background-attachment: fixed; }
-
-/* top bar and guest header: a thin aqua → indigo line instead of grey */
-.app-topbar, .site-header { border-bottom-color: transparent; }
-.app-topbar::after, .site-header::after {
-    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-    background: var(--accent-bar); opacity: .55; pointer-events: none;
-}
+body { background: var(--canvas); }
 
 /* ================================================================== RAIL */
 .dashboard-container {
-    background:
-        linear-gradient(to right, transparent calc(var(--rail-col) - 1px), var(--card-border) calc(var(--rail-col) - 1px) var(--rail-col), transparent var(--rail-col)),
-        var(--rail-bg);
-    background-size: 100% 100%, var(--rail-col) 100%;
-    background-repeat: no-repeat;
+    background: linear-gradient(to right, var(--rail) var(--rail-col), transparent var(--rail-col));
 }
-.side-heading { color: var(--tint-teal-ink); }
-.side-link .i {
-    box-sizing: content-box; padding: 6px; margin: -6px 0; border-radius: 10px;
-    transition: background-color var(--dur-fast), color var(--dur-fast);
+.dashboard-sidebar { color: var(--rail-ink); }
+.side-heading { color: var(--rail-muted); }
+.side-link { color: var(--rail-ink); }
+.side-link .i { color: var(--rail-muted); }
+.side-link:hover { background: var(--rail-hover); color: #fff; }
+.side-link:hover .i { color: var(--rail-ink); }
+.side-link.is-active { background: var(--rail-active); color: #fff; }
+.side-link.is-active .i { color: var(--rail-marker); }
+.side-link.is-active::before { background: var(--rail-marker); }
+.side-meta, .side-link.is-active .side-meta { color: var(--rail-muted); }
+.side-link-danger, .side-link-danger .i { color: #ffb4b4; }
+.side-link-danger:hover { background: rgba(255, 120, 120, 0.12); color: #ffd0d0; }
+.dashboard-sidebar .side-foot { border-top-color: var(--rail-line); }
+.side-link:focus-visible { outline-color: var(--rail-marker); }
+.side-link .badge.badge-action { background: var(--rail-marker); color: #052b2d; }
+.sidebar-mobile-top { border-bottom-color: var(--rail-line); }
+.sidebar-mobile-title { color: #fff; }
+.dashboard-sidebar .sidebar-close { color: var(--rail-ink); }
+.dashboard-sidebar .sidebar-close:hover { background: var(--rail-hover); color: #fff; }
+@media (min-width: 901px) and (max-width: 1279px) {
+    .side-heading { background: var(--rail-line); }
 }
-.side-link:hover { background: color-mix(in srgb, var(--surface) 72%, transparent); }
-.side-link:hover .i { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
-.side-link.is-active { background: var(--surface); color: var(--ink); box-shadow: 0 2px 12px rgba(65, 82, 215, 0.12); }
-.side-link.is-active .i { background: var(--accent-bar); color: #fff; }
-.side-link.is-active::before { background: var(--accent-bar); }
-.side-link.is-active .side-meta { color: var(--tint-indigo-ink); }
-.dashboard-sidebar .side-foot { border-top-color: var(--card-border); }
 @media (max-width: 900px) {
     .dashboard-container { background: none; }
-    .dashboard-sidebar { background: var(--rail-bg); }
-}
-@media (min-width: 901px) and (max-width: 1279px) {
-    .side-link .i { margin: -6px; }
+    .dashboard-sidebar { background: var(--rail); }
 }
 
 /* ======================================================== PAGE HEADINGS */
-.page-head h1::after {
-    content: ""; display: block; width: 48px; height: 4px; margin-top: 10px; border-radius: 4px;
-    background: var(--accent-bar);
-    transform-origin: left; animation: pb-grow 600ms var(--ease-out) 200ms both;
+.eyebrow {
+    padding: 0; background: none; border-radius: 0;
+    color: var(--label-ink); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
 }
-.eyebrow { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
 
 /* ================================================================= CARDS */
-.card, .req-card, .needs-you, .chat, .person-card, .team-card, .req-row, .stat, .stat-link {
-    border-color: var(--card-border);
-    box-shadow: var(--card-shadow);
+.card, .needs-you, .chat, .person-card, .team-card, .stat, .stat-link, .req-card, .req-row {
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    box-shadow: none;
 }
-.card { background: linear-gradient(180deg, var(--card-fade) 0, var(--surface) 96px); }
+.card { background: var(--surface); padding: 20px 22px; }
 
-/* icon tiles in card and section headings, rotating colours */
-.card-head :is(h2, h3) > .i, .section-label > .i {
-    box-sizing: content-box; width: 18px; height: 18px; padding: 7px; border-radius: 10px;
-    background: var(--tint-indigo); color: var(--tint-indigo-ink);
+/* title row with a hairline under it, spanning the card */
+.card > .card-head {
+    margin: -20px -22px 18px; padding: 14px 22px;
+    border-bottom: 1px solid var(--hairline);
 }
-.card:nth-of-type(3n+2) > .card-head :is(h2, h3) > .i { background: var(--tint-teal); color: var(--tint-teal-ink); }
-.card:nth-of-type(3n+3) > .card-head :is(h2, h3) > .i { background: var(--tint-amber); color: var(--tint-amber-ink); }
+.card-head :is(h2, h3) { font-size: 0.98rem; font-weight: 750; letter-spacing: -0.01em; }
+.card-head :is(h2, h3) > .i { width: 18px; height: 18px; color: var(--muted); }
 
-/* small stats: each tile its own colour */
-.mini-stat { border-color: transparent; }
-.mini-stat:nth-child(4n+1) { background: var(--tint-indigo); }
-.mini-stat:nth-child(4n+1) strong { color: var(--tint-indigo-ink); }
-.mini-stat:nth-child(4n+2) { background: var(--tint-teal); }
-.mini-stat:nth-child(4n+2) strong { color: var(--tint-teal-ink); }
-.mini-stat:nth-child(4n+3) { background: var(--tint-amber); }
-.mini-stat:nth-child(4n+3) strong { color: var(--tint-amber-ink); }
-.mini-stat:nth-child(4n+4) { background: var(--tint-green); }
-.mini-stat:nth-child(4n+4) strong { color: var(--tint-green-ink); }
+.section-label { font-size: 1.05rem; letter-spacing: -0.01em; }
+.section-label > .i { width: 18px; height: 18px; color: var(--muted); }
 
-/* large stats (admin, links): a coloured edge each */
-.stat-grid > .stat, .stat-links > .stat-link { position: relative; overflow: hidden; }
-.stat-grid > .stat::before, .stat-links > .stat-link::before {
-    content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--indigo);
+/* hover: a quiet border change, no lift */
+:is(.req-card, .person-card, .team-card, .stat-link, a.mini-stat):hover {
+    transform: none; box-shadow: none; border-color: var(--line-strong);
 }
-.stat-grid > .stat:nth-child(4n+2)::before, .stat-links > .stat-link:nth-child(4n+2)::before { background: var(--teal); }
-.stat-grid > .stat:nth-child(4n+3)::before, .stat-links > .stat-link:nth-child(4n+3)::before { background: #e0a31a; }
-.stat-grid > .stat:nth-child(4n+4)::before, .stat-links > .stat-link:nth-child(4n+4)::before { background: #22a55b; }
 
-/* ===================================================== TABLES AND MONEY */
-.pb-table th { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
-.money-breakdown { background: linear-gradient(135deg, var(--tint-aqua), var(--tint-indigo)); border-color: transparent; }
-.money-breakdown .row.total { color: var(--tint-indigo-ink); }
+/* ================================================================= STATS */
+.mini-stat { background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 12px; }
+.mini-stat strong { color: var(--ink); font-size: 1.45rem; letter-spacing: -0.02em; }
+.mini-stat span { display: inline-flex; align-items: center; gap: 6px; }
+.mini-stat span::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--indigo); }
+.mini-stat:nth-child(4n+2) span::before { background: var(--teal); }
+.mini-stat:nth-child(4n+3) span::before { background: var(--cat-food); }
+.mini-stat:nth-child(4n+4) span::before { background: #22a55b; }
+
+/* ===================================================== RECEIPT-STYLE MONEY */
+.money-breakdown {
+    gap: 0; padding: 4px 16px; border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface-2);
+}
+.money-breakdown .row { padding: 9px 0; border-bottom: 1px dashed var(--card-border); font-variant-numeric: tabular-nums; }
+.money-breakdown .row:last-child { border-bottom: none; }
+.money-breakdown .row.total { border-bottom-style: solid; font-weight: 800; }
 .money-breakdown .row span { color: var(--ink-2); }
 
 /* ========================================================= REQUEST CARDS */
-/* category colour on the left edge and on the category tag */
-.req-card { position: relative; overflow: hidden; }
-.req-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--cat, var(--teal)); }
-.req-card.cat-food            { --cat: #e0a31a;      --cat-bg: var(--tint-amber);  --cat-ink: var(--tint-amber-ink); }
-.req-card.cat-medicine        { --cat: #e0516f;      --cat-bg: var(--tint-rose);   --cat-ink: var(--tint-rose-ink); }
-.req-card.cat-school_supplies { --cat: var(--indigo); --cat-bg: var(--tint-indigo); --cat-ink: var(--tint-indigo-ink); }
-.req-card.cat-household       { --cat: var(--teal);   --cat-bg: var(--tint-teal);   --cat-ink: var(--tint-teal-ink); }
-.req-card.cat-personal_care   { --cat: #8b5cf6;      --cat-bg: var(--tint-violet); --cat-ink: var(--tint-violet-ink); }
-.req-card.cat-other           { --cat: #7b8fa1; }
-.req-card .cat-tag { background: var(--cat-bg, var(--soft)); color: var(--cat-ink, var(--ink-2)); }
+.req-card { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px 0; background: var(--surface); --cat: var(--cat-other); }
+.req-card.cat-food            { --cat: var(--cat-food); }
+.req-card.cat-medicine        { --cat: var(--cat-medicine); }
+.req-card.cat-school_supplies { --cat: var(--cat-school_supplies); }
+.req-card.cat-household       { --cat: var(--cat-household); }
+.req-card.cat-personal_care   { --cat: var(--cat-personal_care); }
 
-/* ============================================== ROWS, EMPTY STATES, FOOTER */
-.req-row:hover { background: var(--tint-indigo); border-color: transparent; }
-.empty-state > .i { background: linear-gradient(135deg, var(--tint-aqua), var(--tint-indigo)); color: var(--tint-indigo-ink); }
-.thread.is-active { background: linear-gradient(90deg, var(--tint-indigo), var(--tint-aqua)); }
-.site-footer {
-    position: relative; border-top-color: transparent;
-    background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--indigo) 5%, var(--surface)));
+.rc-top { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }
+.rc-cat { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-weight: 700; }
+.rc-cat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cat); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cat) 18%, transparent); }
+.rc-time { margin-left: auto; color: var(--muted); }
+.rc-title { margin: 0; font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; }
+.rc-title a { color: inherit; text-decoration: none; }
+.rc-title a:hover { color: var(--brand-ink); }
+.rc-qty { margin-left: 4px; color: var(--muted); font-size: 0.9rem; font-weight: 700; }
+.rc-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 2px 0 4px; }
+.rc-facts dt { color: var(--muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; }
+.rc-facts dd { margin: 1px 0 0; font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 4px -20px 0; padding: 12px 20px; border-top: 1px solid var(--hairline);
 }
-.site-footer::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--accent-bar); opacity: .45; }
+.rc-earn { display: grid; margin: 0; line-height: 1.15; }
+.rc-earn span { color: var(--muted); font-size: 0.72rem; font-weight: 700; }
+.rc-earn strong { color: var(--money-ink); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.rc-actions { display: flex; gap: 6px; }
 
-/* section headings: solid gradient icon tiles as the colour anchor of each section */
-.section-label > .i { background: var(--accent-bar); color: #fff; box-shadow: 0 4px 10px rgba(65, 82, 215, 0.22); }
+/* ============================================================ CATEGORY CHIPS */
+.chip-cat { display: inline-flex; align-items: center; gap: 7px; }
+.chip-cat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cat-other); }
+.chip-cat.cat-food::before            { background: var(--cat-food); }
+.chip-cat.cat-medicine::before        { background: var(--cat-medicine); }
+.chip-cat.cat-school_supplies::before { background: var(--cat-school_supplies); }
+.chip-cat.cat-household::before       { background: var(--cat-household); }
+.chip-cat.cat-personal_care::before   { background: var(--cat-personal_care); }
 
-/* category chips (dashboard): same colours as the request cards */
-.chip-cat { border-color: transparent; transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast); }
-.chip-cat.cat-food            { background: var(--tint-amber);  color: var(--tint-amber-ink); }
-.chip-cat.cat-medicine        { background: var(--tint-rose);   color: var(--tint-rose-ink); }
-.chip-cat.cat-school_supplies { background: var(--tint-indigo); color: var(--tint-indigo-ink); }
-.chip-cat.cat-household       { background: var(--tint-teal);   color: var(--tint-teal-ink); }
-.chip-cat.cat-personal_care   { background: var(--tint-violet); color: var(--tint-violet-ink); }
-.chip-cat.cat-other           { background: var(--soft);        color: var(--ink-2); }
-.chip-cat:hover { transform: translateY(-1px); box-shadow: var(--card-shadow); }
+/* ============================================================ SMALL THINGS */
+.req-row:hover { background: var(--surface-2); }
+.thread.is-active { background: var(--brand-soft); }
