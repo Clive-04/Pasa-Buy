@@ -94,6 +94,32 @@ class TalkJsClient
         ]);
     }
 
+    /**
+     * Lets both people of a conversation write ("ReadWrite") or only read
+     * its history ("Read"). The browser talks to TalkJS directly, so this
+     * is how ChatPolicy (blocks, cancelled errands) is enforced inside
+     * TalkJS. Returns false when the conversation doesn't exist yet.
+     *
+     * @param list<int> $userIds Pasa-Buy user ids
+     */
+    public function setAccess(string $conversationId, array $userIds, string $access): bool
+    {
+        foreach ($userIds as $userId) {
+            $found = $this->request(
+                'PATCH',
+                '/conversations/' . rawurlencode($conversationId) . '/participants/' . rawurlencode(self::userId($userId)),
+                ['access' => $access === 'Read' ? 'Read' : 'ReadWrite'],
+                true,
+            );
+
+            if ($found === null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** Base64url-encoded HS256 JWT (the only algorithm TalkJS supports). */
     private function jwt(array $claims): string
     {
@@ -144,8 +170,11 @@ class TalkJsClient
         return $out;
     }
 
-    /** @return array<string, mixed> decoded JSON body ([] when empty) */
-    private function request(string $method, string $path, ?array $json = null): array
+    /**
+     * @return array<string, mixed>|null decoded JSON body ([] when empty);
+     *                                   null only for a 404 when $allowMissing
+     */
+    private function request(string $method, string $path, ?array $json = null, bool $allowMissing = false): ?array
     {
         if (! $this->config->hasKeys()) {
             throw new ServiceException('Chat is not configured.');
@@ -164,6 +193,10 @@ class TalkJsClient
         }
 
         $status = $response->getStatusCode();
+
+        if ($status === 404 && $allowMissing) {
+            return null;
+        }
 
         if ($status < 200 || $status >= 300) {
             log_message('error', 'TalkJS {m} {p} returned {s}: {b}', ['m' => $method, 'p' => $path, 's' => $status, 'b' => ProviderLog::summarize((string) $response->getBody())]);

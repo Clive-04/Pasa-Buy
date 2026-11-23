@@ -210,6 +210,7 @@
     function grow() {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+        input.classList.toggle('is-scrolling', input.scrollHeight > 160);
     }
 
     function clearFile() {

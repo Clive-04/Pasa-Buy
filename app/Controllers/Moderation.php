@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Services\ChatPolicy;
+use App\Services\TalkAccess;
 
 /**
  * Block and Report (R4).
@@ -45,6 +46,9 @@ class Moderation extends BaseController
             $db->query('INSERT IGNORE INTO ' . $db->protectIdentifiers('user_blocks', true) . ' (blocker_id, blocked_id, created_at) VALUES (?, ?, ?)', [$me, $other, date('Y-m-d H:i:s')]);
         }
 
+        // TalkJS: make their shared conversations read-only there too.
+        (new TalkAccess())->syncPair($me, $other);
+
         $active = (new ChatPolicy())->activeErrands($me, $other);
         $note   = $active !== []
             ? ' You still share an active errand: finish or cancel it from its request page, and use Report if you need an admin’s help.'
@@ -64,6 +68,7 @@ class Moderation extends BaseController
         }
 
         db_connect()->table('user_blocks')->where('blocker_id', $me)->where('blocked_id', $other)->delete();
+        (new TalkAccess())->syncPair($me, $other); // reopens only chats ChatPolicy allows
 
         return redirect()->to($back)->with('success', 'Unblocked. You can message each other again while you share an errand.');
     }

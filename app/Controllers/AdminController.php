@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\Money;
 use App\Models\RequestModel;
 use App\Services\RequestLifecycle;
+use App\Services\TalkAccess;
 
 /**
  * Admin area (route group protected by AdminFilter, which re-checks the
@@ -144,10 +145,15 @@ class AdminController extends BaseController
      */
     public function cancelRequest($id)
     {
-        return $this->attempt(
+        $response = $this->attempt(
             fn () => (new RequestLifecycle())->cancel((int) $id, $this->currentUserId(), true),
             'Request #' . (int) $id . ' cancelled. Its history is kept.',
             '/admin/dashboard',
         );
+
+        // A cancelled errand closes its TalkJS chat for new messages (history stays).
+        (new TalkAccess())->syncRequest((int) $id);
+
+        return $response;
     }
 }

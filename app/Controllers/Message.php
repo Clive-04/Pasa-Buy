@@ -9,6 +9,7 @@ use App\Models\RequestModel;
 use App\Models\UserModel;
 use App\Services\ChatPolicy;
 use App\Services\ServiceException;
+use App\Services\TalkAccess;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
@@ -380,9 +381,14 @@ class Message extends BaseController
     }
 
     /**
-     * Hosted chat (TalkJS), only when explicitly enabled. The same
-     * ChatPolicy rules decide who may talk; the server creates the
-     * conversation with exactly those participants.
+     * Real-time chat through TalkJS (when enabled), drawn with Pasa-Buy's
+     * own markup and CSS: public/js/talk-chat.js reads and sends messages
+     * with TalkJS's data API instead of TalkJS's iframe UI.
+     *
+     * One TalkJS conversation per errand. The server decides who may talk
+     * (ChatPolicy), creates the conversation with exactly those two people,
+     * and sets them to ReadWrite, or to Read when the chat is closed
+     * (blocked / cancelled), so history stays readable but nobody can post.
      */
     private function talkjsIndex()
     {
@@ -394,45 +400,86 @@ class Message extends BaseController
         $me        = $users->select('id, first_name, last_name, profile_photo')->find($meId);
         $selected  = null;
         $conversationId = null;
-        $error     = null;
+        $permission = null;
+        $chatError = null;
 
-        try {
-            $client->syncUser($me);
+        if ($otherId > 0 && $otherId !== $meId) {
+            $selected = $users->select('id, first_name, last_name, profile_photo')->find($otherId);
+        }
 
-            if ($otherId > 0 && $otherId !== $meId) {
-                $permission = $this->policy()->canSend($meId, $otherId, $requestId);
+        if ($selected !== null) {
+            $permission = $this->policy()->canSend($meId, $otherId, $requestId);
 
-                if (! $permission['allowed']) {
-                    $error = $permission['reason'];
-                } else {
-                    $selected  = $users->select('id, first_name, last_name, profile_photo')->find($otherId);
-                    $requestId = $permission['request_id'];
-                    $client->syncUser($selected);
-                    $conversationId = $client->conversationId($meId, $otherId, $requestId);
-                    $request = (new RequestModel())->select('id, item_name')->find($requestId);
-                    $client->syncConversation(
-                        $conversationId,
-                        [$meId, $otherId],
-                        'Request #' . $request['id'] . ': ' . $request['item_name'],
-                        ['requestId' => (string) $request['id']],
-                    );
-                }
+            if (! $permission['allowed'] && $requestId !== null) {
+                $general    = $this->policy()->canSend($meId, $otherId);
+                $permission = $general['allowed'] ? $general : $permission;
             }
-        } catch (ServiceException $e) {
-            $error = $e->getMessage();
+
+            try {
+                if ($permission['allowed']) {
+                    $requestId      = $permission['request_id'];
+                    $conversationId = $client->conversationId($meId, $otherId, $requestId);
+                    $setUpKey       = TalkAccess::cacheKey($conversationId);
+
+                    // Each TalkJS REST call takes ~1 s, so a chat that was set up
+                    // recently isn't set up again. Blocks, unblocks and
+                    // cancellations clear this key (TalkAccess::syncPair).
+                    if (cache($setUpKey) === null) {
+                        $client->syncUser($me);
+                        $client->syncUser($selected);
+                        $request = (new RequestModel())->select('id, item_name')->find($requestId);
+                        $client->syncConversation(
+                            $conversationId,
+                            [$meId, $otherId],
+                            'Request #' . $request['id'] . ': ' . $request['item_name'],
+                            ['requestId' => (string) $request['id']],
+                        );
+                        $client->setAccess($conversationId, [$meId, $otherId], 'ReadWrite');
+                        cache()->save($setUpKey, 1, 600);
+                    }
+                } else {
+                    // Closed chat: show the latest shared errand's history read-only, if any.
+                    $shared = $this->policy()->sharedErrands($meId, $otherId, ['accepted', 'on_the_way', 'delivered', 'cancelled']);
+                    $match  = array_values(array_filter($shared, static fn (array $e): bool => (int) $e['id'] === $requestId));
+                    $errand = $match[0] ?? $shared[0] ?? null;
+
+                    if ($errand !== null) {
+                        $requestId      = (int) $errand['id'];
+                        $conversationId = $client->conversationId($meId, $otherId, $requestId);
+
+                        if (! $client->setAccess($conversationId, [$meId, $otherId], 'Read')) {
+                            $conversationId = null; // never chatted on that errand
+                        }
+                    } else {
+                        $requestId = null;
+                    }
+                }
+            } catch (ServiceException $e) {
+                $chatError      = $e->getMessage();
+                $conversationId = null;
+            }
         }
 
-        if ($error !== null) {
-            session()->setFlashdata('error', $error);
-        }
+        $talk = talkjs_boot();
 
         return view('messages_talkjs_page', [
             'title'          => 'Messages | Pasa-Buy',
-            'conversationId' => $conversationId,
             'selectedUser'   => $selected,
-            'requestId'      => $conversationId !== null ? $requestId : null,
-            'request'        => $conversationId !== null ? (new RequestModel())->select('id, item_name, status, store_name')->find($requestId) : null,
-            'errandChats'    => $this->errandChats($meId),
+            'conversationId' => $conversationId,
+            'canSend'        => $chatError === null && ($permission['allowed'] ?? false),
+            'cannotReason'   => $permission['reason'] ?? '',
+            'chatError'      => $chatError,
+            'requestId'      => $requestId,
+            'request'        => $requestId !== null ? (new RequestModel())->select('id, item_name, status')->find($requestId) : null,
+            'iBlocked'       => $selected !== null && $this->policy()->hasBlocked($meId, $otherId),
+            'activeErrands'  => $selected !== null ? $this->policy()->activeErrands($meId, $otherId) : [],
+            'errandChats'    => array_map(static function (array $e) use ($client, $meId): array {
+                $e['conversation_id'] = $client->conversationId($meId, (int) $e['other_id'], (int) $e['request_id']);
+
+                return $e;
+            }, $this->errandChats($meId)),
+            'talk'           => $talk,
+            'maxLength'      => self::MAX_MESSAGE_LENGTH,
         ]);
     }
 }

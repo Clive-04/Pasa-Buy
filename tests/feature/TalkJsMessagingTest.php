@@ -32,9 +32,21 @@ final class TalkJsMessagingTest extends FeatureTestCase
                 $this->users[] = (int) $user['id'];
             }
 
+            public array $access = [];
+
             public function syncConversation(string $conversationId, array $participants, string $subject, array $custom = []): void
             {
                 $this->conversations[$conversationId] = compact('participants', 'subject', 'custom');
+            }
+
+            public function setAccess(string $conversationId, array $userIds, string $access): bool
+            {
+                if (! isset($this->conversations[$conversationId])) {
+                    return false; // like TalkJS: 404 for a conversation that was never created
+                }
+                $this->access[$conversationId] = $access;
+
+                return true;
             }
         };
 
@@ -96,15 +108,51 @@ final class TalkJsMessagingTest extends FeatureTestCase
         $page = $this->getAs($runner, 'messages?user_id=' . $requester . '&request_id=' . $requestId);
 
         $page->assertOK();
-        $page->assertSee('cdn.talkjs.com/talk.js', null);
+        $page->assertSee('js/talk-chat.js', null);
         $page->assertSee('"tTestApp"', null);
         $page->assertDontSee('sk_test_talkjs_secret');
+        // Site-styled UI: our composer and bubbles, no TalkJS iframe UI.
+        $page->assertSee('data-talk-composer', null);
+        $page->assertDontSee('createInbox', null);
+        $page->assertDontSee('cdn.talkjs.com/talk.js', null);
 
         $conversationId = $this->fake->conversationId($runner, $requester, $requestId);
         $this->assertArrayHasKey($conversationId, $this->fake->conversations);
         $this->assertSame(['pb_' . $runner, 'pb_' . $requester], array_map(static fn ($id) => 'pb_' . $id, $this->fake->conversations[$conversationId]['participants']));
         $this->assertSame('Request #' . $requestId . ': Cooking oil', $this->fake->conversations[$conversationId]['subject']);
-        $page->assertSee(json_encode($conversationId), null);
+        $this->assertSame('ReadWrite', $this->fake->access[$conversationId]);
+        $page->assertSee('data-talk-conversation="' . $conversationId . '"', null);
+    }
+
+    public function testClosedChatIsMadeReadOnlyInsideTalkJs(): void
+    {
+        $requester = $this->createUser();
+        $runner    = $this->createUser();
+        $requestId = $this->createRequest($requester, ['item_name' => 'Cooking oil']);
+        (new RequestLifecycle())->accept($requestId, $runner);
+        $conversationId = $this->fake->conversationId($runner, $requester, $requestId);
+
+        $this->getAs($runner, 'messages?user_id=' . $requester . '&request_id=' . $requestId);
+        $this->assertSame('ReadWrite', $this->fake->access[$conversationId]);
+
+        // Blocking switches both people to read-only in TalkJS straight away.
+        $this->postAs($requester, 'users/' . $runner . '/block');
+        $this->assertSame('Read', $this->fake->access[$conversationId]);
+
+        $page = $this->getAs($runner, 'messages?user_id=' . $requester . '&request_id=' . $requestId);
+        $page->assertSee('data-talk-conversation="' . $conversationId . '"', null); // history still readable
+        $page->assertSee('data-chat-closed', null);
+        $page->assertDontSee('data-talk-composer', null);
+
+        // Unblocking reopens it.
+        $this->postAs($requester, 'users/' . $runner . '/unblock');
+        $this->assertSame('ReadWrite', $this->fake->access[$conversationId]);
+
+        // A cancelled errand closes it again (admin cancellation of an accepted errand).
+        $admin = $this->createUser(['role' => 'admin']);
+        $this->postAs($admin, 'admin/request/cancel/' . $requestId, [], 'admin');
+        $this->assertSame('cancelled', $this->requestRow($requestId)['status']);
+        $this->assertSame('Read', $this->fake->access[$conversationId]);
     }
 
     public function testOutsidersCannotOpenARequestConversation(): void
@@ -115,10 +163,12 @@ final class TalkJsMessagingTest extends FeatureTestCase
         $requestId = $this->createRequest($requester);
         (new RequestLifecycle())->accept($requestId, $runner);
 
-        $this->getAs($outsider, 'messages?user_id=' . $requester . '&request_id=' . $requestId);
+        $page = $this->getAs($outsider, 'messages?user_id=' . $requester . '&request_id=' . $requestId);
 
         $this->assertSame([], $this->fake->conversations);
-        $this->assertStringContainsString('only message the requester or runner', (string) $this->flash('error'));
+        $page->assertSee('only message the requester or runner');
+        $page->assertDontSee('data-talk-conversation', null);
+        $page->assertDontSee('data-talk-composer', null);
     }
 
     public function testEverySignedInPageRunsTheChatSessionForLiveBadges(): void
@@ -128,8 +178,8 @@ final class TalkJsMessagingTest extends FeatureTestCase
         $page = $this->getAs($user, 'dashboard');
 
         $page->assertOK();
-        $page->assertSee('window.PasaBuyTalk', null);
-        $page->assertSee('unreads.onChange', null);
+        $page->assertSee('id="talkBoot"', null);
+        $page->assertSee('js/talk-session.js', null);
         $page->assertSee('"pb_' . $user . '"', null);
         $page->assertSee('data-unread="messages"', null);
         $page->assertDontSee('sk_test_talkjs_secret');
@@ -141,7 +191,7 @@ final class TalkJsMessagingTest extends FeatureTestCase
         config('TalkJS')->secretKey = '';
         $user = $this->createUser();
 
-        $this->getAs($user, 'dashboard')->assertDontSee('cdn.talkjs.com', null);
+        $this->getAs($user, 'dashboard')->assertDontSee('talkBoot', null);
     }
 
     public function testKeysAloneDoNotSwitchTalkJsOn(): void
@@ -151,7 +201,7 @@ final class TalkJsMessagingTest extends FeatureTestCase
 
         $this->assertTrue(config('TalkJS')->hasKeys());
         $this->assertFalse(config('TalkJS')->isConfigured());
-        $this->getAs($user, 'dashboard')->assertDontSee('cdn.talkjs.com', null);
+        $this->getAs($user, 'dashboard')->assertDontSee('talkBoot', null);
         $page = $this->getAs($user, 'messages');
         $page->assertSee('Choose a chat');
         $page->assertDontSee('talkjs-container', null);
@@ -162,10 +212,10 @@ final class TalkJsMessagingTest extends FeatureTestCase
         $me       = $this->createUser();
         $stranger = $this->createUser();
 
-        $this->getAs($me, 'messages?user_id=' . $stranger);
+        $page = $this->getAs($me, 'messages?user_id=' . $stranger);
 
         $this->assertSame([], $this->fake->conversations, 'No dm_ conversation is created for strangers.');
-        $this->assertStringContainsString('once one of you accepts', (string) $this->flash('error'));
+        $page->assertSee('once one of you accepts');
     }
 
     public function testMessagesPageListsErrandChatsOnly(): void

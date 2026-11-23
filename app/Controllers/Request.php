@@ -9,6 +9,7 @@ use App\Models\RequestModel;
 use App\Models\UserModel;
 use App\Services\RatingService;
 use App\Services\RequestLifecycle;
+use App\Services\TalkAccess;
 use App\Services\WalletService;
 
 /**
@@ -171,11 +172,16 @@ class Request extends BaseController
 
     public function cancel($requestId)
     {
-        return $this->attempt(
+        $response = $this->attempt(
             fn () => (new RequestLifecycle())->cancel((int) $requestId, $this->currentUserId()),
             'Request cancelled.',
             '/my-requests',
         );
+
+        // A cancelled errand closes its TalkJS chat for new messages (history stays).
+        (new TalkAccess())->syncRequest((int) $requestId);
+
+        return $response;
     }
 
     public function acceptedRequests()
