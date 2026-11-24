@@ -139,7 +139,7 @@
                    placeholder="e.g. 500" required value="<?= esc((string) old('amount')) ?>">
             <div style="display:flex; gap:8px; flex-wrap:wrap;" aria-label="Quick amounts">
                 <?php foreach ([100, 500, 1000, 2000] as $quick): ?>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('amount').value='<?= $quick ?>'">₱<?= number_format($quick) ?></button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-set-value="amount" data-value="<?= $quick ?>">₱<?= number_format($quick) ?></button>
                 <?php endforeach; ?>
             </div>
         </div>

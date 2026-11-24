@@ -77,10 +77,4 @@ $filtered = $filters['search'] !== '' || $filters['category'] !== '' || $filters
     </div>
 </main>
 
-<script>
-document.querySelectorAll('[data-autosubmit]').forEach(function (select) {
-    select.addEventListener('change', function () { select.form.requestSubmit ? select.form.requestSubmit() : select.form.submit(); });
-});
-</script>
-
 <?= $this->include('includes/footer') ?>

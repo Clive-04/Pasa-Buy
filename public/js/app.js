@@ -84,6 +84,8 @@
                         dialog.querySelectorAll('[data-fill="' + key + '"]').forEach(function (el) { el.textContent = attr.value; });
                         dialog.querySelectorAll('[data-hide-if-zero="' + key + '"]').forEach(function (el) { el.hidden = attr.value === '0'; });
                     });
+                    // Confirmations must be ticked again every time the dialog opens.
+                    dialog.querySelectorAll('[data-reset-on-open]').forEach(function (el) { el.checked = false; });
                     dialog.showModal();
                 }
                 return;
@@ -352,6 +354,22 @@
         });
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && notifMenu && notifMenu.el.isConnected) { notifMenu.close(true); }
+        });
+
+        // Delegated helpers that replaced inline scripts/handlers (R6, CSP):
+        // <select data-autosubmit> submits its filter form on change;
+        // <button data-set-value="amount" data-value="500"> fills that input.
+        document.addEventListener('change', function (event) {
+            var select = event.target.closest && event.target.closest('[data-autosubmit]');
+            if (select && select.form) {
+                if (select.form.requestSubmit) { select.form.requestSubmit(); } else { select.form.submit(); }
+            }
+        });
+        document.addEventListener('click', function (event) {
+            var filler = event.target.closest && event.target.closest('[data-set-value]');
+            if (!filler) { return; }
+            var input = document.getElementById(filler.getAttribute('data-set-value'));
+            if (input) { input.value = filler.getAttribute('data-value'); input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); }
         });
 
         // A Turbo form submission that fails (offline, server error) must

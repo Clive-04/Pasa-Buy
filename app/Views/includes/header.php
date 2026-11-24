@@ -13,12 +13,7 @@
     <title><?= esc($title ?? 'Pasa-Buy') ?></title>
 
     <?php /* Apply the saved light/dark choice before first paint (no flash). */ ?>
-    <script>
-        try {
-            var t = localStorage.getItem('pasabuy-theme');
-            if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
-        } catch (e) {}
-    </script>
+    <script src="<?= asset('js/theme-init.js') ?>"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

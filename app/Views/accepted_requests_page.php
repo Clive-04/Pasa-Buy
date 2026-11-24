@@ -89,8 +89,8 @@ $balanceCents = Money::toCents($walletBalance);
                                     <?php elseif ($isCod): ?>
                                         <button type="button" class="btn btn-primary btn-sm" data-open-dialog="codDialog"
                                                 data-form-action="<?= esc(base_url('request/status/' . $requestId), 'attr') ?>"
-                                                data-cod-total="<?= esc(money_cents($totalCents), 'attr') ?>"
-                                                data-cod-fee="<?= esc(money_cents($feeCents), 'attr') ?>"><?= icon('check-circle') ?> Mark delivered</button>
+                                                data-fill-total="<?= esc(money_cents($totalCents), 'attr') ?>"
+                                                data-fill-fee="<?= esc(money_cents($feeCents), 'attr') ?>"><?= icon('check-circle') ?> Mark delivered</button>
                                     <?php elseif ($isPaid): ?>
                                         <form action="<?= base_url('request/status/' . $requestId) ?>" method="post" class="inline-form" data-submit-once>
                                             <?= csrf_field() ?>
@@ -133,7 +133,7 @@ $balanceCents = Money::toCents($walletBalance);
     <div class="pb-dialog-head">
         <div>
             <h2 id="codTitle">Confirm cash payment</h2>
-            <p>Only continue if the requester has paid you <strong data-cod-total-text>the full amount</strong> in cash.</p>
+            <p>Only continue if the requester has paid you <strong data-fill="total">the full amount</strong> in cash.</p>
         </div>
         <button type="button" class="pb-dialog-close" data-close-dialog aria-label="Close">&times;</button>
     </div>
@@ -142,8 +142,8 @@ $balanceCents = Money::toCents($walletBalance);
         <?= csrf_field() ?>
         <input type="hidden" name="status" value="delivered">
         <label class="pb-check">
-            <input type="checkbox" name="cod_confirmed" value="1" required>
-            <span>I received the cash payment. Deduct the platform fee of <strong data-cod-fee-text>10% of the service fee</strong> from my wallet.</span>
+            <input type="checkbox" name="cod_confirmed" value="1" required data-reset-on-open>
+            <span>I received the cash payment. Deduct the platform fee of <strong data-fill="fee">10% of the service fee</strong> from my wallet.</span>
         </label>
         <div class="pb-dialog-actions">
             <button type="button" class="btn btn-secondary" data-close-dialog>Not yet</button>
@@ -151,18 +151,5 @@ $balanceCents = Money::toCents($walletBalance);
         </div>
     </form>
 </dialog>
-
-<script>
-if (!window.__pbCodDialog) { window.__pbCodDialog = true; // bind once (Turbo re-runs page scripts)
-document.addEventListener('click', function (event) {
-    var opener = event.target.closest('[data-open-dialog="codDialog"]');
-    if (!opener) { return; }
-    var dialog = document.getElementById('codDialog');
-    dialog.querySelector('[data-cod-total-text]').textContent = opener.getAttribute('data-cod-total');
-    dialog.querySelector('[data-cod-fee-text]').textContent = opener.getAttribute('data-cod-fee');
-    dialog.querySelector('input[name="cod_confirmed"]').checked = false;
-});
-}
-</script>
 
 <?= $this->include('includes/footer') ?>
