@@ -4,8 +4,11 @@
 #   deploy/infinityfree/build-package.sh <release-archive.tar.gz> <domain> <db-host> <db-name> <db-user> <out-dir>
 #
 # Output (<out-dir>/infinityfree-<sha>/):
-#   htdocs/            contents of public/; index.php points at ../pasabuy
-#   pasabuy/           app, vendor, writable, spark, .env  (OUTSIDE the web root)
+#   htdocs/            contents of public/ (index.php points at pasabuy/)
+#   pasabuy/           app, vendor, writable, .env; goes INSIDE the server's htdocs,
+#                      blocked by its own .htaccess. InfinityFree confines PHP to the
+#                      site's htdocs (open_basedir), so it can't sit next to it.
+#                      Verified live 2026-11-24: /pasabuy/* -> 403, .env -> no response.
 #   pasabuy-database.sql   schema (all migrations) + synthetic demo data, for phpMyAdmin
 #   DEMO-PASSWORD.txt  random password of the demo accounts
 #
@@ -60,10 +63,19 @@ for d in cache logs session; do cp "$REPO/writable/index.html" "$WORK/writable/$
 
 echo "== web root"
 mv "$WORK/public" "$PKG/htdocs"
-sed -i "s#require FCPATH . '../app/Config/Paths.php';#require FCPATH . '../pasabuy/app/Config/Paths.php';#" "$PKG/htdocs/index.php"
-grep -q "../pasabuy/app/Config/Paths.php" "$PKG/htdocs/index.php"
-# Defence in depth if the folder ever lands inside the web root.
-printf 'Require all denied\nDeny from all\n' > "$WORK/.htaccess"
+sed -i "s#require FCPATH . '../app/Config/Paths.php';#require FCPATH . 'pasabuy/app/Config/Paths.php';#" "$PKG/htdocs/index.php"
+grep -q "FCPATH . 'pasabuy/app/Config/Paths.php'" "$PKG/htdocs/index.php"
+# The app folder lives inside the web root on this host: refuse every request for it.
+cat > "$WORK/.htaccess" <<'HTA'
+# Pasa-Buy application code, settings and private files: never served.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+HTA
 
 echo "== production .env (database password left as a placeholder)"
 keys="$(grep -E '^\s*(talkjs\.appId|talkjs\.secretKey|pasabuy\.talkjsEnabled|xendit\.secretKey|xendit\.callbackToken)\s*=' "$REPO/.env" | tr -d '\r' || true)"
@@ -100,8 +112,11 @@ Pasa-Buy ${SHA} for ${DOMAIN}
 
 1. With FileZilla (FTP details from the InfinityFree control panel):
    - upload the CONTENTS of htdocs/ into the server's htdocs/ folder (replace files);
-   - upload the pasabuy/ folder NEXT TO htdocs/ (not inside it).
-2. In the host's file manager, edit pasabuy/.env and replace
+   - upload the pasabuy/ folder INTO the server's htdocs/ (next to index.php).
+   Use the site's own folder (e.g. /<domain>/htdocs), turn on Server > Force
+   showing hidden files, set Settings > Transfers > File exists action >
+   Uploads: Overwrite, and Maximum simultaneous transfers: 1.
+2. In the host's file manager, edit htdocs/pasabuy/.env and replace
    PUT-YOUR-MYSQL-PASSWORD-HERE with your MySQL password.
 3. phpMyAdmin (control panel) -> your database -> Import -> pasabuy-database.sql.
 4. Open https://${DOMAIN}/ . Demo accounts: admin@, requester@, runner@,
