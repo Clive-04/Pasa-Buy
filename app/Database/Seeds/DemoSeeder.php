@@ -18,8 +18,8 @@ use RuntimeException;
  *
  *   php spark db:seed DemoSeeder
  *
- * Password: DEMO_SEED_PASSWORD from the environment. Outside production a
- * documented local default is used; in production the variable is required.
+ * Password: DEMO_SEED_PASSWORD from .env or the environment, always required
+ * (no built-in default, so no demo account ever has a publicly known password).
  */
 class DemoSeeder extends Seeder
 {
@@ -35,14 +35,13 @@ class DemoSeeder extends Seeder
             return;
         }
 
-        $password = getenv('DEMO_SEED_PASSWORD') ?: null;
+        // Always required: the demo accounts include an admin, and a default
+        // written in this (public) repository would be a known password on
+        // any server that was ever seeded without the variable.
+        $password = getenv('DEMO_SEED_PASSWORD') ?: (env('DEMO_SEED_PASSWORD') ?: null);
 
         if ($password === null) {
-            if (ENVIRONMENT === 'production') {
-                throw new RuntimeException('Set DEMO_SEED_PASSWORD before seeding a production-mode database.');
-            }
-
-            $password = 'DemoPass#2026';
+            throw new RuntimeException('Set DEMO_SEED_PASSWORD (at least 8 characters) in .env or the environment before seeding demo accounts.');
         }
 
         if (strlen($password) < 8) {

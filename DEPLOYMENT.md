@@ -170,7 +170,7 @@ Environment: Windows 11, PHP 8.2.12, MariaDB 10.4.32 (XAMPP), PHP built-in serve
 | Build release `fbc31da171`, then `1129c1cfa6` from exact commits | Archives built; `composer audit` found no advisories; no dev packages, tests or legacy uploads included |
 | Fresh install: migrate as the app user | Refused (`CREATE command denied`), as intended |
 | Migrate as the migrator | 2 migrations applied |
-| Seed in production mode without `DEMO_SEED_PASSWORD` | Refused, as intended |
+| Seed without `DEMO_SEED_PASSWORD` (any mode; no built-in default since 2026-11-24) | Refused, as intended |
 | `scripts/smoke-test.php` (user + admin) | 51/51 checks passed |
 | `forceGlobalSecureRequests` with an HTTPS baseURL | HTTP → 307 to https, including with a spoofed `X-Forwarded-Proto` from an untrusted IP |
 | Upload a real PNG / a PHP file renamed `.png` | Stored privately / rejected ("content does not match") |

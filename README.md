@@ -78,7 +78,7 @@ scripts/             smoke-test.php, build-release.sh
 
 ### Demo accounts (local seed)
 
-Password: `DemoPass#2026` locally, or `DEMO_SEED_PASSWORD` if you set it.
+Password: whatever you set in `DEMO_SEED_PASSWORD` (in `.env`, at least 8 characters) before seeding. It is required: there is no built-in default, so demo accounts never share a publicly known password.
 
 | Email | Role |
 |---|---|
