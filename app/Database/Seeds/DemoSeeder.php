@@ -2,6 +2,8 @@
 
 namespace App\Database\Seeds;
 
+use App\Libraries\UploadStorage;
+use App\Services\PriceApproval;
 use App\Services\RequestLifecycle;
 use App\Services\WalletService;
 use CodeIgniter\Database\Seeder;
@@ -76,6 +78,7 @@ class DemoSeeder extends Seeder
 
         $wallet    = new WalletService($db);
         $lifecycle = new RequestLifecycle($db);
+        $prices    = new PriceApproval($db);
         $key       = static fn (): string => bin2hex(random_bytes(16));
 
         $wallet->addDemoCredits($ids['requester'], '3000.00', $key());
@@ -103,6 +106,8 @@ class DemoSeeder extends Seeder
         ] + $base);
         $lifecycle->accept($done, $ids['runner']);
         $lifecycle->markOnTheWay($done, $ids['runner']);
+        $prices->submit($done, $ids['runner'], '92.75', $this->demoReceipt('Demo Pharmacy', '92.75'), 'Synthetic demo receipt');
+        $prices->approve($done, $ids['requester'], $this->latestSubmission($done));
         $wallet->payForRequest($done, $ids['requester']);
         $lifecycle->markDelivered($done, $ids['runner'], false);
 
@@ -114,6 +119,8 @@ class DemoSeeder extends Seeder
         ] + $base);
         $lifecycle->accept($cod, $ids['runner2']);
         $lifecycle->markOnTheWay($cod, $ids['runner2']);
+        $prices->submit($cod, $ids['runner2'], '180.00', $this->demoReceipt('Demo Bookstore', '180.00'));
+        $prices->approve($cod, $ids['requester2'], $this->latestSubmission($cod));
         $lifecycle->markDelivered($cod, $ids['runner2'], true);
 
         // 4. Cash-on-delivery request, accepted and in progress.
@@ -122,6 +129,8 @@ class DemoSeeder extends Seeder
             'estimated_price' => '150.00', 'service_fee' => '40.00', 'payment_method' => 'cod', 'urgency' => 'asap',
         ] + $base);
         $lifecycle->accept($active, $ids['runner']);
+        // The runner sent the actual price; it waits for the requester's approval (R5 demo).
+        $prices->submit($active, $ids['runner'], '158.00', $this->demoReceipt('Demo Grocery', '158.00'), 'Only the 1 kg pack was left (synthetic demo)');
 
         // 5. Cancelled before anyone accepted it.
         $cancelled = $lifecycle->create($ids['requester2'], [
@@ -158,5 +167,52 @@ class DemoSeeder extends Seeder
         ]);
 
         echo 'Seeded 5 demo accounts (*@' . self::DOMAIN . ") and 5 requests.\n";
+    }
+
+    /**
+     * A tiny synthetic PDF "receipt" stored privately, so demo errands show the
+     * R5 approval flow. Clearly labelled as demo data; no real purchase.
+     *
+     * @return array{path: string, name: string, type: string}
+     */
+    private function demoReceipt(string $store, string $amount): array
+    {
+        $text = "DEMO RECEIPT - NOT A REAL PURCHASE  {$store}  Total PHP {$amount}";
+        $stream = 'BT /F1 11 Tf 40 760 Td (' . str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text) . ') Tj ET';
+        $objects = [
+            '<< /Type /Catalog /Pages 2 0 R >>',
+            '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+            '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+            '<< /Length ' . strlen($stream) . " >>\nstream\n{$stream}\nendstream",
+            '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+        ];
+        $pdf = "%PDF-1.4\n";
+        $offsets = [];
+
+        foreach ($objects as $i => $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= ($i + 1) . " 0 obj\n{$object}\nendobj\n";
+        }
+
+        $xref = strlen($pdf);
+        $pdf .= 'xref' . "\n0 " . (count($objects) + 1) . "\n0000000000 65535 f \n";
+
+        foreach ($offsets as $offset) {
+            $pdf .= sprintf("%010d 00000 n \n", $offset);
+        }
+
+        $pdf .= 'trailer << /Size ' . (count($objects) + 1) . " /Root 1 0 R >>\nstartxref\n{$xref}\n%%EOF\n";
+
+        $directory = UploadStorage::directory(UploadStorage::RECEIPTS);
+        is_dir($directory) || mkdir($directory, 0775, true);
+        $name = 'demo_' . bin2hex(random_bytes(10)) . '.pdf';
+        file_put_contents($directory . $name, $pdf);
+
+        return ['path' => $name, 'name' => 'demo-receipt.pdf', 'type' => 'application/pdf'];
+    }
+
+    private function latestSubmission(int $requestId): int
+    {
+        return (int) $this->db->table('price_submissions')->selectMax('id', 'id')->where('request_id', $requestId)->get()->getRow('id');
     }
 }

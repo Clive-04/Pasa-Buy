@@ -50,8 +50,12 @@ $tabs = ['' => 'All', 'pending' => 'Waiting for runner', 'accepted' => 'Accepted
                         <?php endif; ?>
                         <?php
                         $next  = next_step($request, 'requester');
+                        $price        = (string) ($request['price_status'] ?? 'not_required');
                         $needsPayment = in_array($request['status'], ['accepted', 'on_the_way'], true)
-                            && $request['payment_method'] !== 'cod' && $request['payment_status'] === 'unpaid';
+                            && $request['payment_method'] !== 'cod' && $request['payment_status'] === 'unpaid'
+                            && in_array($price, ['approved', 'not_required'], true);
+                        $needsReview  = in_array($request['status'], ['accepted', 'on_the_way'], true) && $price === 'submitted'
+                            && in_array($request['payment_status'], ['unpaid', 'cod_pending'], true);
                         ?>
                         <article class="req-card">
                             <div class="req-card-head">
@@ -77,6 +81,9 @@ $tabs = ['' => 'All', 'pending' => 'Waiting for runner', 'accepted' => 'Accepted
                                 <?php if ($request['status'] === 'pending'): ?>
                                     <button type="button" class="btn btn-danger btn-sm" data-open-dialog="cancelDialog"
                                             data-form-action="<?= esc(base_url('request/cancel/' . (int) $request['id']), 'attr') ?>"><?= icon('x-circle') ?> Cancel</button>
+                                <?php endif; ?>
+                                <?php if ($needsReview): ?>
+                                    <a href="<?= base_url('request-details/' . (int) $request['id']) ?>#priceHeading" class="btn btn-primary btn-sm"><?= icon('eye') ?> Check the price</a>
                                 <?php endif; ?>
                                 <?php if ($needsPayment): ?>
                                     <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="btn btn-primary btn-sm"><?= icon('wallet') ?> Pay runner</a>

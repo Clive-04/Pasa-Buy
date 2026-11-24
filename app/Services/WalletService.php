@@ -116,10 +116,19 @@ class WalletService extends TransactionalService
                 throw new ServiceException('No runner is assigned to this request.');
             }
 
+            // R5: only an approved actual price (backed by a receipt) is paid.
+            if ($request['price_status'] !== 'approved' || $request['approved_item_price'] === null) {
+                throw new ServiceException(match ($request['price_status']) {
+                    'submitted' => 'Check and approve the actual price your runner submitted before paying.',
+                    'rejected'  => 'You rejected the last price. Wait for the runner to submit a corrected price and receipt.',
+                    default     => 'Your runner hasn’t submitted the actual price and receipt yet. You can pay once you approve it.',
+                });
+            }
+
             $runnerId = (int) $acceptance['runner_id'];
             $users    = $this->lockUsers($requesterId, $runnerId);
 
-            $itemCents  = Money::toCents($request['estimated_price']);
+            $itemCents  = Money::toCents($request['approved_item_price']);
             $feeCents   = Money::toCents($request['service_fee']);
             $totalCents = FeePolicy::requesterTotalCents($itemCents, $feeCents);
             $platform   = Money::toCents($request['platform_fee']);
@@ -172,6 +181,7 @@ class WalletService extends TransactionalService
             $this->db->table('requests')->where('id', $requestId)->update([
                 'payment_status' => 'paid',
                 'paid_at'        => date('Y-m-d H:i:s'),
+                'total_amount'   => Money::toDecimal($totalCents), // frozen: the price can't change once paid
             ]);
 
             $this->notify(

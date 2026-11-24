@@ -38,7 +38,11 @@ $balanceCents = Money::toCents($walletBalance);
                         $feeCents   = Money::toCents($request['platform_fee']);
                         $totalCents = Money::toCents($request['total_amount']);
                         $requestId  = (int) $request['request_id'];
-                        $asRequest  = ['status' => $request['accepted_status'], 'payment_method' => $request['payment_method'], 'payment_status' => $request['payment_status'], 'total_amount' => $request['total_amount']];
+                        $price      = (string) ($request['price_status'] ?? 'not_required');
+                        $priceOk    = in_array($price, ['approved', 'not_required'], true);
+                        $needsPrice = in_array($request['accepted_status'], ['accepted', 'on_the_way'], true) && in_array($price, ['awaiting_receipt', 'rejected'], true)
+                            && in_array($request['payment_status'], ['unpaid', 'cod_pending'], true);
+                        $asRequest  = ['status' => $request['accepted_status'], 'payment_method' => $request['payment_method'], 'payment_status' => $request['payment_status'], 'total_amount' => $request['total_amount'], 'price_status' => $price];
                         $next       = next_step($asRequest, 'runner');
                         ?>
                         <article class="req-card">
@@ -69,6 +73,10 @@ $balanceCents = Money::toCents($walletBalance);
                                     <a href="<?= base_url('messages?user_id=' . (int) $request['user_id'] . '&request_id=' . $requestId) ?>" class="btn btn-secondary btn-sm"><?= icon('message') ?> Message requester</a>
                                 <?php endif; ?>
 
+                                <?php if ($needsPrice): ?>
+                                    <a href="<?= base_url('request-details/' . $requestId) ?>#priceHeading" class="btn btn-primary btn-sm"><?= icon('paperclip') ?> <?= $price === 'rejected' ? 'Send corrected price' : 'Send actual price' ?></a>
+                                <?php endif; ?>
+
                                 <?php if ($request['accepted_status'] === 'accepted'): ?>
                                     <form action="<?= base_url('request/status/' . $requestId) ?>" method="post" class="inline-form" data-submit-once>
                                         <?= csrf_field() ?>
@@ -76,7 +84,9 @@ $balanceCents = Money::toCents($walletBalance);
                                         <button type="submit" class="btn btn-primary btn-sm" data-busy-label="Updating…"><?= icon('truck') ?> I'm on the way</button>
                                     </form>
                                 <?php elseif ($request['accepted_status'] === 'on_the_way'): ?>
-                                    <?php if ($isCod): ?>
+                                    <?php if ($isCod && ! $priceOk): ?>
+                                        <button type="button" class="btn btn-secondary btn-sm" disabled title="The requester must approve the actual price first"><?= icon('clock') ?> Waiting for price approval</button>
+                                    <?php elseif ($isCod): ?>
                                         <button type="button" class="btn btn-primary btn-sm" data-open-dialog="codDialog"
                                                 data-form-action="<?= esc(base_url('request/status/' . $requestId), 'attr') ?>"
                                                 data-cod-total="<?= esc(money_cents($totalCents), 'attr') ?>"

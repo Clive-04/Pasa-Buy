@@ -186,6 +186,13 @@ final class ProfilesSearchAndNavTest extends FeatureTestCase
         $pay = $this->createRequest($requester, ['item_name' => 'Needs payment', 'payment_method' => 'wallet']);
         (new RequestLifecycle())->accept($pay, $runner);
 
+        // R5: first the runner owes the actual price, then the requester owes a review.
+        $this->getAs($runner, 'accepted-requests')->assertSee('Send the actual price');
+        $submission = (new \App\Services\PriceApproval())->submit($pay, $runner, '100.00',
+            ['path' => 'test_receipt.pdf', 'name' => 'receipt.pdf', 'type' => 'application/pdf']);
+        $this->getAs($requester, 'my-requests')->assertSee('Check the actual price');
+        (new \App\Services\PriceApproval())->approve($pay, $requester, $submission);
+
         // 2) delivered, unrated by both: each side must rate.
         $rate = $this->deliveredErrand($requester, $runner, ['item_name' => 'Needs rating']);
 

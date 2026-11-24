@@ -54,6 +54,12 @@ final class UserJourneyTest extends FeatureTestCase
         $this->postAs($runner, 'request/status/' . $requestId, ['status' => 'delivered']);
         $this->assertSame('on_the_way', $this->requestRow($requestId)['status']);
 
+        // R5: no payment until the actual price + receipt is approved.
+        $this->postAs($requester, 'request/pay-runner/' . $requestId);
+        $this->assertStringContainsString('actual price', (string) $this->flash('error'));
+        $this->assertSame('500.00', $this->balance($requester));
+        $this->approvePrice($requestId);
+
         // Requester pays from the wallet.
         $this->postAs($requester, 'request/pay-runner/' . $requestId);
         $this->assertSame('Payment sent to the runner from your wallet.', $this->flash('success'));
@@ -124,6 +130,12 @@ final class UserJourneyTest extends FeatureTestCase
         $this->postAs($runner, 'wallet/top-up', ['amount' => '20', 'idempotency_key' => bin2hex(random_bytes(16))]);
         $this->postAs($runner, 'request/accept/' . $requestId);
         $this->postAs($runner, 'request/status/' . $requestId, ['status' => 'on_the_way']);
+
+        // R5: cash can't be settled until the requester approves the actual price.
+        $this->postAs($runner, 'request/status/' . $requestId, ['status' => 'delivered', 'cod_confirmed' => '1']);
+        $this->assertSame('cod_pending', $this->requestRow($requestId)['payment_status']);
+        $this->assertStringContainsString('approve the actual price', (string) $this->flash('error'));
+        $this->approvePrice($requestId);
 
         // Requester sees what to pay in cash; no pay button.
         $details = $this->getAs($requester, 'request-details/' . $requestId);

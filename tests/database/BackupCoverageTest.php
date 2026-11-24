@@ -13,7 +13,7 @@ final class BackupCoverageTest extends DatabaseTestCase
         sort($actual);
         sort($expected);
         $this->assertSame($expected, $actual, 'Every migrated table must participate in restore verification.');
-        $this->assertCount(9, $this->db->table('migrations')->get()->getResultArray());
+        $this->assertCount(10, $this->db->table('migrations')->get()->getResultArray());
     }
 
     public function testRestoreGuardFindsTablesTheBackupWouldLeaveBehind(): void

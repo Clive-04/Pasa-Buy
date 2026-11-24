@@ -121,7 +121,28 @@ final class ProfileAndNavigationTest extends FeatureTestCase
 
         (new RequestLifecycle())->accept($requestId, $runner);
 
-        $this->getAs($requester, 'request-details/' . $requestId)->assertSee('Pay your runner');
+        // R5: the runner sends the actual price first; the requester can't pay yet.
+        $this->getAs($runner, 'request-details/' . $requestId)->assertSee('Send the actual price');
+        $waiting = $this->getAs($requester, 'request-details/' . $requestId);
+        $waiting->assertSee('Your runner is getting your items');
+        $waiting->assertDontSee('payRunnerDialog');
+
+        $submission = (new \App\Services\PriceApproval())->submit($requestId, $runner, '120.00',
+            ['path' => 'test_receipt.pdf', 'name' => 'receipt.pdf', 'type' => 'application/pdf'], 'Bigger pack only');
+
+        $review = $this->getAs($requester, 'request-details/' . $requestId);
+        $review->assertSee('Check the actual price');
+        $review->assertSee('Approve ₱120.00');
+        $review->assertSee('+₱20.00 vs estimate ₱100.00');
+        $review->assertSee('request/' . $requestId . '/receipt/' . $submission, null);
+        $this->getAs($runner, 'request-details/' . $requestId)->assertSee('Waiting for the requester to approve the price');
+
+        (new \App\Services\PriceApproval())->approve($requestId, $requester, $submission);
+
+        $pay = $this->getAs($requester, 'request-details/' . $requestId);
+        $pay->assertSee('Pay your runner');
+        $pay->assertSee('Item (actual, approved)');
+        $pay->assertSee('Pay ₱170.00');
         $this->getAs($runner, 'request-details/' . $requestId)->assertSee('Buy the items, then set off');
     }
 

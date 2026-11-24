@@ -183,6 +183,12 @@ if (! function_exists('next_step')) {
 
         $r = static fn (string $tone, string $title, string $text): array => compact('tone', 'title', 'text');
 
+        // R5 price approval applies to assigned, unsettled errands (not to legacy settled ones).
+        $price     = (string) ($request['price_status'] ?? 'not_required');
+        $priceOpen = in_array($status, ['accepted', 'on_the_way'], true)
+            && in_array($request['payment_status'] ?? '', ['unpaid', 'cod_pending'], true)
+            && $price !== 'not_required';
+
         return match (true) {
             $status === 'cancelled' => $r('muted', 'This request was cancelled', 'Nothing else needs to happen. It stays in the history for reference.'),
             $status === 'delivered' => $r('success', 'Completed', $viewer === 'other'
@@ -191,6 +197,15 @@ if (! function_exists('next_step')) {
 
             $status === 'pending' && $viewer === 'requester' => $r('info', 'Waiting for a runner', 'Nearby runners can see your request. You will be notified when someone accepts it. You can still cancel it.'),
             $status === 'pending' => $r('action', 'Want to do this errand?', 'Accept it to become the runner. You buy the items (about ' . money($request['estimated_price'] ?? '0') . '), deliver them, and receive ' . $net . ' in total. That is the item cost back plus your service fee, minus the 10% platform fee.'),
+
+            // R5: the actual price (with a receipt) must be approved before any payment.
+            $viewer === 'requester' && $priceOpen && $price === 'submitted' => $r('action', 'Check the actual price', 'Your runner sent the actual item price and a receipt. Approve it to continue, or reject it with a reason.'),
+            $viewer === 'requester' && $priceOpen && $price === 'rejected' => $r('info', 'Waiting for a corrected price', 'You didn’t approve the last price. The runner can send a corrected amount and receipt. Message them if you need to sort it out.'),
+            $viewer === 'requester' && $priceOpen && $price !== 'approved' => $r('info', 'Your runner is getting your items', 'After buying, your runner sends the actual price with a receipt for you to approve. You pay only the approved amount.'),
+            $viewer === 'runner' && $priceOpen && in_array($price, ['awaiting_receipt', 'rejected'], true) => $r('action', $price === 'rejected' ? 'Send a corrected price' : 'Send the actual price', $price === 'rejected'
+                ? 'The requester didn’t approve the last price. Send the correct amount with the receipt, or message them.'
+                : 'After buying the items, send the actual amount with a photo of the receipt. The requester approves it before paying.'),
+            $viewer === 'runner' && $priceOpen && $price === 'submitted' => $r('info', 'Waiting for the requester to approve the price', 'You can mark the errand On the way meanwhile. Payment uses the approved amount.'),
 
             $viewer === 'requester' && ! $isCod && $unpaid => $r('action', 'Pay your runner', 'Pay ' . $total . ' from your wallet. The runner cannot complete the delivery until you pay.'),
             $viewer === 'requester' && $isCod && $status === 'accepted' => $r('info', 'Your runner is getting your items', 'Have ' . $total . ' in cash ready to pay the runner on delivery.'),
@@ -214,19 +229,28 @@ if (! function_exists('current_user')) {
      */
     function current_user(): ?array
     {
-        static $cache = [];
+        // Cached per request object (not per process: worker mode / tests reuse
+        // processes). A WeakMap entry dies with its request; spl_object_id()
+        // numbers are reused, which could serve a previous request's data.
+        static $cache = null;
+        $cache ??= new WeakMap();
         $id = (int) session('user_id');
 
         if ($id === 0) {
             return null;
         }
 
-        // Cached per request object (not per process: worker mode / tests reuse processes).
-        $key = $id . ':' . spl_object_id(service('request'));
+        $current = service('request');
+        $mine    = $cache[$current] ?? [];
 
-        return $cache[$key] ??= db_connect()->table('users')
-            ->select('id, first_name, last_name, username, profile_photo, wallet_balance, role')
-            ->where('id', $id)->get()->getRowArray();
+        if (! array_key_exists($id, $mine)) {
+            $mine[$id] = db_connect()->table('users')
+                ->select('id, first_name, last_name, username, profile_photo, wallet_balance, role')
+                ->where('id', $id)->get()->getRowArray();
+            $cache[$current] = $mine;
+        }
+
+        return $mine[$id];
     }
 }
 
@@ -260,20 +284,27 @@ if (! function_exists('unread_counts')) {
     /** @return array{notifications: int, messages: int} */
     function unread_counts(): array
     {
-        static $cache = [];
+        static $cache = null;
+        $cache ??= new WeakMap(); // per request object, see current_user()
         $id = (int) session('user_id');
 
         if ($id === 0) {
             return ['notifications' => 0, 'messages' => 0];
         }
 
-        $key = $id . ':' . spl_object_id(service('request'));
+        $current = service('request');
 
-        return $cache[$key] ??= [
+        if (isset($cache[$current][$id])) {
+            return $cache[$current][$id];
+        }
+
+        $mine = $cache[$current] ?? [];
+
+        return ($cache[$current] = $mine + [$id => [
             'notifications' => db_connect()->table('request_notifications')->where('user_id', $id)->where('is_read', 0)->countAllResults(),
             // With TalkJS, unread chat counts come live from the browser session.
             'messages'      => config('TalkJS')->isConfigured() ? 0 : db_connect()->table('notifications')->where('user_id', $id)->where('type', 'message')->where('is_read', 0)->countAllResults(),
-        ];
+        ]])[$id];
     }
 }
 
@@ -296,17 +327,20 @@ if (! function_exists('action_items')) {
      */
     function action_items(): array
     {
-        static $cache = [];
+        // Cached per request object (a WeakMap entry disappears with the object,
+        // unlike spl_object_id(), whose numbers are reused).
+        static $cache = null;
+        $cache ??= new WeakMap();
         $id = (int) session('user_id');
 
         if ($id === 0 || session('role') === 'admin') {
             return ['requests' => [], 'deliveries' => []];
         }
 
-        $key = $id . ':' . spl_object_id(service('request'));
+        $current = service('request');
 
-        if (isset($cache[$key])) {
-            return $cache[$key];
+        if (isset($cache[$current][$id])) {
+            return $cache[$current][$id];
         }
 
         $db     = db_connect();
@@ -314,11 +348,13 @@ if (! function_exists('action_items')) {
 
         $requests = $db->query(
             "SELECT r.id, r.item_name,
-                    CASE WHEN r.status = 'delivered' THEN 'rate' ELSE 'pay' END AS action
+                    CASE WHEN r.status = 'delivered' THEN 'rate' WHEN r.price_status = 'submitted' THEN 'review_price' ELSE 'pay' END AS action
              FROM requests r
              JOIN accepted_requests ar ON ar.request_id = r.id
              WHERE r.user_id = ?
-               AND ((r.status IN ('accepted', 'on_the_way') AND r.payment_method <> 'cod' AND r.payment_status = 'unpaid')
+               AND ((r.status IN ('accepted', 'on_the_way') AND r.payment_status IN ('unpaid', 'cod_pending') AND r.price_status = 'submitted')
+                 OR (r.status IN ('accepted', 'on_the_way') AND r.payment_method <> 'cod' AND r.payment_status = 'unpaid'
+                     AND r.price_status IN ('approved', 'not_required'))
                  OR (r.status = 'delivered' AND r.updated_at >= ?
                      AND NOT EXISTS (SELECT 1 FROM user_ratings ur WHERE ur.rater_id = ? AND ur.request_id = r.id)))
              ORDER BY r.updated_at DESC, r.id DESC",
@@ -327,12 +363,19 @@ if (! function_exists('action_items')) {
 
         $deliveries = $db->query(
             "SELECT r.id, r.item_name,
-                    CASE r.status WHEN 'accepted' THEN 'start' WHEN 'on_the_way' THEN 'deliver' ELSE 'rate' END AS action
+                    CASE
+                        WHEN r.status IN ('accepted', 'on_the_way') AND r.price_status IN ('awaiting_receipt', 'rejected')
+                             AND r.payment_status IN ('unpaid', 'cod_pending') THEN 'send_price'
+                        WHEN r.status = 'accepted' THEN 'start'
+                        WHEN r.status = 'on_the_way' THEN 'deliver'
+                        ELSE 'rate' END AS action
              FROM accepted_requests ar
              JOIN requests r ON r.id = ar.request_id
              WHERE ar.runner_id = ?
-               AND (r.status = 'accepted'
-                 OR (r.status = 'on_the_way' AND (r.payment_method = 'cod' OR r.payment_status = 'paid'))
+               AND ((r.status IN ('accepted', 'on_the_way') AND r.price_status IN ('awaiting_receipt', 'rejected')
+                     AND r.payment_status IN ('unpaid', 'cod_pending'))
+                 OR r.status = 'accepted'
+                 OR (r.status = 'on_the_way' AND ((r.payment_method = 'cod' AND r.price_status = 'approved') OR r.payment_status = 'paid'))
                  OR (r.status = 'delivered' AND r.updated_at >= ?
                      AND NOT EXISTS (SELECT 1 FROM user_ratings ur WHERE ur.rater_id = ? AND ur.request_id = r.id)))
              ORDER BY r.updated_at DESC, r.id DESC",
@@ -343,7 +386,11 @@ if (! function_exists('action_items')) {
             'id' => (int) $r['id'], 'item_name' => (string) $r['item_name'], 'action' => (string) $r['action'],
         ], $rows);
 
-        return $cache[$key] = ['requests' => $cast($requests), 'deliveries' => $cast($deliveries)];
+        $mine      = $cache[$current] ?? [];
+        $mine[$id] = ['requests' => $cast($requests), 'deliveries' => $cast($deliveries)];
+        $cache[$current] = $mine;
+
+        return $mine[$id];
     }
 }
 
@@ -351,7 +398,9 @@ if (! function_exists('action_label')) {
     function action_label(string $action): string
     {
         return match ($action) {
-            'pay'     => 'Pay your runner',
+            'pay'          => 'Pay your runner',
+            'review_price' => 'Check the actual price',
+            'send_price'   => 'Send the actual price',
             'rate'    => 'Rate this delivery',
             'start'   => 'Mark as On the way',
             'deliver' => 'Mark as Delivered',

@@ -39,6 +39,10 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $route
     $routes->post('request/status/(:num)', 'Request::updateAcceptedStatus/$1');
     $routes->post('request/pay-runner/(:num)', 'Request::payRunner/$1');
     $routes->post('request/(:num)/rate', 'Request::rate/$1');
+    $routes->post('request/(:num)/price', 'Request::submitPrice/$1');
+    $routes->post('request/(:num)/price/(:num)/approve', 'Request::approvePrice/$1/$2');
+    $routes->post('request/(:num)/price/(:num)/reject', 'Request::rejectPrice/$1/$2');
+    $routes->get('request/(:num)/receipt/(:num)', 'Request::receipt/$1/$2');
     $routes->post('request/cancel/(:num)', 'Request::cancel/$1');
 
     $routes->get('browse-requests', 'Request::browse');

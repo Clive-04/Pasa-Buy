@@ -89,6 +89,7 @@ final class ConcurrencyTest extends DatabaseTestCase
         $this->fund($requester, '5000');
         $requestId = $this->createRequest($requester, ['estimated_price' => '100', 'service_fee' => '50']);
         (new RequestLifecycle())->accept($requestId, $runner);
+        $this->approvePrice($requestId);
 
         $results = $this->race(array_fill(0, self::WORKERS, ['pay', $requestId, $requester]));
 
@@ -107,6 +108,7 @@ final class ConcurrencyTest extends DatabaseTestCase
         $requestId = $this->createRequest($this->createUser(), ['payment_method' => 'cod', 'service_fee' => '50']);
         $lifecycle = new RequestLifecycle();
         $lifecycle->accept($requestId, $runner);
+        $this->approvePrice($requestId);
         $lifecycle->markOnTheWay($requestId, $runner);
 
         $results = $this->race(array_fill(0, self::WORKERS, ['deliver_cod', $requestId, $runner]));
@@ -116,6 +118,61 @@ final class ConcurrencyTest extends DatabaseTestCase
         $this->assertSame(1, $this->countRows('payments', ['request_id' => $requestId, 'type' => 'platform_fee']));
         $this->assertSame(1, $this->countRows('request_notifications', ['request_id' => $requestId, 'type' => 'delivered']));
         $this->assertSame('paid_cod', $this->requestRow($requestId)['payment_status']);
+    }
+
+    /**
+     * R5: the runner revises an approved price while the requester pays. One
+     * of them wins; the requester is never charged a price they didn't approve.
+     */
+    public function testPaymentRacingAPriceRevisionNeverChargesAnUnapprovedPrice(): void
+    {
+        $requester = $this->createUser();
+        $runner    = $this->createUser();
+        $this->fund($requester, '5000');
+        $requestId = $this->createRequest($requester, ['estimated_price' => '100', 'service_fee' => '50']);
+        (new RequestLifecycle())->accept($requestId, $runner);
+        $this->approvePrice($requestId, '120.00');
+
+        $jobs = [];
+        foreach (range(1, self::WORKERS) as $i) {
+            $jobs[] = $i % 2 === 0 ? ['pay', $requestId, $requester] : ['revise_price', $requestId, $runner, '999.00'];
+        }
+
+        $this->race($jobs);
+        $row = $this->requestRow($requestId);
+
+        if ($row['payment_status'] === 'paid') {
+            // Payment won: exactly the approved 120 + 50, once; later revisions were refused.
+            $this->assertSame('4830.00', $this->balance($requester));
+            $this->assertSame('170.00', $row['total_amount']);
+            $this->assertSame(0, $this->countRows('price_submissions', ['request_id' => $requestId, 'item_price' => '999.00']));
+        } else {
+            // A revision won first: the approval was cancelled, so nothing was paid.
+            $this->assertSame('5000.00', $this->balance($requester));
+            $this->assertSame('submitted', $row['price_status']);
+            $this->assertSame(0, $this->countRows('payments', ['request_id' => $requestId]));
+        }
+
+        $this->assertSame($this->balance($requester), $this->ledgerTotal($requester));
+        $this->assertLessThanOrEqual(1, $this->countRows('price_submissions', ['request_id' => $requestId, 'status' => 'approved']));
+    }
+
+    /** Two approvals of the same submission (double click, two tabs): one wins, the other is told it's done. */
+    public function testDuplicateApprovalsApproveOnce(): void
+    {
+        $requester = $this->createUser();
+        $runner    = $this->createUser();
+        $requestId = $this->createRequest($requester);
+        (new RequestLifecycle())->accept($requestId, $runner);
+        $submissionId = (new \App\Services\PriceApproval())->submit($requestId, $runner, '110.00',
+            ['path' => 'r.pdf', 'name' => 'r.pdf', 'type' => 'application/pdf']);
+
+        $results = $this->race(array_fill(0, self::WORKERS, ['approve_price', $requestId, $requester, $submissionId]));
+
+        $this->assertSame(1, $this->successes($results));
+        $this->assertSame(1, $this->countRows('request_notifications', ['request_id' => $requestId, 'type' => 'price_approved']));
+        $this->assertSame('approved', $this->requestRow($requestId)['price_status']);
+        $this->assertSame('160.00', $this->requestRow($requestId)['total_amount']);
     }
 
     public function testDuplicateTopUpSubmissionsCreditOnce(): void
@@ -155,6 +212,7 @@ final class ConcurrencyTest extends DatabaseTestCase
         foreach (range(1, 3) as $i) {
             $requestId = $this->createRequest($requester);
             $lifecycle->accept($requestId, $this->createUser());
+            $this->approvePrice($requestId);
             $jobs[] = ['pay', $requestId, $requester];
         }
 

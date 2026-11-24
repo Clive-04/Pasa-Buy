@@ -7,7 +7,11 @@ use App\Libraries\Money;
 use App\Models\AcceptedRequestModel;
 use App\Models\RequestModel;
 use App\Models\UserModel;
+use App\Libraries\UploadStorage;
+use App\Services\PriceApproval;
 use App\Services\RatingService;
+use App\Services\ServiceException;
+use CodeIgniter\Exceptions\PageNotFoundException;
 use App\Services\RequestLifecycle;
 use App\Services\TalkAccess;
 use App\Services\WalletService;
@@ -186,6 +190,97 @@ class Request extends BaseController
         return $response;
     }
 
+    // ------------------------------------------------ R5: actual price
+
+    /** Runner submits the actual item amount with a receipt (photo or PDF). */
+    public function submitPrice($requestId)
+    {
+        $requestId = (int) $requestId;
+        $back      = '/request-details/' . $requestId;
+        $file      = $this->request->getFile('receipt');
+        $stored    = null;
+
+        if ($file === null || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            return redirect()->to($back)->withInput()->with('error', 'Attach a photo or PDF of the receipt.')->with('open_dialog', 'priceDialog');
+        }
+
+        try {
+            $checked = UploadStorage::validate($file, UploadStorage::RECEIPT_TYPES, UploadStorage::RECEIPT_MAX_BYTES);
+            $stored  = UploadStorage::store($file, UploadStorage::RECEIPTS, $checked['extension']);
+
+            (new PriceApproval())->submit($requestId, $this->currentUserId(), (string) $this->request->getPost('item_price'), [
+                'path' => $stored,
+                'name' => preg_replace('/[^A-Za-z0-9._ -]/', '_', (string) $file->getClientName()) ?: 'receipt.' . $checked['extension'],
+                'type' => $checked['mime'],
+            ], (string) $this->request->getPost('note'));
+        } catch (ServiceException $e) {
+            UploadStorage::delete(UploadStorage::RECEIPTS, $stored);
+
+            return redirect()->to($back)->withInput()->with('error', $e->getMessage())->with('open_dialog', 'priceDialog');
+        } catch (\Throwable $e) {
+            UploadStorage::delete(UploadStorage::RECEIPTS, $stored);
+            log_message('error', 'Price submission failed: {m}', ['m' => $e->getMessage()]);
+
+            return redirect()->to($back)->with('error', 'Something went wrong. Nothing was changed. Please try again.');
+        }
+
+        return redirect()->to($back)->with('success', 'Price and receipt sent. The requester will check and approve it before paying.');
+    }
+
+    public function approvePrice($requestId, $submissionId)
+    {
+        return $this->attempt(
+            fn () => (new PriceApproval())->approve((int) $requestId, $this->currentUserId(), (int) $submissionId),
+            'Price approved. The total now uses the actual price.',
+            '/request-details/' . (int) $requestId,
+        );
+    }
+
+    public function rejectPrice($requestId, $submissionId)
+    {
+        return $this->attempt(
+            fn () => (new PriceApproval())->reject((int) $requestId, $this->currentUserId(), (int) $submissionId, (string) $this->request->getPost('reason')),
+            'Price not approved. The runner has been told why and can send a corrected price.',
+            '/request-details/' . (int) $requestId,
+        );
+    }
+
+    /**
+     * Receipt evidence, only for the errand's requester and runner, and for
+     * admins (role re-read from the database, as in AdminFilter).
+     */
+    public function receipt($requestId, $submissionId)
+    {
+        $db         = db_connect();
+        $viewer     = $this->currentUserId();
+        $submission = $db->table('price_submissions')->where('id', (int) $submissionId)->where('request_id', (int) $requestId)->get()->getRowArray();
+        $request    = $submission !== null ? $db->table('requests')->select('user_id')->where('id', (int) $requestId)->get()->getRowArray() : null;
+
+        $allowed = $submission !== null && $request !== null && (
+            (int) $request['user_id'] === $viewer
+            || (int) $submission['runner_id'] === $viewer
+            || $db->table('users')->where('id', $viewer)->where('role', 'admin')->countAllResults() > 0
+        );
+
+        $path = $allowed ? UploadStorage::path(UploadStorage::RECEIPTS, $submission['receipt_path']) : null;
+
+        if ($path === null) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $contentType = UploadStorage::contentType($submission['receipt_path']);
+        $download    = preg_replace('/[^A-Za-z0-9._ -]/', '_', (string) $submission['receipt_name']);
+
+        return $this->response
+            ->setHeader('Content-Type', $contentType)
+            ->setHeader('Content-Length', (string) filesize($path))
+            ->setHeader('Content-Disposition', 'inline; filename="' . $download . '"')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; sandbox")
+            ->setHeader('Cache-Control', 'no-store, private')
+            ->setBody((string) file_get_contents($path));
+    }
+
     public function acceptedRequests()
     {
         $config = config('PasaBuy');
@@ -194,7 +289,7 @@ class Request extends BaseController
 
         $model->select('accepted_requests.id AS accepted_id, accepted_requests.request_id, accepted_requests.runner_id,
                 accepted_requests.status AS accepted_status, accepted_requests.accepted_at,
-                r.item_name, r.quantity, r.store_name, r.urgency, r.payment_method, r.payment_status,
+                r.item_name, r.quantity, r.store_name, r.urgency, r.payment_method, r.payment_status, r.price_status,
                 r.estimated_price, r.service_fee, r.platform_fee, r.total_amount, r.status AS request_status,
                 u.first_name, u.last_name, u.id AS user_id')
             ->join('requests r', 'r.id = accepted_requests.request_id')
@@ -258,6 +353,8 @@ class Request extends BaseController
             // Exact address and phone are shared only with the participants.
             'canSeeContact' => $isRequester || $isRunner || $isAdmin,
             'walletBalance' => $viewer['wallet_balance'] ?? '0.00',
+            // R5: every price submission and decision (participants and admins only).
+            'priceHistory'  => $isRequester || $isRunner || $isAdmin ? (new PriceApproval())->history((int) $request['id']) : [],
             'myRating'      => ($isRequester || $isRunner) && $request['status'] === 'delivered'
                 ? (new RatingService())->ratingFor($viewerId, (int) $request['id'])
                 : null,

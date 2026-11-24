@@ -560,3 +560,40 @@ mark.chat-hit.is-current { background: #ffd54a; color: #1b1b1b; box-shadow: 0 0 
 .profile-wallet:active { transform: none; }
 .profile-wallet:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .bubble.is-settled { animation: none; }
+
+/* ---------------------------------------------- R5: actual price + receipt */
+.price-card .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.price-state { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.74rem; font-weight: 750; white-space: nowrap;
+    background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.price-state.is-submitted, .price-state.is-pending { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
+.price-state.is-approved { background: var(--success-bg); color: var(--success-ink); border-color: var(--success-line); }
+.price-state.is-rejected { background: var(--danger-bg); color: var(--danger-ink); border-color: var(--danger-line); }
+.price-state.is-superseded { text-decoration: line-through; color: var(--muted); }
+.price-empty { margin: 0; color: var(--ink-2); font-size: 0.92rem; }
+.price-latest { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.price-figures { display: grid; gap: 2px; }
+.price-amount { color: var(--ink); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.price-diff { color: var(--muted); font-size: 0.82rem; font-weight: 650; }
+.price-diff.is-up { color: var(--warn-ink); }
+.price-diff.is-down { color: var(--success-ink); }
+.price-receipt { display: inline-grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--brand-ink); font-weight: 700; text-decoration: none; max-width: 100%; }
+.price-receipt:hover { border-color: var(--brand); }
+.price-receipt .i { grid-row: span 2; width: 18px; height: 18px; }
+.price-receipt small { min-width: 0; overflow: hidden; color: var(--muted); font-weight: 600; font-size: 0.74rem; white-space: nowrap; text-overflow: ellipsis; }
+.price-note { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; color: var(--ink-2); font-size: 0.88rem; }
+.price-note .i { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--muted); }
+.price-note.is-rejected { padding: 8px 10px; border-radius: 10px; background: var(--danger-bg); color: var(--danger-ink); }
+.price-note.is-rejected .i { color: var(--danger-ink); }
+.price-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.price-hint { margin: 10px 0 0; color: var(--muted); font-size: 0.82rem; }
+.link-btn { padding: 0; border: 0; background: none; color: var(--brand-ink); font: inherit; font-weight: 700; cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }
+.price-history { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.price-history summary { cursor: pointer; color: var(--ink-2); font-size: 0.86rem; font-weight: 700; }
+.price-history ol { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.price-history li { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 6px 8px; border-radius: 8px; background: var(--surface-2); font-size: 0.84rem; }
+.price-history-main { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.price-history-main small { color: var(--muted); }
+.price-history-meta { color: var(--muted); font-size: 0.78rem; }
+.money-breakdown .row.muted { color: var(--muted); }

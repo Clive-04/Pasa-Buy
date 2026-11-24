@@ -157,6 +157,7 @@ final class RequestLifecycleTest extends DatabaseTestCase
         $id = $this->createRequest($requester, ['payment_method' => 'cod', 'estimated_price' => '180', 'service_fee' => '50']);
 
         $this->lifecycle->accept($id, $runner);
+        $this->approvePrice($id);
         $this->lifecycle->markOnTheWay($id, $runner);
         $this->lifecycle->markDelivered($id, $runner, true);
 
@@ -184,6 +185,7 @@ final class RequestLifecycleTest extends DatabaseTestCase
         $this->fund($runner, '5');
         $id = $this->createRequest($this->createUser(), ['payment_method' => 'cod', 'service_fee' => '50']);
         $this->lifecycle->accept($id, $runner);
+        $this->approvePrice($id);
         $this->lifecycle->markOnTheWay($id, $runner);
 
         // Runner spends the credits elsewhere before delivering.
@@ -244,6 +246,7 @@ final class RequestLifecycleTest extends DatabaseTestCase
         $this->fund($requester, '500');
         $paid = $this->createRequest($requester);
         $this->lifecycle->accept($paid, $runner);
+        $this->approvePrice($paid);
         $this->wallet->payForRequest($paid, $requester);
 
         $this->expectException(ServiceException::class);

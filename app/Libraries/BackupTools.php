@@ -15,7 +15,7 @@ final class BackupTools
     public const TABLES = [
         'users', 'requests', 'accepted_requests', 'payments', 'messages', 'notifications',
         'request_notifications', 'referrals', 'user_ratings', 'website_ratings',
-        'wallet_topups', 'user_blocks', 'user_reports', 'chat_deletions', 'migrations',
+        'wallet_topups', 'user_blocks', 'user_reports', 'chat_deletions', 'price_submissions', 'migrations',
     ];
 
     /** @param array<string, mixed> $db */

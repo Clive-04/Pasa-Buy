@@ -18,6 +18,7 @@ final class UploadStorage
 {
     public const PROFILE_PHOTOS = 'profile_photos';
     public const MESSAGE_FILES  = 'message_attachments';
+    public const RECEIPTS       = 'receipts';
 
     /** @var array<string, list<string>> */
     public const IMAGE_TYPES = [
@@ -33,6 +34,10 @@ final class UploadStorage
         'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
     ];
 
+    /** Receipt evidence for R5: a photo or a PDF. */
+    public const RECEIPT_TYPES = self::IMAGE_TYPES + ['pdf' => ['application/pdf']];
+
+    public const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
     public const PROFILE_MAX_BYTES = 2 * 1024 * 1024;
     public const MESSAGE_MAX_BYTES = 5 * 1024 * 1024;
     public const MAX_IMAGE_SIDE    = 5000;
@@ -129,7 +134,7 @@ final class UploadStorage
 
     public static function directory(string $directory): string
     {
-        if (! in_array($directory, [self::PROFILE_PHOTOS, self::MESSAGE_FILES], true)) {
+        if (! in_array($directory, [self::PROFILE_PHOTOS, self::MESSAGE_FILES, self::RECEIPTS], true)) {
             throw new \InvalidArgumentException('Unknown upload directory.');
         }
 

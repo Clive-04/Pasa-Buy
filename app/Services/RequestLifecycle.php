@@ -202,6 +202,11 @@ class RequestLifecycle extends TransactionalService
                     throw new ServiceException('This cash payment was already settled.');
                 }
 
+                // R5: the cash collected is the approved actual price + service fee.
+                if ($request['price_status'] !== 'approved') {
+                    throw new ServiceException('The requester must approve the actual price and receipt before you collect the cash and complete this delivery.');
+                }
+
                 $feeCents = Money::toCents($request['platform_fee']);
                 $runner   = $this->lockUsers($runnerId)[$runnerId];
 

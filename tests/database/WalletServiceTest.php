@@ -107,6 +107,7 @@ final class WalletServiceTest extends DatabaseTestCase
         $this->fund($requester, '1000');
         $id = $this->createRequest($requester, ['estimated_price' => '95.50', 'service_fee' => '45.00']);
         $this->lifecycle->accept($id, $runner);
+        $this->approvePrice($id);
 
         $this->wallet->payForRequest($id, $requester);
 
@@ -131,6 +132,7 @@ final class WalletServiceTest extends DatabaseTestCase
         $this->fund($requester, '1000');
         $id = $this->createRequest($requester);
         $this->lifecycle->accept($id, $this->createUser());
+        $this->approvePrice($id);
         $this->wallet->payForRequest($id, $requester);
 
         try {
@@ -150,6 +152,7 @@ final class WalletServiceTest extends DatabaseTestCase
         $this->fund($requester, '149.99');
         $id = $this->createRequest($requester); // total 150.00
         $this->lifecycle->accept($id, $runner);
+        $this->approvePrice($id);
 
         try {
             $this->wallet->payForRequest($id, $requester);
@@ -205,6 +208,7 @@ final class WalletServiceTest extends DatabaseTestCase
         $this->fund($requester, '1000');
         $id = $this->createRequest($requester);
         $this->lifecycle->accept($id, $runner);
+        $this->approvePrice($id);
 
         $this->db->table('payments')->insert([
             'user_id' => $runner, 'request_id' => $id, 'amount' => '1.00', 'type' => 'request_earning',
@@ -235,6 +239,7 @@ final class WalletServiceTest extends DatabaseTestCase
         $requester = $this->createUser();
         $id        = $this->createRequest($requester);
         (new RequestLifecycle())->accept($id, $this->createUser());
+        $this->approvePrice($id);
 
         try {
             $this->wallet->payForRequest($id, $requester); // no funds -> fails

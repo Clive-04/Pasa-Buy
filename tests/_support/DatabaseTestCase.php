@@ -21,7 +21,7 @@ use RuntimeException;
 abstract class DatabaseTestCase extends CIUnitTestCase
 {
     protected const TABLES = [
-        'chat_deletions', 'user_reports', 'user_blocks', 'wallet_topups', 'request_notifications', 'notifications', 'messages', 'payments', 'accepted_requests',
+        'price_submissions', 'chat_deletions', 'user_reports', 'user_blocks', 'wallet_topups', 'request_notifications', 'notifications', 'messages', 'payments', 'accepted_requests',
         'user_ratings', 'website_ratings', 'referrals', 'requests', 'users',
     ];
 
@@ -152,6 +152,24 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         )->getRow();
 
         return number_format((float) $row->total, 2, '.', '');
+    }
+
+    /**
+     * R5 shortcut: the request's runner submits an actual price (default: the
+     * estimate) with a placeholder receipt, and the requester approves it.
+     */
+    protected function approvePrice(int $requestId, ?string $itemPrice = null): int
+    {
+        $request = $this->requestRow($requestId);
+        $runner  = (int) $this->db->table('accepted_requests')->where('request_id', $requestId)->get()->getRow('runner_id');
+        $service = new \App\Services\PriceApproval();
+
+        $submissionId = $service->submit($requestId, $runner, $itemPrice ?? $request['estimated_price'], [
+            'path' => 'test_receipt_' . $requestId . '.pdf', 'name' => 'receipt.pdf', 'type' => 'application/pdf',
+        ]);
+        $service->approve($requestId, (int) $request['user_id'], $submissionId);
+
+        return $submissionId;
     }
 
     protected function requestRow(int $requestId): array

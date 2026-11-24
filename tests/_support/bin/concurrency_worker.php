@@ -36,6 +36,10 @@ try {
         'pay'         => (new App\Services\WalletService($db))->payForRequest((int) $args[0], (int) $args[1]),
         'deliver_cod' => (new App\Services\RequestLifecycle($db))->markDelivered((int) $args[0], (int) $args[1], true),
         'topup'       => (new App\Services\WalletService($db))->addDemoCredits((int) $args[0], (string) $args[1], (string) $args[2]),
+        // R5: runner revises the price (placeholder receipt name; no file needed for the service).
+        'revise_price' => (new App\Services\PriceApproval($db))->submit((int) $args[0], (int) $args[1], (string) $args[2],
+            ['path' => 'race_receipt.pdf', 'name' => 'receipt.pdf', 'type' => 'application/pdf']),
+        'approve_price' => (new App\Services\PriceApproval($db))->approve((int) $args[0], (int) $args[1], (int) $args[2]),
         default       => throw new InvalidArgumentException('Unknown action ' . $action),
     };
 
