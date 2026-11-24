@@ -130,3 +130,7 @@ _modules/*
 
 /results/
 /phpunit*.xml
+
+# Legacy public uploads (April 2026). Kept only on local disks; the app uses
+# private storage in writable/uploads. Removed from tracking 2026-11-24 (R10).
+/uploads/
