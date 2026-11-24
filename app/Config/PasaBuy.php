@@ -51,6 +51,13 @@ class PasaBuy extends BaseConfig
     public bool $talkjsEnabled = false;
 
     /**
+     * Content-Security-Policy mode (R6): 'enforce' (default), 'report-only'
+     * (browser logs violations but blocks nothing; for checking a new setup)
+     * or 'off'. (.env: pasabuy.cspMode = report-only)
+     */
+    public string $cspMode = 'enforce';
+
+    /**
      * Rate limits per signed-in user (per IP for guests): action => [max, seconds].
      * Token bucket: up to `max` actions at once, refilling evenly over `seconds`.
      * Demo-scale defaults; tune for a real deployment.

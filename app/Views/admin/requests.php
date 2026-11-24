@@ -142,10 +142,4 @@ $exportUrl = base_url('admin/requests/export') . ($query !== '' ? '?' . $query :
     </form>
 </dialog>
 
-<script>
-document.querySelectorAll('[data-autosubmit]').forEach(function (select) {
-    select.addEventListener('change', function () { select.form.requestSubmit ? select.form.requestSubmit() : select.form.submit(); });
-});
-</script>
-
 <?= $this->include('includes/footer') ?>

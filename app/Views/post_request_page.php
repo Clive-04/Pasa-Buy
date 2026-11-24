@@ -28,7 +28,9 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
 
                 <div class="post-grid">
                     <section>
-                        <form action="<?= base_url('request/process') ?>" method="post" id="postRequestForm" data-submit-once novalidate>
+                        <form action="<?= base_url('request/process') ?>" method="post" id="postRequestForm" data-submit-once novalidate
+                              data-fee-basis-points="<?= (int) \App\Libraries\FeePolicy::PLATFORM_FEE_BASIS_POINTS ?>"
+                              data-had-server-input="<?= session('_ci_old_input') ? '1' : '0' ?>" data-csrf-name="<?= esc(csrf_token(), 'attr') ?>">
                             <?= csrf_field() ?>
 
                             <fieldset class="form-section">
@@ -214,96 +216,6 @@ $selected = static fn (string $field, string $value): string => form_value($fiel
     </div>
 </main>
 
-<script>
-(function () { // runs at once: the form is above (also on Turbo visits)
-    var form = document.getElementById('postRequestForm');
-    var DRAFT_KEY = 'pasabuy:post-request-draft:v1';
-    var FEE_BASIS_POINTS = <?= (int) \App\Libraries\FeePolicy::PLATFORM_FEE_BASIS_POINTS ?>;
-    var hadServerInput = <?= session('_ci_old_input') ? 'true' : 'false' ?>;
-
-    function cents(value) {
-        var match = /^(\d{1,8})(?:\.(\d{1,2}))?$/.exec(String(value || '').trim());
-        if (!match) { return 0; }
-        return parseInt(match[1], 10) * 100 + parseInt((match[2] || '').padEnd(2, '0') || '0', 10);
-    }
-
-    function peso(c) {
-        return '₱' + Math.floor(c / 100).toLocaleString('en-PH') + '.' + String(c % 100).padStart(2, '0');
-    }
-
-    function text(id, value) { document.getElementById(id).textContent = value; }
-
-    function selectedLabel(select) {
-        return select.value ? select.options[select.selectedIndex].text : 'Not set';
-    }
-
-    function update() {
-        var item = cents(form.estimated_price.value);
-        var fee = cents(form.service_fee.value);
-        var platform = Math.floor((fee * FEE_BASIS_POINTS + 5000) / 10000); // same half-up rule as the server
-
-        text('summaryItem', form.item_name.value.trim() || 'Not set');
-        text('summaryQuantity', form.quantity.value || '1');
-        text('summaryStore', form.store_name.value.trim() || 'Not set');
-        text('summaryUrgency', selectedLabel(form.urgency));
-        text('summaryPayment', selectedLabel(form.payment_method));
-        text('summaryEstimated', peso(item));
-        text('summaryServiceFee', peso(fee));
-        text('summaryTotal', peso(item + fee));
-        text('summaryPlatformFee', peso(platform));
-        text('summaryRunnerNet', peso(item + fee - platform));
-    }
-
-    // ------------------------------------------------------ local draft
-    function fields() {
-        return Array.prototype.filter.call(form.elements, function (el) {
-            return el.name && el.name !== '<?= csrf_token() ?>' && el.type !== 'hidden' && el.type !== 'submit' && el.type !== 'button';
-        });
-    }
-
-    function saveDraft() {
-        var data = {};
-        fields().forEach(function (el) { data[el.name] = el.value; });
-        try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
-            text('draftStatus', 'Draft saved on this device.');
-        } catch (e) {
-            text('draftStatus', 'Could not save a draft in this browser.');
-        }
-    }
-
-    function restoreDraft() {
-        if (hadServerInput) { return; } // server re-filled the form after an error
-        var raw = null;
-        try { raw = localStorage.getItem(DRAFT_KEY); } catch (e) { return; }
-        if (!raw) { return; }
-        try {
-            var data = JSON.parse(raw);
-            fields().forEach(function (el) {
-                if (Object.prototype.hasOwnProperty.call(data, el.name)) { el.value = data[el.name]; }
-            });
-            document.getElementById('draftNotice').hidden = false;
-        } catch (e) { /* ignore corrupt draft */ }
-    }
-
-    document.getElementById('saveDraft').addEventListener('click', saveDraft);
-    document.getElementById('discardDraft').addEventListener('click', function () {
-        try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
-        form.reset();
-        document.getElementById('draftNotice').hidden = true;
-        update();
-    });
-
-    form.addEventListener('submit', function () {
-        try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
-    });
-
-    form.addEventListener('input', update);
-    form.addEventListener('change', update);
-
-    restoreDraft();
-    update();
-})();
-</script>
+<script src="<?= asset('js/post-request.js') ?>"></script>
 
 <?= $this->include('includes/footer') ?>

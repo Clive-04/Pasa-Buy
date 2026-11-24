@@ -1,2 +1,6 @@
 /.gitattributes export-ignore
 /.github export-ignore
+
+# Shell scripts run on Linux servers: always LF.
+*.sh text eol=lf
+spark text eol=lf

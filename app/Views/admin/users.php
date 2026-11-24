@@ -189,10 +189,4 @@ $sorts = ['newest' => 'Newest first', 'oldest' => 'Oldest first', 'balance' => '
     </form>
 </dialog>
 
-<script>
-document.querySelectorAll('[data-autosubmit]').forEach(function (select) {
-    select.addEventListener('change', function () { select.form.requestSubmit ? select.form.requestSubmit() : select.form.submit(); });
-});
-</script>
-
 <?= $this->include('includes/footer') ?>
