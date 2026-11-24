@@ -597,3 +597,8 @@ mark.chat-hit.is-current { background: #ffd54a; color: #1b1b1b; box-shadow: 0 0 
 .price-history-main small { color: var(--muted); }
 .price-history-meta { color: var(--muted); font-size: 0.78rem; }
 .money-breakdown .row.muted { color: var(--muted); }
+
+/* Post a request: the header and cards sit in their own wrapper, so it needs
+   the same 20px rhythm as .dashboard-main (title -> notices -> cards). */
+.post-request-content-panel { display: grid; gap: 20px; align-content: start; }
+.post-request-content-panel > * { margin: 0; }

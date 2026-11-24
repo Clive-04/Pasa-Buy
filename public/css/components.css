@@ -203,10 +203,13 @@ button[aria-busy="true"] .i { display: none; }
 /* =========================================================== FLASH/TOAST */
 .flash-stack { display: grid; gap: 10px; }
 .flash {
-    display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r); border: 1px solid transparent;
+    display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: var(--r); border: 1px solid transparent;
     font-weight: 600; font-size: 0.92rem; line-height: 1.45; animation: pb-slide-down var(--dur-slow) var(--ease-spring) both;
 }
-.flash > .i { margin-top: 2px; }
+.flash > .i { flex: none; }
+/* A message with a list of errors reads from the top instead. */
+.flash:has(ul) { align-items: flex-start; }
+.flash:has(ul) > .i { margin-top: 2px; }
 .flash-success { background: var(--success-bg); color: var(--success-ink); border-color: var(--success-line); }
 .flash-error   { background: var(--danger-bg); color: var(--danger-ink); border-color: var(--danger-line); }
 .flash-info    { background: var(--info-bg); color: var(--info-ink); border-color: var(--info-line); }
@@ -215,7 +218,8 @@ button[aria-busy="true"] .i { display: none; }
 .flash.is-leaving { animation: pb-fade-out var(--dur) var(--ease-out) forwards; }
 .flash ul { margin: 6px 0 0; padding-left: 18px; font-weight: 500; }
 .flash-dismiss {
-    margin-left: auto; min-width: 32px; min-height: 32px; border: none; border-radius: 8px;
+    /* Negative margins: the 32px tap target must not make the box taller than its text. */
+    flex: none; margin: -6px -6px -6px auto; min-width: 32px; min-height: 32px; border: none; border-radius: 8px;
     background: transparent; color: inherit; font-size: 1.2rem; line-height: 1; cursor: pointer;
 }
 .flash-dismiss:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
