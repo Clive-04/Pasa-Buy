@@ -27,6 +27,23 @@ Candidate categories for the decision (no provider or paid plan has been chosen)
 
 Compare current pricing when the budget and domain are known.
 
+## 1a. Oracle Cloud Always Free (chosen host, 2026-11-24)
+
+Ubuntu 24.04 VM (Ampere A1 Flex 1 OCPU / 6 GB, or E2.1.Micro), ingress TCP 80/443 open in the subnet's security list. The address is a free `sslip.io` name: `pasabuy.<ip-with-dashes>.sslip.io` resolves to the VM, so Let's Encrypt can issue a certificate without buying a domain.
+
+```bash
+# from the build machine (SSH key ~/.ssh/pasabuy_oracle)
+scp -i ~/.ssh/pasabuy_oracle deploy/oracle/*.sh ubuntu@<ip>:/tmp/
+ssh -i ~/.ssh/pasabuy_oracle ubuntu@<ip> 'sudo bash /tmp/provision.sh pasabuy.<ip-dashes>.sslip.io <email>'
+scripts/build-release.sh <commit> build/releases
+scp -i ~/.ssh/pasabuy_oracle build/releases/pasabuy-<sha>.tar.gz* ubuntu@<ip>:/tmp/
+ssh -i ~/.ssh/pasabuy_oracle ubuntu@<ip> 'sudo bash /tmp/release.sh /tmp/pasabuy-<sha>.tar.gz --seed-demo'
+```
+
+`provision.sh` generates the database passwords and the encryption key on the server (root-only files, never printed), opens 80/443 in the VM's own iptables (Oracle images reject them by default even when the security list allows them), adds swap, PHP upload limits, a nightly backup cron (02:30, keep 14) and automatic security updates. `release.sh` backs up, extracts, migrates as the migration user and switches `current`; `--seed-demo` creates the demo accounts with a random password stored in `/root/pasabuy-demo.pw`.
+
+Provider keys (TalkJS, Xendit **test mode**) are appended to `/srv/pasabuy/shared/.env` over SSH, never committed. Then register `https://<domain>/webhooks/xendit` in the Xendit dashboard (test mode) with the same callback token, and add the domain to TalkJS's allowed origins if that setting is enabled.
+
 ## 2. Server layout
 
 ```
