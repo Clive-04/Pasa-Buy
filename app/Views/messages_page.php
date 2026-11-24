@@ -1,220 +1,204 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
+<?php
+$otherName = ! empty($selectedUser) ? trim(($selectedUser['first_name'] ?? '') . ' ' . ($selectedUser['last_name'] ?? '')) : '';
+$lastId    = $messages !== [] ? end($messages)['id'] : 0;
+?>
 
-<main class="dashboard-page">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
-            <div class="messages-page-panel">
-                <?php if (session()->getFlashdata('success')): ?>
-                    <div class="alert alert-success" style="padding:12px; background:#d1fae5; color:#065f46; border-radius:8px; margin-bottom:16px;">
-                        <?= session()->getFlashdata('success') ?>
-                    </div>
-                <?php endif; ?>
+            <?= page_header([
+                'crumbs' => [['Dashboard', 'dashboard'], ['Messages', null]],
+                'title'  => 'Messages',
+            ]) ?>
 
-                <?php if (session()->getFlashdata('error')): ?>
-                    <div class="alert alert-error" style="padding:12px; background:#fee2e2; color:#991b1b; border-radius:8px; margin-bottom:16px;">
-                        <?= session()->getFlashdata('error') ?>
-                    </div>
-                <?php endif; ?>
+            <?= $this->include('includes/flash') ?>
 
-                <div class="page-top">
-                    <div>
-                        <span class="page-badge">Communication</span>
-                        <h1>Messages</h1>
-                        <p>Coordinate with requesters and runners through direct chat.</p>
-                    </div>
-
-                    <a href="<?= base_url('dashboard') ?>" class="page-back-btn">Back to Dashboard</a>
-                </div>
-
-                <div class="messages-layout">
-                    <aside class="conversations-panel">
-                        <div class="conversations-header">
-                            <h2>Chats</h2>
-                        </div>
-
-                        <form method="get" action="<?= base_url('messages') ?>" class="conversation-search">
-                            <?php if (!empty($selectedUserId)): ?>
-                                <input type="hidden" name="user_id" value="<?= esc($selectedUserId) ?>">
-                            <?php endif; ?>
-                            <?php if (!empty($requestId)): ?>
-                                <input type="hidden" name="request_id" value="<?= esc($requestId) ?>">
-                            <?php endif; ?>
-
-                            <input
-                                type="text"
-                                name="search"
-                                placeholder="Search conversation"
-                                value="<?= esc($search ?? '') ?>"
-                            >
+            <div class="chat<?= ! empty($selectedUser) ? ' has-thread' : '' ?>">
+                <aside class="chat-list" aria-label="Conversations">
+                    <div class="chat-list-head">
+                        <?php /* Searches names and the text of every message (server side). */ ?>
+                        <form method="get" action="<?= base_url('messages') ?>" class="chat-filter" role="search">
+                            <?= icon('search') ?>
+                            <label for="conversationSearch" class="visually-hidden">Search chats by name or message</label>
+                            <input type="search" id="conversationSearch" name="search" maxlength="100" placeholder="Search names and messages…" value="<?= esc($search) ?>">
                         </form>
+                    </div>
 
-                        <div class="conversation-list">
-                            <?php if (!empty($conversations)): ?>
-                                <?php foreach ($conversations as $conversation): ?>
-                                    <?php
-                                        $isActive = ((string) $selectedUserId === (string) $conversation['user_id']);
-                                        $avatarLetter = strtoupper(substr($conversation['first_name'] ?? 'U', 0, 1));
-                                        $previewText = !empty($conversation['message'])
-                                            ? $conversation['message']
-                                            : (!empty($conversation['attachment_name']) ? '[Attachment] ' . $conversation['attachment_name'] : 'No messages yet.');
-
-                                        $hasUnread = ((int) ($conversation['unread_count'] ?? 0)) > 0;
-                                    ?>
-
-                                    <a href="<?= base_url('messages?user_id=' . $conversation['user_id'] . (!empty($conversation['request_id']) ? '&request_id=' . $conversation['request_id'] : '')) ?>"
-                                       class="conversation-item <?= $isActive ? 'active' : '' ?> <?= $hasUnread ? 'has-unread' : '' ?>"
-                                       style="text-decoration:none;">
-                                        <div class="conversation-avatar"><?= esc($avatarLetter) ?></div>
-
-                                        <div class="conversation-info">
-                                            <div class="conversation-top">
-                                                <h3 class="<?= $hasUnread ? 'unread-name' : '' ?>">
-                                                    <?= esc(trim(($conversation['first_name'] ?? '') . ' ' . ($conversation['last_name'] ?? ''))) ?>
-                                                </h3>
-                                                <span><?= !empty($conversation['created_at']) ? date('g:i A', strtotime($conversation['created_at'])) : '' ?></span>
-                                            </div>
-
-                                            <p class="<?= $hasUnread ? 'unread-text' : '' ?>">
-                                                <?= esc($previewText) ?>
-                                            </p>
-                                        </div>
-                                    </a>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="conversation-item">
-                                    <div class="conversation-info">
-                                        <p>No conversations found.</p>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </aside>
-
-                    <section class="chat-panel">
-                        <?php if (!empty($selectedUser)): ?>
-                            <div class="chat-header">
-                                <div class="chat-user">
-                                    <div class="conversation-avatar">
-                                        <?= strtoupper(substr($selectedUser['first_name'] ?? 'U', 0, 1)) ?>
-                                    </div>
-                                    <div>
-                                        <h2><?= esc(trim(($selectedUser['first_name'] ?? '') . ' ' . ($selectedUser['last_name'] ?? ''))) ?></h2>
-                                        <?php if (!empty($requestId)): ?>
-                                            <p>Regarding Request #<?= esc($requestId) ?></p>
-                                        <?php else: ?>
-                                            <p>Conversation</p>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="chat-body" id="chatBody">
-                                <?php if (!empty($messages)): ?>
-                                    <?php
-                                        $currentDate = '';
-                                        $loggedInUserId = session('user_id');
-                                    ?>
-
-                                    <?php foreach ($messages as $msg): ?>
-                                        <?php
-                                            $msgDate = date('F j, Y', strtotime($msg['created_at']));
-                                            $isSent = ((string) $msg['sender_id'] === (string) $loggedInUserId);
-                                        ?>
-
-                                        <?php if ($msgDate !== $currentDate): ?>
-                                            <?php $currentDate = $msgDate; ?>
-                                            <div class="chat-date"><?= esc($currentDate) ?></div>
-                                        <?php endif; ?>
-
-                                        <div class="message-row <?= $isSent ? 'sent' : 'received' ?>">
-                                            <div class="message-bubble">
-                                                <?php if (!empty($msg['message'])): ?>
-                                                    <p><?= esc($msg['message']) ?></p>
-                                                <?php endif; ?>
-
-                                                <?php if (!empty($msg['attachment_path'])): ?>
-                                                    <div style="margin-top:8px;">
-                                                        <a href="<?= base_url($msg['attachment_path']) ?>" target="_blank" class="btn-light">
-                                                            Open Attachment: <?= esc($msg['attachment_name']) ?>
-                                                        </a>
-                                                    </div>
-                                                <?php endif; ?>
-
-                                                <span class="message-time"><?= date('g:i A', strtotime($msg['created_at'])) ?></span>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="chat-date">No messages yet</div>
-                                <?php endif; ?>
-                            </div>
-
-                            <form action="<?= base_url('messages/send') ?>" method="post" enctype="multipart/form-data" class="chat-input-bar">
-                                <input type="hidden" name="receiver_id" value="<?= esc($selectedUserId) ?>">
-                                <input type="hidden" name="request_id" value="<?= esc($requestId ?? '') ?>">
-
-                                <label for="attachment" class="attach-btn" title="Attach file" style="cursor:pointer;">📎</label>
-                                <input type="file" name="attachment" id="attachment" style="display:none;">
-
-                                <div class="attachment-preview" id="attachmentPreview" style="display:none;">
-                                    <span id="attachmentName"></span>
-                                    <button type="button" id="removeAttachment" style="margin-left:8px; border:none; background:none; cursor:pointer;">✕</button>
-                                </div>
-
-                                <input type="text" name="message" placeholder="Type message...">
-                                <button type="submit" class="send-btn">Send</button>
-                            </form>
-                        <?php else: ?>
-                            <div class="chat-header">
-                                <div class="chat-user">
-                                    <div>
-                                        <h2>Select a conversation</h2>
-                                        <p>Choose a requester or runner from the left panel.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="chat-body" id="chatBody">
-                                <div class="chat-date">No conversation selected</div>
+                    <div class="chat-threads">
+                        <?php if ($conversations !== []): ?>
+                            <?php foreach ($conversations as $c): ?>
+                                <?php
+                                $isActive  = ! empty($selectedUser) && (int) $selectedUser['id'] === (int) $c['user_id'];
+                                $unread    = (int) ($c['unread_count'] ?? 0);
+                                $preview   = $c['message'] !== '' ? $c['message'] : (! empty($c['attachment_name']) ? 'Attachment: ' . $c['attachment_name'] : '');
+                                $prefix    = (int) $c['sender_id'] === (int) session('user_id') ? 'You: ' : '';
+                                ?>
+                                <a href="<?= base_url('messages?user_id=' . (int) $c['user_id']) ?>" class="thread<?= $isActive ? ' is-active' : '' ?><?= $unread > 0 ? ' has-unread' : '' ?>"<?= $isActive ? ' aria-current="page"' : '' ?>>
+                                    <?= avatar($c, 'md') ?>
+                                    <span class="thread-main">
+                                        <span class="thread-top">
+                                            <strong><?= esc(trim($c['first_name'] . ' ' . $c['last_name'])) ?></strong>
+                                            <time datetime="<?= esc($c['created_at'], 'attr') ?>"><?= esc(time_ago($c['created_at'])) ?></time>
+                                        </span>
+                                        <span class="thread-preview"><?= esc($prefix . $preview) ?></span>
+                                    </span>
+                                    <?php if ($unread > 0): ?>
+                                        <span class="badge"><?= $unread > 9 ? '9+' : $unread ?><span class="visually-hidden"> unread</span></span>
+                                    <?php endif; ?>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php elseif ($search !== ''): ?>
+                            <div class="empty-state empty-state-sm">
+                                <h3>No chats found</h3>
+                                <p>Nothing matches “<?= esc($search) ?>”.</p>
+                                <a class="btn btn-ghost btn-sm" href="<?= base_url('messages') ?>">Clear search</a>
                             </div>
                         <?php endif; ?>
-                    </section>
-                </div>
+
+                        <?php
+                        $known  = array_map('intval', array_column($conversations, 'user_id'));
+                        $starts = array_values(array_filter($errandChats, static fn (array $e): bool => ! in_array((int) $e['other_id'], $known, true)));
+                        ?>
+                        <?php if ($starts !== [] && $search === ''): ?>
+                            <p class="chat-group-label">Start a chat about an errand</p>
+                            <?php foreach ($starts as $e): ?>
+                                <a href="<?= base_url('messages?user_id=' . (int) $e['other_id'] . '&request_id=' . (int) $e['request_id']) ?>" class="thread<?= ! empty($selectedUser) && (int) $selectedUser['id'] === (int) $e['other_id'] ? ' is-active' : '' ?>">
+                                    <?= avatar(['first_name' => $e['first_name'], 'last_name' => $e['last_name'], 'profile_photo' => $e['profile_photo']], 'md') ?>
+                                    <span class="thread-main">
+                                        <span class="thread-top"><strong><?= esc(trim($e['first_name'] . ' ' . $e['last_name'])) ?></strong></span>
+                                        <span class="thread-preview">Your <?= esc($e['other_role']) ?> · <?= esc($e['item_name']) ?></span>
+                                    </span>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+
+                        <?php if ($conversations === [] && $starts === [] && $search === ''): ?>
+                            <div class="empty-state empty-state-sm">
+                                <?= icon('message') ?>
+                                <h3>No chats yet</h3>
+                                <p>You can chat with someone once a runner accepts your request, or you accept theirs.</p>
+                                <a href="<?= base_url('browse-requests') ?>" class="btn btn-secondary btn-sm"><?= icon('search') ?> Find requests</a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </aside>
+
+                <section class="chat-pane" aria-label="<?= $otherName !== '' ? 'Conversation with ' . esc($otherName, 'attr') : 'Conversation' ?>">
+                    <?php if (! empty($selectedUser)): ?>
+                        <header class="chat-pane-head">
+                            <a href="<?= base_url('messages') ?>" class="icon-btn chat-back" aria-label="Back to all chats"><?= icon('arrow-left') ?></a>
+                            <?= avatar($selectedUser, 'md') ?>
+                            <div class="chat-pane-title">
+                                <h2><a href="<?= base_url('users/' . (int) $selectedUser['id']) ?>"><?= esc($otherName) ?></a></h2>
+                                <p>
+                                    <?php if (! empty($request)): ?>
+                                        About <a class="link" href="<?= base_url('request-details/' . (int) $request['id']) ?>"><?= esc($request['item_name']) ?></a>
+                                        <span class="status-pill <?= esc($request['status'], 'attr') ?>"><?= esc(status_label($request['status'])) ?></span>
+                                    <?php else: ?>
+                                        Earlier messages
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                            <div class="chat-head-tools">
+                                <?php if ($messages !== []): ?>
+                                    <?= view('includes/chat_tools', ['other' => $selectedUser, 'requestId' => 0]) ?>
+                                <?php endif; ?>
+                                <?= view('includes/user_safety_actions', [
+                                    'other'     => $selectedUser,
+                                    'iBlocked'  => $iBlocked,
+                                    'returnTo'  => 'messages?user_id=' . (int) $selectedUser['id'],
+                                    'requestId' => $requestId,
+                                ]) ?>
+                            </div>
+                        </header>
+
+                        <?= view('includes/chat_search_bar') ?>
+
+                        <div class="chat-body" id="chatBody" role="log" aria-live="polite" aria-relevant="additions" aria-label="Messages with <?= esc($otherName, 'attr') ?>"
+                             data-chat
+                             data-poll-url="<?= esc(base_url('messages/poll?user_id=' . (int) $selectedUser['id']), 'attr') ?>"
+                             data-after="<?= (int) $lastId ?>"
+                             data-poll-seconds="<?= (int) $pollSeconds ?>"
+                             data-other-name="<?= esc($selectedUser['first_name'] ?? 'They', 'attr') ?>">
+                            <?php $day = ''; ?>
+                            <?php foreach ($messages as $m): ?>
+                                <?php if ($m['day'] !== $day): $day = $m['day']; ?>
+                                    <div class="chat-day"><?= esc($day) ?></div>
+                                <?php endif; ?>
+                                <div class="bubble <?= $m['mine'] ? 'sent' : 'received' ?>" data-message-id="<?= (int) $m['id'] ?>" data-day="<?= esc($m['day'], 'attr') ?>">
+                                    <span class="visually-hidden"><?= $m['mine'] ? 'You' : esc($selectedUser['first_name']) ?>:</span>
+                                    <?php if ($m['text'] !== ''): ?><p><?= esc($m['text']) ?></p><?php endif; ?>
+                                    <?php if ($m['attachment'] !== null): ?>
+                                        <a class="attachment" href="<?= esc($m['attachment']['url'], 'attr') ?>" target="_blank" rel="noopener"><?= icon('paperclip') ?> <?= esc($m['attachment']['name']) ?></a>
+                                    <?php endif; ?>
+                                    <time><?= esc($m['time']) ?></time>
+                                </div>
+                            <?php endforeach; ?>
+                            <?php if ($messages === []): ?>
+                                <div class="empty-state empty-state-sm" data-chat-empty>
+                                    <?= icon('message') ?>
+                                    <h3><?= $canSend ? 'Say hello' : 'No messages' ?></h3>
+                                    <p><?= $canSend ? 'Ask about the items, the store or the delivery time.' : 'There are no messages with ' . esc($selectedUser['first_name']) . ' yet.' ?></p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if (! $canSend): ?>
+                            <div class="chat-notice" role="status" data-chat-closed>
+                                <?= icon('lock') ?>
+                                <div>
+                                    <p><?= esc($cannotReason) ?></p>
+                                    <?php if ($activeErrands !== []): ?>
+                                        <p>You still share an active errand. Its request page stays open for updates and payment, and you can report a problem to the admins:</p>
+                                        <ul>
+                                            <?php foreach ($activeErrands as $e): ?>
+                                                <li><a class="link" href="<?= base_url('request-details/' . (int) $e['id']) ?>"><?= esc($e['item_name']) ?></a> · <?= esc(status_label($e['status'])) ?></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <form action="<?= base_url('messages/send') ?>" method="post" enctype="multipart/form-data" class="composer" data-chat-composer>
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="receiver_id" value="<?= (int) $selectedUser['id'] ?>">
+                                <input type="hidden" name="request_id" value="<?= (int) ($requestId ?? 0) ?: '' ?>">
+
+                                <label for="attachment" class="icon-btn" title="Attach a photo or file (JPG, PNG, WEBP, PDF or DOCX, up to 5 MB)">
+                                    <?= icon('paperclip') ?><span class="visually-hidden">Attach a photo or file (JPG, PNG, WEBP, PDF or DOCX, up to 5 MB)</span>
+                                </label>
+                                <input type="file" name="attachment" id="attachment" class="visually-hidden" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx" data-chat-file>
+
+                                <span class="file-chip" data-chat-file-chip hidden>
+                                    <span data-chat-file-name></span>
+                                    <button type="button" class="icon-btn icon-btn-xs" data-chat-file-remove aria-label="Remove attachment"><?= icon('x') ?></button>
+                                </span>
+
+                                <label for="messageText" class="visually-hidden">Message to <?= esc($otherName) ?></label>
+                                <textarea id="messageText" name="message" rows="1" placeholder="Write a message…" maxlength="<?= (int) $maxLength ?>"
+                                          autocomplete="off" data-chat-input><?= esc((string) old('message')) ?></textarea>
+                                <button type="submit" class="btn btn-primary" data-chat-send><?= icon('send') ?><span>Send</span></button>
+                                <p class="chat-status" role="status" aria-live="polite" data-chat-status hidden></p>
+                            </form>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="empty-state chat-pane-empty">
+                            <?= icon('message') ?>
+                            <h3>Choose a chat</h3>
+                            <p>Pick a conversation on the left. Chats are private to the requester and runner of an accepted errand.</p>
+                        </div>
+                    <?php endif; ?>
+                </section>
             </div>
+            <p class="chat-footnote"><?= icon('lock') ?> Only you and the other person can see these messages. Never share passwords or one-time PINs.</p>
         </section>
     </div>
 </main>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const attachmentInput = document.getElementById('attachment');
-    const attachmentPreview = document.getElementById('attachmentPreview');
-    const attachmentName = document.getElementById('attachmentName');
-    const removeAttachment = document.getElementById('removeAttachment');
-
-    if (attachmentInput) {
-        attachmentInput.addEventListener('change', function () {
-            if (this.files && this.files.length > 0) {
-                attachmentName.textContent = this.files[0].name;
-                attachmentPreview.style.display = 'inline-flex';
-            } else {
-                attachmentName.textContent = '';
-                attachmentPreview.style.display = 'none';
-            }
-        });
-    }
-
-    if (removeAttachment) {
-        removeAttachment.addEventListener('click', function () {
-            attachmentInput.value = '';
-            attachmentName.textContent = '';
-            attachmentPreview.style.display = 'none';
-        });
-    }
-});
-</script>
-
+<script src="<?= asset('js/chat.js') ?>" defer></script>
+<script src="<?= asset('js/chat-tools.js') ?>" defer></script>
 <?= $this->include('includes/footer') ?>

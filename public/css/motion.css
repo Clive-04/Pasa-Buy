@@ -1,0 +1,150 @@
+/*
+ * Pasa-Buy motion layer (loaded last). Progressive enhancement throughout:
+ * browsers without a feature simply skip it, and "reduce motion" turns
+ * every effect here off. Pointer effects only run with a mouse/trackpad.
+ *
+ *  1. Page-to-page transitions (cross-document View Transitions).
+ *  2. Headings rise in word by word (words wrapped by motion.js).
+ *  3. Scroll: reading-progress bar, reveals for all content (the effect is
+ *     matched to the element), parallax accents, the About line that fills
+ *     as you scroll. Native CSS scroll timelines where supported, an
+ *     IntersectionObserver fallback (motion.js) elsewhere.
+ *  4. Interaction on the important parts only: pointer tilt on key cards,
+ *     magnetic call-to-action buttons, a back-to-top button with a
+ *     progress ring.
+ *  5. Count-up numbers (motion.js).
+ *
+ * Reveal/entrance keyframes use the individual translate/scale properties,
+ * so they never fight the pointer tilt, which uses transform.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+    /* ===================================================== 1. PAGE TRANSITIONS */
+    @view-transition { navigation: auto; }
+
+    .app-topbar, .site-header { view-transition-name: topbar; }
+    .dashboard-sidebar { view-transition-name: rail; }
+    .side-link.is-active { view-transition-name: rail-active; }
+
+    ::view-transition-group(topbar),
+    ::view-transition-group(rail) { animation: none; }
+    ::view-transition-old(rail), ::view-transition-new(rail),
+    ::view-transition-old(topbar), ::view-transition-new(topbar) { animation: none; mix-blend-mode: normal; }
+    ::view-transition-group(rail-active) { animation-duration: 380ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    ::view-transition-old(root) { animation: pb-vt-out 160ms ease-in both; }
+    ::view-transition-new(root) { animation: pb-vt-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    @keyframes pb-vt-out { to { opacity: 0; } }
+    @keyframes pb-vt-in { from { opacity: 0; } }
+
+    /* ====================================================== 2. WORD HEADINGS */
+    .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+    .wi { display: inline-block; animation: pb-word-up 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(80ms + var(--i, 0) * 55ms); }
+    @keyframes pb-word-up { from { translate: 0 105%; } to { translate: none; } }
+    :is(.page-head, .story-hero, .contact-hero, .welcome-text) h1:has(.w) { animation: none; }
+
+    /* ================================================================ 3. SCROLL */
+
+    /* reading progress: a thin blue line under the top bar */
+    .scroll-progress {
+        position: fixed; z-index: 1001; left: 0; right: 0; top: var(--topbar-h); height: 3px;
+        background: linear-gradient(90deg, var(--brand), var(--aqua));
+        transform-origin: left; scale: var(--progress, 0) 1; pointer-events: none;
+    }
+    .scroll-progress[hidden] { display: none; }
+
+    /* reveal effects, picked per element by motion.js (data-reveal) */
+    @keyframes pb-in-rise  { from { opacity: 0; translate: 0 32px; scale: 0.98; } to { opacity: 1; translate: none; scale: none; } }
+    @keyframes pb-in-slide { from { opacity: 0; translate: -28px 0; } to { opacity: 1; translate: none; } }
+    @keyframes pb-in-zoom  { from { opacity: 0; scale: 0.92; } to { opacity: 1; scale: none; } }
+    @keyframes pb-in-unveil { from { opacity: 0.2; clip-path: inset(0 0 100% 0 round 18px); } to { opacity: 1; clip-path: inset(0 0 0 0 round 18px); } }
+
+    /* native: tied to scroll position (scrolling back up plays it backwards) */
+    @supports ((animation-timeline: view()) and (animation-range: entry 0% entry 100%)) {
+        [data-reveal] {
+            animation-timing-function: linear; animation-fill-mode: both; animation-duration: auto; animation-delay: 0s;
+            animation-timeline: view(); animation-range: entry 0% entry 75%;
+        }
+        [data-reveal="rise"]   { animation-name: pb-in-rise; }
+        [data-reveal="slide"]  { animation-name: pb-in-slide; animation-range: entry 0% entry 60%; }
+        [data-reveal="zoom"]   { animation-name: pb-in-zoom; }
+        [data-reveal="unveil"] { animation-name: pb-in-unveil; animation-range: entry 5% entry 95%; }
+
+        /* parallax accents: drift slower than the page */
+        [data-parallax] { animation: pb-parallax linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+        @keyframes pb-parallax { from { translate: 0 calc(var(--parallax, 24px) * -1); } to { translate: 0 var(--parallax, 24px); } }
+
+        /* About: the line fills with your scroll; each number lights as it's reached */
+        .how-steps { view-timeline: --how block; }
+        .how-steps::after { transition: none; animation: pb-fill-x linear both; animation-timeline: --how; animation-range: entry 60% cover 55%; }
+        @keyframes pb-fill-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        .how-step .how-num { transition: none; animation: pb-num-on linear both; animation-timeline: --how; }
+        .how-step:nth-child(1) .how-num { animation-range: entry 60% entry 61%; }
+        .how-step:nth-child(2) .how-num { animation-range: cover 30% cover 31%; }
+        .how-step:nth-child(3) .how-num { animation-range: cover 54% cover 55%; }
+        @keyframes pb-num-on { from { background: var(--canvas); color: var(--brand-ink); } to { background: var(--brand); color: var(--on-brand); } }
+    }
+
+    /* fallback (IntersectionObserver): one-shot reveal with the same looks */
+    [data-reveal].reveal-wait { opacity: 0; }
+    [data-reveal].reveal-in { animation-delay: 0s; animation-duration: 620ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); animation-fill-mode: both; }
+    [data-reveal="rise"].reveal-in   { animation-name: pb-in-rise; }
+    [data-reveal="slide"].reveal-in  { animation-name: pb-in-slide; }
+    [data-reveal="zoom"].reveal-in   { animation-name: pb-in-zoom; }
+    [data-reveal="unveil"].reveal-in { animation-name: pb-in-unveil; }
+
+    /* ============================================================ 4. INTERACTION */
+
+    /* pointer tilt on key cards (motion.js sets --rx / --ry / --mx / --my) */
+    @media (hover: hover) and (pointer: fine) {
+        [data-tilt] {
+            position: relative;
+            transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+            transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 300ms, border-color 200ms;
+            will-change: transform;
+        }
+        [data-tilt].is-tilting { transition: transform 90ms linear, box-shadow 300ms, border-color 200ms; box-shadow: 0 18px 40px -22px rgba(11, 29, 58, 0.45); }
+        /* a soft light that follows the pointer, kept faint */
+        [data-tilt]::before {
+            content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none;
+            background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.10), transparent 60%);
+            opacity: 0; transition: opacity 250ms;
+        }
+        [data-tilt].is-tilting::before { opacity: 1; }
+        [data-tilt] > * { position: relative; z-index: 1; }
+
+        /* magnetic call-to-action buttons (motion.js sets --tx / --ty) */
+        [data-magnetic] { translate: var(--tx, 0) var(--ty, 0); transition: translate 260ms cubic-bezier(0.2, 0.8, 0.2, 1), transform var(--dur-fast), box-shadow var(--dur-fast), background-color var(--dur-fast); }
+        [data-magnetic].is-pulled { transition: translate 80ms linear, transform var(--dur-fast), box-shadow var(--dur-fast), background-color var(--dur-fast); }
+    }
+
+    /* back to top, with a ring that fills as you scroll */
+    .to-top {
+        position: fixed; z-index: 900; right: 20px; bottom: 20px; width: 48px; height: 48px;
+        display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%;
+        background: var(--surface); color: var(--brand-ink); cursor: pointer;
+        box-shadow: 0 10px 24px -10px rgba(11, 29, 58, 0.45), 0 0 0 1px var(--card-border);
+        opacity: 0; translate: 0 12px; scale: 0.9; pointer-events: none;
+        transition: opacity 240ms, translate 300ms cubic-bezier(0.2, 0.8, 0.2, 1), scale 300ms cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+    .to-top.is-shown { opacity: 1; translate: none; scale: none; pointer-events: auto; }
+    .to-top:hover { scale: 1.06; }
+    .to-top:active { scale: 0.94; }
+    .to-top:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .to-top svg.ring { position: absolute; inset: 0; width: 100%; height: 100%; rotate: -90deg; }
+    .to-top .ring-track { fill: none; stroke: var(--card-border); stroke-width: 3; }
+    .to-top .ring-bar { fill: none; stroke: var(--brand); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 138.2; stroke-dashoffset: calc(138.2 * (1 - var(--progress, 0))); }
+    .to-top .i { width: 20px; height: 20px; rotate: -90deg; }
+
+    /* ============================================================= 5. NUMBERS */
+    [data-counting] { font-variant-numeric: tabular-nums; }
+
+    /* finishing touches */
+    .btn-primary:hover, .btn-accent:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0) scale(0.97); }
+}
+
+/* the chat toasts sit above the back-to-top button */
+.chat-toast-stack { bottom: 84px; }
+
+/* Turbo Drive's loading bar (shown only when a page takes over 500 ms) */
+.turbo-progress-bar { height: 3px; background: linear-gradient(90deg, var(--brand), var(--aqua)); }

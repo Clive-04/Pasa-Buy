@@ -4,48 +4,94 @@ use CodeIgniter\Router\RouteCollection;
 
 /**
  * @var RouteCollection $routes
+ *
+ * Access rules:
+ *  - Public: landing/login/register/about/contact/health.
+ *  - `auth`  group: requires a signed-in user (AuthFilter).
+ *  - `admin` group: requires role=admin, re-checked against the DB (AdminFilter).
+ *  - Every POST is CSRF-checked globally (Config\Filters::$globals).
+ *  - State changes use POST only.
  */
+
+// ------------------------------------------------------------------ public
 $routes->get('/', 'Home::index');
 $routes->get('/login', 'Auth::login');
+$routes->post('/login/process', 'Auth::loginProcess');
 $routes->get('/register', 'Auth::register');
 $routes->post('/register/process', 'Auth::process');
-
-$routes->post('/login/process', 'Auth::loginProcess');
-$routes->get('/logout', 'Auth::logout');
-
-$routes->get('/dashboard', 'Dashboard::index');
-
-$routes->get('/post-request', 'Request::create');
-$routes->post('/request/process', 'Request::process');
-$routes->post('/request/accept/(:num)', 'Request::accept/$1');
-$routes->post('/request/status/(:num)', 'Request::updateAcceptedStatus/$1');
-$routes->post('/request/pay-runner/(:num)', 'Request::payRunner/$1');
-
-$routes->get('/browse-requests', 'Request::browse');
-$routes->get('/request-details', 'Request::details');
-$routes->get('/request-details/(:num)', 'Request::details/$1');
-
-$routes->get('/my-requests', 'Request::myRequests');
-$routes->get('/accepted-requests', 'Request::acceptedRequests');
-
-$routes->get('/messages', 'Message::index');
-$routes->post('/messages/send', 'Message::send');
-
-$routes->get('/wallet', 'Wallet::index');
-$routes->post('/wallet/top-up', 'Wallet::topUp');
+$routes->post('/logout', 'Auth::logout');
 
 $routes->get('/about', 'NavBar::about');
 $routes->get('/contact', 'NavBar::contact');
+$routes->get('/health', 'Health::index');
 
-$routes->get('/profile', 'Profile::index');
-$routes->post('profile/update', 'Profile::updateProfile');
-$routes->post('profile/rate-website', 'Profile::rateWebsite');
-$routes->post('profile/refer-friend', 'Profile::referFriend');
+// Payment provider callbacks: no session, CSRF-exempt, verified by signature.
+$routes->post('/webhooks/paymongo', 'PaymentWebhook::paymongo');
+$routes->post('/webhooks/xendit', 'PaymentWebhook::xendit');
 
-$routes->get('/users/search', 'UserSearch::index');
-$routes->get('/users/(:num)', 'UserSearch::view/$1');
-$routes->post('/users/(:num)/rate', 'UserSearch::rate/$1');
+// ------------------------------------------------------------- signed in
+$routes->group('', ['filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->get('dashboard', 'Dashboard::index');
 
-$routes->get('/notifications', 'RequestNotification::index');
-$routes->get('/notifications/open/(:num)', 'RequestNotification::open/$1');
-$routes->post('/notifications/mark-all-read', 'RequestNotification::markAllRead');
+    $routes->get('post-request', 'Request::create');
+    $routes->post('request/process', 'Request::process');
+    $routes->post('request/accept/(:num)', 'Request::accept/$1');
+    $routes->post('request/status/(:num)', 'Request::updateAcceptedStatus/$1');
+    $routes->post('request/pay-runner/(:num)', 'Request::payRunner/$1');
+    $routes->post('request/(:num)/rate', 'Request::rate/$1');
+    $routes->post('request/(:num)/price', 'Request::submitPrice/$1');
+    $routes->post('request/(:num)/price/(:num)/approve', 'Request::approvePrice/$1/$2');
+    $routes->post('request/(:num)/price/(:num)/reject', 'Request::rejectPrice/$1/$2');
+    $routes->get('request/(:num)/receipt/(:num)', 'Request::receipt/$1/$2');
+    $routes->post('request/cancel/(:num)', 'Request::cancel/$1');
+
+    $routes->get('browse-requests', 'Request::browse');
+    $routes->get('request-details/(:num)', 'Request::details/$1');
+    $routes->get('my-requests', 'Request::myRequests');
+    $routes->get('accepted-requests', 'Request::acceptedRequests');
+
+    $routes->get('messages', 'Message::index');
+    $routes->post('messages/send', 'Message::send');
+    $routes->get('messages/poll', 'Message::poll');
+    $routes->post('messages/delete', 'Message::delete');
+    $routes->get('messages/attachment/(:num)', 'Message::attachment/$1');
+
+    $routes->get('wallet', 'Wallet::index');
+    $routes->post('wallet/top-up', 'Wallet::topUp');
+    $routes->get('wallet/top-up/return', 'Wallet::topUpReturn');
+    $routes->post('wallet/top-up/check', 'Wallet::topUpCheck');
+
+    $routes->get('profile', 'Profile::index');
+    $routes->post('profile/update', 'Profile::updateProfile');
+    $routes->post('profile/password', 'Profile::changePassword');
+    $routes->post('profile/rate-website', 'Profile::rateWebsite');
+    $routes->post('profile/refer-friend', 'Profile::referFriend');
+
+    $routes->get('media/avatar/(:segment)', 'Media::avatar/$1');
+
+    $routes->get('users/search', 'UserSearch::index');
+    $routes->get('users/(:num)', 'UserSearch::view/$1');
+    $routes->post('users/(:num)/block', 'Moderation::block/$1');
+    $routes->post('users/(:num)/unblock', 'Moderation::unblock/$1');
+    $routes->post('users/(:num)/report', 'Moderation::report/$1');
+
+    $routes->get('notifications', 'RequestNotification::index');
+    $routes->get('notifications/unread-count', 'RequestNotification::unreadCount');
+    $routes->get('notifications/feed', 'RequestNotification::feed');
+    $routes->get('notifications/open/(:num)', 'RequestNotification::open/$1');
+    $routes->post('notifications/mark-all-read', 'RequestNotification::markAllRead');
+});
+
+// ----------------------------------------------------------------- admin
+$routes->group('admin', ['filter' => 'admin'], static function (RouteCollection $routes): void {
+    $routes->get('dashboard', 'AdminController::dashboard');
+    $routes->post('request/cancel/(:num)', 'AdminController::cancelRequest/$1');
+    $routes->get('requests', 'AdminController::requests');
+    $routes->get('requests/export', 'AdminController::exportRequests');
+    $routes->get('users', 'AdminController::users');
+    $routes->post('users/(:num)/suspend', 'AdminController::suspendUser/$1');
+    $routes->post('users/(:num)/restore', 'AdminController::restoreUser/$1');
+    $routes->get('topups', 'AdminController::topups');
+    $routes->get('reports', 'AdminController::reports');
+    $routes->post('reports/(:num)', 'AdminController::updateReport/$1');
+});

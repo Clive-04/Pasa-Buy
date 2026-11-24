@@ -2,91 +2,139 @@
 
 namespace App\Controllers;
 
-use App\Models\UserModel;
+use App\Libraries\Money;
 use App\Models\PaymentModel;
+use App\Models\UserModel;
+use App\Services\ServiceException;
+use App\Services\TopUpService;
+use App\Services\WalletService;
+use Throwable;
 
 class Wallet extends BaseController
 {
     public function index()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
+        $config   = config('PasaBuy');
+        $provider = TopUpService::activeProvider();
+        $userId   = $this->currentUserId();
+
+        $payments = new PaymentModel();
+        $payments->where('user_id', $userId)->orderBy('created_at', 'DESC')->orderBy('id', 'DESC');
+
+        if ($this->request->getGet('topup') === 'cancelled') {
+            session()->setFlashdata('error', 'Top-up cancelled. Your wallet was not charged.');
         }
 
-        $userId = session('user_id');
-
-        $userModel = new UserModel();
-        $paymentModel = new PaymentModel();
-
-        $user = $userModel->find($userId);
-
-        $transactions = $paymentModel
-            ->where('user_id', $userId)
-            ->orWhere('receiver_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->findAll();
-
         return view('wallet_page', [
-            'title' => 'Wallet | Pasa-Buy',
-            'user' => $user,
-            'transactions' => $transactions
+            'title'          => 'Wallet | Pasa-Buy',
+            'user'           => (new UserModel())->find($userId),
+            'transactions'   => $payments->paginate($config->perPage),
+            'pager'          => $payments->pager,
+            'gateway'        => $provider,
+            'gatewayLabel'   => TopUpService::providerLabel($provider),
+            'pendingTopUps'  => $provider !== null ? (new TopUpService())->pendingFor($userId) : [],
+            // One-time key: resubmitting this exact form never credits twice.
+            'idempotencyKey' => bin2hex(random_bytes(16)),
+            'topUpMin'       => Money::format($provider !== null ? TopUpService::limits($provider)[0] : 1),
+            'topUpMax'       => Money::format($provider !== null ? TopUpService::limits($provider)[1] : $config->demoTopUpMaxCents),
+            'walletCap'      => Money::format($config->demoWalletCapCents),
         ]);
     }
 
     public function topUp()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/login')->with('error', 'Please login first.');
+        $amount = trim((string) $this->request->getPost('amount'));
+
+        if (($limited = $this->rateLimited('topup-start', 'top-up attempts', '/wallet')) !== null) {
+            return $limited;
         }
 
-        $userId = session('user_id');
-        $amount = (float) $this->request->getPost('amount');
-        $source = trim((string) $this->request->getPost('source'));
-        $referenceNo = trim((string) $this->request->getPost('reference_no'));
+        // GCash / Maya through Xendit or PayMongo (test mode) when configured.
+        if (TopUpService::activeProvider() !== null) {
+            try {
+                $checkoutUrl = (new TopUpService())->start($this->currentUserId(), $amount);
 
-        $allowedSources = ['gcash', 'maya', 'bank_transfer'];
+                return redirect()->to($checkoutUrl);
+            } catch (ServiceException $e) {
+                return redirect()->to('/wallet')->withInput()->with('error', $e->getMessage());
+            } catch (Throwable $e) {
+                log_message('error', 'Top-up start failed: {m}', ['m' => $e->getMessage()]);
 
-        if ($amount <= 0) {
-            return redirect()->back()->with('error', 'Please enter a valid top-up amount.');
+                return redirect()->to('/wallet')->withInput()->with('error', 'The payment page could not be opened. Please try again.');
+            }
         }
 
-        if (!in_array($source, $allowedSources, true)) {
-            return redirect()->back()->with('error', 'Please select a valid top-up method.');
+        // Otherwise: simulated demo credits.
+        $result = null;
+
+        $response = $this->attempt(
+            function () use (&$result, $amount): void {
+                $result = (new WalletService())->addDemoCredits(
+                    $this->currentUserId(),
+                    $amount,
+                    (string) $this->request->getPost('idempotency_key'),
+                );
+            },
+            'Demo credits added to your wallet. These are simulated funds, not real money.',
+            '/wallet',
+            true,
+        );
+
+        // A repeated submission of the same form is a no-op, not an error.
+        if (is_array($result) && $result['credited'] === false) {
+            return redirect()->to('/wallet')->with('success', 'That top-up was already processed, so it was not added twice.');
         }
 
-        $db = db_connect();
-        $userModel = new UserModel();
-        $paymentModel = new PaymentModel();
+        return $response;
+    }
 
-        $db->transStart();
+    /**
+     * The provider sends the user back here after checkout. The redirect
+     * proves nothing, so we ask the provider server-to-server before crediting.
+     */
+    public function topUpReturn()
+    {
+        // The provider may still be finalising the payment when it redirects,
+        // so give it a few seconds before falling back to "Check payment".
+        return $this->reconcileAndRedirect((int) $this->request->getGet('topup'), 3);
+    }
 
-        $user = $userModel->find($userId);
-        $currentBalance = (float) ($user['wallet_balance'] ?? 0);
-        $newBalance = $currentBalance + $amount;
+    /** "Check payment" button for a pending top-up (POST, CSRF-protected). */
+    public function topUpCheck()
+    {
+        return $this->reconcileAndRedirect((int) $this->request->getPost('topup'));
+    }
 
-        $userModel->update($userId, [
-            'wallet_balance' => $newBalance
-        ]);
-
-        $paymentModel->insert([
-            'user_id' => $userId,
-            'request_id' => null,
-            'receiver_id' => null,
-            'amount' => $amount,
-            'type' => 'top_up',
-            'source' => $source,
-            'status' => 'completed',
-            'reference_no' => $referenceNo ?: null,
-            'description' => 'Wallet top-up via ' . ucfirst(str_replace('_', ' ', $source)),
-            'created_at' => date('Y-m-d H:i:s')
-        ]);
-
-        $db->transComplete();
-
-        if (!$db->transStatus()) {
-            return redirect()->back()->with('error', 'Top-up failed.');
+    private function reconcileAndRedirect(int $topUpId, int $attempts = 1)
+    {
+        // Each check calls the provider's API. A refused check changes
+        // nothing: the webhook can still credit the payment meanwhile.
+        if (($limited = $this->rateLimited('payment-check', 'payment checks', '/wallet', false)) !== null) {
+            return $limited;
         }
 
-        return redirect()->to('/wallet')->with('success', 'Wallet topped up successfully.');
+        try {
+            $service = new TopUpService();
+
+            for ($try = 1; ; $try++) {
+                $status = $service->reconcile($topUpId, $this->currentUserId());
+
+                if ($status !== 'pending' || $try >= $attempts) {
+                    break;
+                }
+
+                sleep(2);
+            }
+        } catch (Throwable $e) {
+            log_message('error', 'Top-up reconcile failed: {m}', ['m' => $e->getMessage()]);
+            $status = 'error';
+        }
+
+        return match ($status) {
+            'credited', 'already' => redirect()->to('/wallet')->with('success', 'Payment confirmed. Your wallet has been topped up.'),
+            'pending'             => redirect()->to('/wallet')->with('success', 'No completed payment yet. If you just paid, wait a moment and press "Check payment" again.'),
+            'error'               => redirect()->to('/wallet')->with('error', 'We could not reach the payment service. Please try again shortly.'),
+            default               => redirect()->to('/wallet')->with('error', 'That top-up could not be found.'),
+        };
     }
 }

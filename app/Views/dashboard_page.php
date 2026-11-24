@@ -1,169 +1,131 @@
 <?= $this->include('includes/header') ?>
 <?= $this->include('includes/navbar') ?>
+<?php
+$hour     = (int) date('G');
+$greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good evening');
+?>
 
-<main class="dashboard-page">
+<main class="dashboard-page" id="main-content">
     <div class="dashboard-container">
         <?= $this->include('includes/sidebar2') ?>
 
         <section class="dashboard-main">
-            <div class="dashboard-hero">
-                <div>
-                    <span class="dashboard-badge">Welcome Back</span>
-                    <h1>Pasa-Buy Dashboard</h1>
-                    <p>
-                        Manage your local requests, track deliveries, and stay updated with your community errands.
-                    </p>
-                </div>
+            <?= $this->include('includes/flash') ?>
 
-                <div class="dashboard-hero-actions">
-                    <a href="<?= base_url('post-request') ?>" class="dashboard-btn primary-btn">Post a Request</a>
-                    <a href="<?= base_url('browse-requests') ?>" class="dashboard-btn secondary-btn">Browse Requests</a>
+            <?php
+            $todo    = action_items();
+            $nTodo   = count($todo['requests']) + count($todo['deliveries']);
+            $todoUrl = count($todo['requests']) > 0 ? 'my-requests' : 'accepted-requests';
+            ?>
+            <div class="bento">
+            <section class="hero-card welcome bento-hero" aria-label="Overview">
+                <div class="welcome-text">
+                    <h1><?= $greeting ?>, <?= esc($me['first_name'] ?? 'there') ?></h1>
+                    <p><?= esc(date('l, F j')) ?></p>
+                    <dl class="hero-stats">
+                        <div><dt>Active requests</dt><dd><a href="<?= base_url('my-requests') ?>"><?= (int) $activeRequests ?></a></dd></div>
+                        <div><dt>Deliveries in progress</dt><dd><a href="<?= base_url('accepted-requests') ?>"><?= (int) $activeDeliveries ?></a></dd></div>
+                        <div><dt>Delivered</dt><dd><a href="<?= base_url('accepted-requests?status=delivered') ?>"><?= (int) $completedDeliveries ?></a></dd></div>
+                    </dl>
                 </div>
+                <div class="welcome-actions">
+                    <a href="<?= base_url('post-request') ?>" class="btn btn-accent btn-lg"><?= icon('plus') ?> Post a request</a>
+                    <a href="<?= base_url('browse-requests') ?>" class="btn btn-light-on-hero btn-lg"><?= icon('search') ?> Find requests <span class="count-pill"><?= (int) $openRequests ?></span></a>
+                </div>
+            </section>
+
+            <a class="bento-tile tile-wallet" href="<?= base_url('wallet') ?>">
+                <span class="tile-label"><?= icon('wallet') ?> <?= is_demo_mode() ? 'Wallet · demo credits' : 'Wallet' ?></span>
+                <strong class="tile-value"><?= money($me['wallet_balance'] ?? '0') ?></strong>
+                <span class="tile-link">Top up or see history <?= icon('arrow-right') ?></span>
+            </a>
+
+            <a class="bento-tile tile-todo<?= $nTodo === 0 ? ' is-clear' : '' ?>" href="<?= base_url($nTodo > 0 ? $todoUrl : 'browse-requests') ?>">
+                <span class="tile-label"><?= icon($nTodo > 0 ? 'bell' : 'check-circle') ?> Needs you</span>
+                <strong class="tile-value"><?= $nTodo > 0 ? $nTodo . ' errand' . ($nTodo === 1 ? '' : 's') : 'All caught up' ?></strong>
+                <span class="tile-link"><?= $nTodo > 0 ? 'Pay, rate or update ' . icon('arrow-right') : 'Find an errand to run ' . icon('arrow-right') ?></span>
+            </a>
             </div>
 
-            <div class="dashboard-stats">
-                <div class="stat-box">
-                    <span class="stat-label">Active Requests</span>
-                    <h2><?= esc($activeRequests ?? 0) ?></h2>
-                    <p>Requests currently in progress</p>
-                </div>
-
-                <div class="stat-box">
-                    <span class="stat-label">Accepted Tasks</span>
-                    <h2><?= esc($acceptedTasks ?? 0) ?></h2>
-                    <p>Errands you are currently handling</p>
-                </div>
-
-                <div class="stat-box">
-                    <span class="stat-label">Completed Orders</span>
-                    <h2><?= esc($completedOrders ?? 0) ?></h2>
-                    <p>Successfully delivered requests</p>
-                </div>
-
-                <div class="stat-box">
-                    <span class="stat-label">Wallet Balance</span>
-                    <h2>₱<?= number_format((float) ($walletBalance ?? 0), 2) ?></h2>
-                    <p>Available wallet funds</p>
-                </div>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <div class="card-header">
-                        <h3>My Active Requests</h3>
-                        <a href="<?= base_url('my-requests') ?>">View All</a>
-                    </div>
-
-                    <div class="request-list">
-                        <?php if (!empty($myActiveRequests)): ?>
-                            <?php foreach ($myActiveRequests as $request): ?>
-                                <div class="request-item">
+            <?php if (! empty($attention)): ?>
+                <section aria-labelledby="attentionHeading">
+                    <h2 id="attentionHeading" class="section-label"><?= icon('bell') ?> Needs your attention</h2>
+                    <ul class="attention">
+                        <?php foreach ($attention as $item): ?>
+                            <li>
+                                <a class="attention-item" href="<?= base_url($item['url']) ?>">
+                                    <?= icon($item['icon']) ?>
                                     <div>
-                                        <h4><?= esc($request['item_name']) ?></h4>
-                                        <p><?= esc($request['store_name']) ?> • <?= ucfirst(str_replace('_', ' ', $request['status'])) ?></p>
+                                        <strong><?= esc($item['title']) ?></strong>
+                                        <span><?= esc($item['text']) ?></span>
                                     </div>
-                                    <a href="<?= base_url('request-details/' . $request['id']) ?>" class="status-badge <?= esc($request['status']) ?>">
-                                        <?= ucfirst(str_replace('_', ' ', $request['status'])) ?>
-                                    </a>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="request-item">
-                                <div>
-                                    <h4>No active requests yet</h4>
-                                    <p>Your active requests will appear here.</p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                                    <span class="attention-action"><?= esc($item['action']) ?> <?= icon('arrow-right') ?></span>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </section>
+            <?php endif; ?>
+
+            <section aria-labelledby="myActiveHeading">
+                <div class="section-head">
+                    <h2 id="myActiveHeading" class="section-label"><?= icon('list') ?> My active requests</h2>
+                    <a href="<?= base_url('my-requests') ?>" class="link">View all <?= icon('chevron') ?></a>
                 </div>
-
-                <div class="dashboard-card">
-                    <div class="card-header">
-                        <h3>Available Requests</h3>
-                        <a href="<?= base_url('browse-requests') ?>">Browse</a>
+                <?php if (! empty($myActiveRequests)): ?>
+                    <div class="row-list active-grid">
+                        <?php foreach ($myActiveRequests as $request): ?>
+                            <a href="<?= base_url('request-details/' . (int) $request['id']) ?>" class="row-item row-item-stack">
+                                <span class="row-line">
+                                    <span class="row-main">
+                                        <strong><?= esc($request['item_name']) ?></strong>
+                                        <span><?= esc($request['store_name']) ?> · <?= money($request['total_amount']) ?></span>
+                                    </span>
+                                    <span class="status-pill <?= esc($request['status'], 'attr') ?>"><?= esc(status_label($request['status'])) ?></span>
+                                </span>
+                                <?= request_steps($request, true) ?>
+                            </a>
+                        <?php endforeach; ?>
                     </div>
-
-                    <div class="request-list">
-                        <?php if (!empty($availableRequests)): ?>
-                            <?php foreach ($availableRequests as $request): ?>
-                                <div class="request-item">
-                                    <div>
-                                        <h4><?= esc($request['item_name']) ?></h4>
-                                        <p>Fee: ₱<?= number_format((float) ($request['service_fee'] ?? 0), 2) ?></p>
-                                    </div>
-                                    <a href="<?= base_url('request-details/' . $request['id']) ?>" class="mini-btn">View</a>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="request-item">
-                                <div>
-                                    <h4>No available requests</h4>
-                                    <p>New nearby requests will appear here.</p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
+                <?php else: ?>
+                    <div class="empty-inline">
+                        <p>No active requests. <a class="link" href="<?= base_url('post-request') ?>">Post one <?= icon('arrow-right') ?></a></p>
                     </div>
+                <?php endif; ?>
+            </section>
+
+            <section class="market" aria-labelledby="openHeading">
+                <div class="section-head">
+                    <div>
+                        <h2 id="openHeading" class="section-label"><?= icon('store') ?> Requests you can deliver</h2>
+                        <p class="market-lead"><?= (int) $openRequests ?> open <?= (int) $openRequests === 1 ? 'errand' : 'errands' ?> from your neighbours. Accept one, buy the items, and earn the service fee.</p>
+                    </div>
+                    <a href="<?= base_url('browse-requests') ?>" class="link">Browse all <?= icon('chevron') ?></a>
                 </div>
-
-                <div class="dashboard-card wide-card">
-                    <div class="card-header">
-                        <h3>Recent Notifications</h3>
-                        <a href="<?= base_url('notifications') ?>">See More</a>
+                <nav class="market-cats" aria-label="Browse by category">
+                    <?php foreach (['food' => 'Food', 'medicine' => 'Medicine', 'school_supplies' => 'School supplies', 'household' => 'Household', 'personal_care' => 'Personal care', 'other' => 'Other'] as $value => $label): ?>
+                        <a class="chip chip-cat cat-<?= esc($value, 'attr') ?>" href="<?= base_url('browse-requests?category=' . $value) ?>"><?= esc($label) ?></a>
+                    <?php endforeach; ?>
+                </nav>
+                <?php if (! empty($availableRequests)): ?>
+                    <div class="request-card-grid">
+                        <?php foreach ($availableRequests as $request): ?>
+                            <?= view('includes/request_card', ['request' => $request]) ?>
+                        <?php endforeach; ?>
                     </div>
-
-                    <div class="activity-timeline">
-                        <?php if (!empty($recentActivity)): ?>
-                            <?php foreach ($recentActivity as $activity): ?>
-                                <div class="activity-item">
-                                    <div class="activity-dot"></div>
-                                    <div>
-                                        <h4><?= esc($activity['title']) ?></h4>
-                                        <p><?= esc($activity['content']) ?></p>
-                                        <small><?= date('M j, Y g:i A', strtotime($activity['created_at'])) ?></small>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="activity-item">
-                                <div class="activity-dot"></div>
-                                <div>
-                                    <h4>No notifications yet</h4>
-                                    <p>Your request and payment updates will appear here.</p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
+                    <?php if ($openRequests > count($availableRequests)): ?>
+                        <div class="market-more">
+                            <a href="<?= base_url('browse-requests') ?>" class="btn btn-secondary"><?= icon('search') ?> See all <?= (int) $openRequests ?> open requests</a>
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="card empty-state">
+                        <?= icon('store') ?>
+                        <h3>No open requests right now</h3>
+                        <p>New requests from your neighbours will appear here. Check back soon.</p>
                     </div>
-                </div>
-
-                <div class="dashboard-card">
-                    <div class="card-header">
-                        <h3>Quick Actions</h3>
-                    </div>
-
-                    <div class="quick-actions">
-                        <a href="<?= base_url('post-request') ?>" class="quick-action-card">
-                            <span>📝</span>
-                            <p>Post New Request</p>
-                        </a>
-
-                        <a href="<?= base_url('browse-requests') ?>" class="quick-action-card">
-                            <span>📍</span>
-                            <p>Browse Requests</p>
-                        </a>
-
-                        <a href="<?= base_url('wallet') ?>" class="quick-action-card">
-                            <span>💰</span>
-                            <p>Open Wallet</p>
-                        </a>
-
-                        <a href="<?= base_url('notifications') ?>" class="quick-action-card">
-                            <span>🔔</span>
-                            <p>View Notifications</p>
-                        </a>
-                    </div>
-                </div>
-            </div>
+                <?php endif; ?>
+            </section>
         </section>
     </div>
 </main>

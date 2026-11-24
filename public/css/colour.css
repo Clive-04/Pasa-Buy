@@ -1,0 +1,345 @@
+/*
+ * Pasa-Buy colour and card layer — loaded after theme.css, components.css
+ * and pages.css.
+ *
+ * Direction: crisp and purposeful rather than decorative.
+ *  - Colour where it carries meaning: the navy navigation rail, status
+ *    and category markers, money amounts, the current page.
+ *  - Cards are solid surfaces with a 1px border, a hairline under their
+ *    title row and a modest radius. No glows, gradient tiles or fades.
+ *  - A tinted (not white) page background so cards stand out.
+ *
+ * Every colour is a token with a dark-mode value below, and text/background
+ * pairs keep WCAG AA contrast in both themes.
+ */
+
+/* ================================================================ TOKENS */
+:root {
+    /*
+     * "Harbor blue" light mode: cool blue-tinted canvas, a navy rail, blue
+     * feature tiles, and shadows tinted toward navy. Amber/terracotta is the
+     * single warm accent, kept for things that need the user.
+     */
+    --canvas: #eef2f9;
+    --card-border: #d9e1ee;
+    --card-radius: 14px;
+    --hairline: #e4eaf4;
+    --label-ink: #1d4ac2;
+    --card-shadow: 0 1px 2px rgba(11, 29, 58, 0.05), 0 10px 24px -14px rgba(11, 29, 58, 0.22);
+
+    /* feature cards ("mint" is the historical name: now a soft blue) */
+    --mint: #e4eeff;      --mint-ink: #12357a;   --mint-line: #c9dafb;
+    --sand: #fbead3;      --sand-ink: #7a3412;   --sand-line: #f1d4ad;
+    --terracotta: #c2562b;
+    --topbar-bg: rgba(238, 242, 249, 0.9);
+
+    /* navigation rail (navy in light mode) */
+    --rail: #0b1d3a;
+    --rail-line: #17305a;
+    --rail-ink: #dbe5f7;
+    --rail-muted: #8ea3c8;
+    --rail-hover: rgba(255, 255, 255, 0.07);
+    --rail-active: rgba(255, 255, 255, 0.12);
+    --rail-marker: #5fb8ff;
+
+    /* category markers */
+    --cat-food: #d48a00;
+    --cat-medicine: #d6455f;
+    --cat-school_supplies: #2459e0;
+    --cat-household: #0f8aa0;
+    --cat-personal_care: #8455e8;
+    --cat-other: #7b8fa1;
+
+    --money-ink: #127a45;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --canvas: #060e1c;
+        --card-border: #1d304f;
+        --hairline: #172a48;
+        --label-ink: #8fb0ff;
+        --rail: #081428;
+        --rail-line: #16284a;
+        --rail-ink: #d6e1f5;
+        --rail-muted: #8396ba;
+        --rail-hover: rgba(255, 255, 255, 0.05);
+        --rail-active: rgba(91, 140, 255, 0.16);
+        --rail-marker: #5b8cff;
+        --cat-food: #fbbf24;
+        --cat-medicine: #fb7185;
+        --cat-school_supplies: #8fb0ff;
+        --cat-household: #38c6e0;
+        --cat-personal_care: #c4b5fd;
+        --cat-other: #94a3b8;
+        --money-ink: #86efac;
+        --mint: rgba(91, 140, 255, 0.12); --mint-ink: #b4caff; --mint-line: rgba(91, 140, 255, 0.28);
+        --sand: rgba(251, 191, 36, 0.10); --sand-ink: #fcd9a0; --sand-line: rgba(251, 191, 36, 0.25);
+        --terracotta: #f59e6b;
+        --topbar-bg: color-mix(in srgb, var(--surface) 86%, transparent);
+        --card-shadow: none;
+    }
+}
+
+:root[data-theme="dark"] {
+    --canvas: #060e1c;
+    --card-border: #1d304f;
+    --hairline: #172a48;
+    --label-ink: #8fb0ff;
+    --rail: #081428;
+    --rail-line: #16284a;
+    --rail-ink: #d6e1f5;
+    --rail-muted: #8396ba;
+    --rail-hover: rgba(255, 255, 255, 0.05);
+    --rail-active: rgba(91, 140, 255, 0.16);
+    --rail-marker: #5b8cff;
+    --cat-food: #fbbf24;
+    --cat-medicine: #fb7185;
+    --cat-school_supplies: #8fb0ff;
+    --cat-household: #38c6e0;
+    --cat-personal_care: #c4b5fd;
+    --cat-other: #94a3b8;
+    --money-ink: #86efac;
+    --mint: rgba(91, 140, 255, 0.12); --mint-ink: #b4caff; --mint-line: rgba(91, 140, 255, 0.28);
+    --sand: rgba(251, 191, 36, 0.10); --sand-ink: #fcd9a0; --sand-line: rgba(251, 191, 36, 0.25);
+    --terracotta: #f59e6b;
+    --topbar-bg: color-mix(in srgb, var(--surface) 86%, transparent);
+    --card-shadow: none;
+}
+
+/* ================================================================ CANVAS */
+body { background: var(--canvas); }
+
+/* ================================================================== RAIL */
+.dashboard-container {
+    background: linear-gradient(to right, var(--rail) var(--rail-col), transparent var(--rail-col));
+}
+.dashboard-sidebar { color: var(--rail-ink); }
+.side-heading { color: var(--rail-muted); }
+.side-link { color: var(--rail-ink); }
+.side-link .i { color: var(--rail-muted); }
+.side-link:hover { background: var(--rail-hover); color: #fff; }
+.side-link:hover .i { color: var(--rail-ink); }
+.side-link.is-active { background: var(--rail-active); color: #fff; }
+.side-link.is-active .i { color: var(--rail-marker); }
+.side-link.is-active::before { background: var(--rail-marker); }
+.side-meta, .side-link.is-active .side-meta { color: var(--rail-muted); }
+.side-link-danger, .side-link-danger .i { color: #ffb4b4; }
+.side-link-danger:hover { background: rgba(255, 120, 120, 0.12); color: #ffd0d0; }
+.dashboard-sidebar .side-foot { border-top-color: var(--rail-line); }
+.side-link:focus-visible { outline-color: var(--rail-marker); }
+.side-link .badge.badge-action { background: var(--rail-marker); color: #061a36; }
+.sidebar-mobile-top { border-bottom-color: var(--rail-line); }
+.sidebar-mobile-title { color: #fff; }
+.dashboard-sidebar .sidebar-close { color: var(--rail-ink); }
+.dashboard-sidebar .sidebar-close:hover { background: var(--rail-hover); color: #fff; }
+@media (min-width: 901px) and (max-width: 1279px) {
+    .side-heading { background: var(--rail-line); }
+}
+@media (max-width: 900px) {
+    .dashboard-container { background: none; }
+    .dashboard-sidebar { background: var(--rail); }
+}
+
+/* ======================================================== PAGE HEADINGS */
+.eyebrow {
+    padding: 0; background: none; border-radius: 0;
+    color: var(--label-ink); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* ================================================================= CARDS */
+.card, .needs-you, .chat, .person-card, .team-card, .stat, .stat-link, .req-card, .req-row {
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+}
+.card { background: var(--surface); padding: 16px 18px; }
+
+/* title row with a hairline under it, spanning the card */
+.card > .card-head {
+    margin: -16px -18px 14px; padding: 12px 18px;
+    border-bottom: 1px solid var(--hairline);
+}
+.card-head :is(h2, h3) { font-size: 0.98rem; font-weight: 750; letter-spacing: -0.01em; }
+.card-head :is(h2, h3) > .i { width: 18px; height: 18px; color: var(--muted); }
+
+.section-label { font-size: 1.05rem; letter-spacing: -0.01em; }
+.section-label > .i { width: 18px; height: 18px; color: var(--muted); }
+
+/* hover: a quiet border change, no lift */
+:is(.req-card, .person-card, .team-card, .stat-link, a.mini-stat):hover {
+    transform: none; box-shadow: none; border-color: var(--line-strong);
+}
+
+/* ================================================================= STATS */
+.mini-stat { background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 12px; }
+.mini-stat strong { color: var(--ink); font-size: 1.45rem; letter-spacing: -0.02em; }
+.mini-stat span { display: inline-flex; align-items: center; gap: 6px; }
+.mini-stat span::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--indigo); }
+.mini-stat:nth-child(4n+2) span::before { background: var(--teal); }
+.mini-stat:nth-child(4n+3) span::before { background: var(--cat-food); }
+.mini-stat:nth-child(4n+4) span::before { background: #22a55b; }
+
+/* ===================================================== RECEIPT-STYLE MONEY */
+.money-breakdown {
+    gap: 0; padding: 4px 16px; border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface-2);
+}
+.money-breakdown .row { padding: 9px 0; border-bottom: 1px dashed var(--card-border); font-variant-numeric: tabular-nums; }
+.money-breakdown .row:last-child { border-bottom: none; }
+.money-breakdown .row.total { border-bottom-style: solid; font-weight: 800; }
+.money-breakdown .row span { color: var(--ink-2); }
+
+/* ========================================================= REQUEST CARDS */
+.req-card { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 0; background: var(--surface); --cat: var(--cat-other); }
+.req-card.cat-food            { --cat: var(--cat-food); }
+.req-card.cat-medicine        { --cat: var(--cat-medicine); }
+.req-card.cat-school_supplies { --cat: var(--cat-school_supplies); }
+.req-card.cat-household       { --cat: var(--cat-household); }
+.req-card.cat-personal_care   { --cat: var(--cat-personal_care); }
+
+.rc-top { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }
+.rc-cat { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-weight: 700; }
+.rc-cat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cat); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cat) 18%, transparent); }
+.rc-time { margin-left: auto; color: var(--muted); }
+.rc-title { margin: 0; font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; }
+.rc-title a { color: inherit; text-decoration: none; }
+.rc-title a:hover { color: var(--brand-ink); }
+.rc-qty { margin-left: 4px; color: var(--muted); font-size: 0.9rem; font-weight: 700; }
+.rc-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 2px 0 4px; }
+.rc-facts dt { color: var(--muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; }
+.rc-facts dd { margin: 1px 0 0; font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 2px -16px 0; padding: 10px 16px; border-top: 1px solid var(--hairline);
+}
+.rc-earn { display: grid; margin: 0; line-height: 1.15; }
+.rc-earn span { color: var(--muted); font-size: 0.72rem; font-weight: 700; }
+.rc-earn strong { color: var(--money-ink); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.rc-actions { display: flex; gap: 6px; }
+
+/* ============================================================ CATEGORY CHIPS */
+.chip-cat { display: inline-flex; align-items: center; gap: 7px; }
+.chip-cat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cat-other); }
+.chip-cat.cat-food::before            { background: var(--cat-food); }
+.chip-cat.cat-medicine::before        { background: var(--cat-medicine); }
+.chip-cat.cat-school_supplies::before { background: var(--cat-school_supplies); }
+.chip-cat.cat-household::before       { background: var(--cat-household); }
+.chip-cat.cat-personal_care::before   { background: var(--cat-personal_care); }
+
+/* ============================================================ SMALL THINGS */
+.req-row:hover { background: var(--surface-2); }
+.thread.is-active { background: var(--brand-soft); }
+
+/* ====================================================== LIGHT-MODE WARMTH */
+/* top bar and footer sit on the same warm canvas */
+.app-topbar, .site-header { background: var(--topbar-bg); }
+.site-footer { background: var(--soft); }
+.pb-table th { background: var(--surface-2); }
+
+/* feature cards: mint for the blocks that matter most */
+.needs-you {
+    background: var(--mint); border-color: var(--mint-line); border-left: 1px solid var(--mint-line);
+}
+.needs-you h2, .needs-you h2 .i { color: var(--mint-ink); }
+.needs-you a:hover { background: color-mix(in srgb, var(--surface) 60%, transparent); }
+.needs-you a strong { color: var(--mint-ink); }
+
+/* ============================================================ BENTO TOP */
+.bento {
+    display: grid; gap: 16px;
+    grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+    grid-template-areas: "hero wallet" "hero todo";
+}
+.bento-hero { grid-area: hero; }
+.bento-tile {
+    display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+    min-height: 120px; padding: 18px 20px; border-radius: var(--card-radius);
+    text-decoration: none; box-shadow: var(--card-shadow);
+    transition: border-color var(--dur-fast), transform var(--dur) var(--ease-out);
+}
+.bento-tile:hover { transform: translateY(-1px); }
+.bento-tile:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.tile-label { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; }
+.tile-label .i { width: 18px; height: 18px; }
+.tile-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82rem; font-weight: 700; }
+.tile-link .i { width: 16px; height: 16px; transition: transform var(--dur-fast) var(--ease-out); }
+.bento-tile:hover .tile-link .i { transform: translateX(3px); }
+
+.tile-wallet { grid-area: wallet; background: var(--mint); border: 1px solid var(--mint-line); color: var(--mint-ink); }
+.tile-wallet .tile-label, .tile-wallet .tile-link { color: var(--mint-ink); }
+.tile-todo { grid-area: todo; background: var(--sand); border: 1px solid var(--sand-line); color: var(--sand-ink); }
+.tile-todo .tile-label .i { color: var(--terracotta); }
+.tile-todo.is-clear { background: var(--surface); border-color: var(--card-border); color: var(--ink); }
+.tile-todo.is-clear .tile-label .i { color: var(--teal); }
+.tile-todo.is-clear .tile-link { color: var(--brand-ink); }
+
+@media (max-width: 760px) {
+    .bento { grid-template-columns: 1fr 1fr; grid-template-areas: "hero hero" "wallet todo"; gap: 12px; }
+    .bento-tile { min-height: 0; padding: 14px 16px; }
+    .tile-value { font-size: 1.25rem; }
+}
+@media (max-width: 420px) {
+    .bento { grid-template-columns: 1fr; grid-template-areas: "hero" "wallet" "todo"; }
+}
+.bento > * { animation: pb-rise-sm var(--dur-slow) var(--ease-out) both; }
+.bento > :nth-child(2) { animation-delay: 80ms; }
+.bento > :nth-child(3) { animation-delay: 140ms; }
+
+/* eyebrows on dark hero panels keep their pill shape */
+:is(.hero-card, .auth-aside, .hero) .eyebrow { padding: 4px 10px; border-radius: 999px; }
+
+/* ================================================================ DENSITY
+ * Less empty space: wider content, tighter vertical rhythm, compact
+ * components. Touch targets stay at least 40-44px.
+ */
+.dashboard-main {
+    max-width: 1280px; gap: 20px;
+    padding: clamp(16px, 2vw, 24px) clamp(14px, 2.4vw, 28px) clamp(40px, 5vw, 56px);
+}
+.page-head { margin-bottom: 0; }
+.crumbs ol { margin-bottom: 6px; }
+.page-head h1 { font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); }
+.eyebrow { margin-bottom: 4px; }
+.section-label { margin-bottom: 10px; }
+.section-head { margin-bottom: 10px; }
+.section-head .section-label { margin-bottom: 0; }
+.hero-card { padding: clamp(18px, 2.4vw, 26px); }
+.hero-stats { margin-top: 14px; gap: 22px; }
+.bento { gap: 14px; }
+.bento-tile { min-height: 104px; padding: 14px 16px; }
+.empty-state { padding: 22px 16px; gap: 6px; }
+.empty-state > .i { width: 36px; height: 36px; padding: 8px; }
+.content-wrap { gap: 20px; }
+:is(.req-list, .people-grid, .team-grid, .stat-grid, .active-grid, .profile-grid, .detail-grid, .request-card-grid) { gap: 14px; }
+.needs-you { padding: 12px 14px; }
+.needs-you ul { margin-top: 6px; }
+.needs-you a { padding: 6px 8px; }
+.money-breakdown .row { padding: 7px 0; }
+.card-head { margin-bottom: 14px; }
+.dl { gap: 10px 18px; }
+.pb-table th, .pb-table td { padding: 10px 12px; }
+.req-row { padding: 8px 12px; }
+.stat, .stat-link { padding: 14px 16px; }
+.mini-stat { padding: 10px 12px; }
+.form-section { padding: 18px; }
+@media (max-width: 760px) {
+    .card { padding: 14px; }
+    .card > .card-head { margin: -14px -14px 12px; padding: 10px 14px; }
+}
+/* "Needs you" rows must shrink on phones (grid items default to content width) */
+.needs-you ul { grid-template-columns: minmax(0, 1fr); }
+.needs-you a { min-width: 0; }
+@media (max-width: 480px) {
+    .needs-you a { flex-wrap: wrap; row-gap: 2px; }
+    .needs-you a strong { white-space: normal; }
+    .needs-you a span { flex-basis: calc(100% - 28px); order: 3; }
+}
+
+/* demo notice inside the top-up dialog (replaces the old site-wide banner) */
+.demo-notice {
+    display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; padding: 10px 12px;
+    border: 1px solid var(--warn-line); border-radius: 10px; background: var(--warn-bg); color: var(--warn-ink);
+    font-size: 0.86rem; line-height: 1.45;
+}
+.demo-notice > .i { flex: none; width: 18px; height: 18px; margin-top: 1px; }

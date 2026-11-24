@@ -9,6 +9,14 @@ class UserModel extends Model
     protected $table = 'users';
     protected $primaryKey = 'id';
 
+    /*
+     * Deliberately NOT mass-assignable:
+     *  - role:           set by the column default; admins are provisioned
+     *                    with `php spark user:role` only.
+     *  - wallet_balance: changed only by the ledger services
+     *                    (App\Services\WalletService / RequestLifecycle),
+     *                    which write a matching payments row.
+     */
     protected $allowedFields = [
         'first_name',
         'last_name',
@@ -19,7 +27,6 @@ class UserModel extends Model
         'username',
         'about_me',
         'profile_photo',
-        'wallet_balance'
     ];
 
     protected $useTimestamps = false;

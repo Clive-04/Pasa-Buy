@@ -1,87 +1,46 @@
 <?php
-use App\Models\UserModel;
-
-$db = db_connect();
-
-if (session()->has('user_id')) {
-    $userModel = new UserModel();
-    $user = $userModel->find(session('user_id'));
-
-    $user_name = session('user_name');
-    $first_name = explode(' ', $user_name)[0] ?? 'User';
-    $avatar = strtoupper(substr($first_name, 0, 1));
-} else {
-    $user = null;
-    $first_name = 'Guest';
-    $avatar = 'G';
-}
-
-$requestNotifModel = new \App\Models\RequestNotificationModel();
-$notifCount = 0;
-$messageNotifCount = 0;
-
-if (session()->has('user_id')) {
-    $notifCount = $requestNotifModel
-        ->where('user_id', session('user_id'))
-        ->where('is_read', 0)
-        ->countAllResults();
-
-    $messageNotifCount = $db->table('notifications')
-        ->where('user_id', session('user_id'))
-        ->where('type', 'message')
-        ->where('is_read', 0)
-        ->countAllResults();
-}
+/*
+ * Main navigation rail (signed-in users). Full height under the top bar,
+ * icon-only at intermediate widths (labels stay in the DOM as accessible
+ * names and appear as tooltips), a drawer on small screens.
+ * The profile entry lives in the top bar only.
+ */
+$me      = current_user();
+$actions = action_items();
+$nReq    = count($actions['requests']);
+$nDel    = count($actions['deliveries']);
 ?>
-
-<button class="sidebar-toggle" type="button" aria-label="Open sidebar" aria-expanded="false" aria-controls="dashboardSidebar">
-    ☰
-</button>
-
 <div class="sidebar-overlay"></div>
 
-<aside class="dashboard-sidebar" id="dashboardSidebar">
+<aside class="dashboard-sidebar app-rail" id="dashboardSidebar" aria-label="Main menu">
     <div class="sidebar-mobile-top">
         <span class="sidebar-mobile-title">Menu</span>
-        <button class="sidebar-close" type="button" aria-label="Close sidebar">✕</button>
+        <button class="sidebar-close icon-btn" type="button" aria-label="Close menu"><?= icon('x') ?></button>
     </div>
 
-    <div class="dashboard-profile-card">
-        <div class="profile-avatar">
-            <?php if (!empty($user['profile_photo'])): ?>
-                <img src="<?= base_url('uploads/profile_photos/' . $user['profile_photo']) ?>" alt="Profile Photo">
-            <?php else: ?>
-                <?= $avatar ?>
-            <?php endif; ?>
-        </div>
+    <nav class="side-nav" aria-label="Pages">
+        <a href="<?= base_url('dashboard') ?>" class="side-link<?= nav_attrs('dashboard') ?>"><?= icon('dashboard') ?><span class="side-label">Dashboard</span></a>
 
-        <h3><?= esc($first_name) ?></h3>
-        <p>Community User</p>
-    </div>
+        <p class="side-heading">I need something</p>
+        <a href="<?= base_url('post-request') ?>" class="side-link<?= nav_attrs('post-request') ?>"><?= icon('plus') ?><span class="side-label">Post a request</span></a>
+        <a href="<?= base_url('my-requests') ?>" class="side-link<?= nav_attrs('my-requests') ?>"><?= icon('list') ?><span class="side-label">My requests</span><?= count_badge($nReq, $nReq === 1 ? 'request needs you (pay or rate)' : 'requests need you (pay or rate)') ?></a>
 
-    <nav class="dashboard-menu">
-        <a href="<?= base_url('dashboard') ?>" class="dashboard-link">Dashboard</a>
-        <a href="<?= base_url('post-request') ?>" class="dashboard-link">Post a Request</a>
-        <a href="<?= base_url('browse-requests') ?>" class="dashboard-link">Browse Requests</a>
-        <a href="<?= base_url('my-requests') ?>" class="dashboard-link">My Requests</a>
-        <a href="<?= base_url('accepted-requests') ?>" class="dashboard-link">Accepted Requests</a>
-        <a href="<?= base_url('wallet') ?>" class="dashboard-link">Wallet</a>
+        <p class="side-heading">I want to earn</p>
+        <a href="<?= base_url('browse-requests') ?>" class="side-link<?= nav_attrs('browse-requests') ?>"><?= icon('search') ?><span class="side-label">Find requests</span></a>
+        <a href="<?= base_url('accepted-requests') ?>" class="side-link<?= nav_attrs('accepted-requests') ?>"><?= icon('truck') ?><span class="side-label">My deliveries</span><?= count_badge($nDel, $nDel === 1 ? 'delivery needs an update or rating' : 'deliveries need an update or rating') ?></a>
 
-        <a href="<?= base_url('notifications') ?>" class="dashboard-link dashboard-link-with-badge">
-            <span>Notifications</span>
-            <?php if ($notifCount > 0): ?>
-                <span class="notif-badge"><?= $notifCount > 9 ? '9+' : $notifCount ?></span>
-            <?php endif; ?>
-        </a>
-
-        <a href="<?= base_url('messages') ?>" class="dashboard-link dashboard-link-with-badge">
-            <span>Messages</span>
-            <?php if ($messageNotifCount > 0): ?>
-                <span class="notif-badge"><?= $messageNotifCount > 9 ? '9+' : $messageNotifCount ?></span>
-            <?php endif; ?>
-        </a>
-
-        <a href="<?= base_url('profile') ?>" class="dashboard-link">Profile</a>
-        <a href="<?= base_url('logout') ?>" class="dashboard-link logout-link">Logout</a>
+        <p class="side-heading">Account</p>
+        <a href="<?= base_url('messages') ?>" class="side-link<?= nav_attrs('messages') ?>"><?= icon('message') ?><span class="side-label">Messages</span><?= unread_badge('messages') ?></a>
+        <a href="<?= base_url('notifications') ?>" class="side-link<?= nav_attrs('notifications') ?>"><?= icon('bell') ?><span class="side-label">Notifications</span><?= unread_badge('notifications') ?></a>
+        <a href="<?= base_url('wallet') ?>" class="side-link<?= nav_attrs('wallet') ?>"><?= icon('wallet') ?><span class="side-label"><?= is_demo_mode() ? 'Wallet (test)' : 'Wallet' ?> <small class="side-meta"><?= money($me['wallet_balance'] ?? '0') ?></small></span></a>
     </nav>
+
+    <div class="side-foot">
+        <a href="<?= base_url('about') ?>" class="side-link<?= nav_attrs('about') ?>"><?= icon('help') ?><span class="side-label">About Pasa-Buy</span></a>
+        <form action="<?= base_url('logout') ?>" method="post" class="side-logout" data-turbo="false">
+            <?= csrf_field() ?>
+            <button type="submit" class="side-link side-link-danger" data-open-dialog="logoutDialog"><?= icon('logout') ?><span class="side-label">Log out</span></button>
+        </form>
+    </div>
 </aside>
+<?= $this->include('includes/logout_dialog') ?>
